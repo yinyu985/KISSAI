@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KISSAI Web</title>
+    <meta name="description" content="KISSAI 是一个现代、极简且高质感的 AI 聊天交互平台，支持多种模型提供商。">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Markdown-it for rendering markdown content -->
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
+</head>
+<body class="dark-mode">
+    <div id="app">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-main">KISS AI</div>
+                    <div class="logo-sub">Keep it simple, stupid</div>
+                </div>
+            </div>
+
+            <div class="sidebar-content">
+                <div class="sidebar-action">
+                    <i data-lucide="search"></i>
+                    <input type="text" placeholder="搜索对话">
+                </div>
+
+                <button id="new-chat-btn" class="sidebar-action" style="cursor: pointer;">
+                    <i data-lucide="plus"></i>
+                    <span>新建对话</span>
+                </button>
+
+                <div class="history-list-container">
+                    <div id="history-list" class="history-list">
+                        <div class="empty-state">
+                            <i data-lucide="message-square"></i>
+                            <p>暂无会话</p>
+                            <span>开始新的对话以在此处查看您的会话历史记录。</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <button id="settings-btn" class="footer-btn" title="设置">
+                    <i data-lucide="settings"></i>
+                </button>
+            </div>
+
+            <!-- Sidebar Toggle Handle moved inside -->
+            <div id="sidebar-handle" class="sidebar-handle">
+                <svg viewBox="0 0 12 64" class="handle-svg">
+                    <path id="handle-path" d="M 6 2 L 6 32 L 6 62" />
+                </svg>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main id="main-content" class="main-content">
+            <div id="chat-view" class="view active">
+                <div class="chat-container narrow-mode">
+                    <div class="welcome-section">
+                        <h1>嗨，你好吗？</h1>
+                        <p>今天我能为您做些什么？</p>
+                    </div>
+                    <div id="chat-messages" class="chat-messages">
+                        <!-- Messages will be appended here -->
+                    </div>
+                    <div class="input-container">
+                        <div class="input-wrapper">
+                            <div class="input-border"></div>
+                            <textarea id="chat-input" placeholder="随便问我什么..." rows="1"></textarea>
+                            <div class="input-footer">
+                                <div id="model-selector" class="model-selector">
+                                    <span id="current-model">openai/gpt-oss-120b</span>
+                                    <!-- Dropdown Menu -->
+                                    <div id="model-dropdown" class="model-dropdown">
+                                        <!-- Content will be injected by JS -->
+                                    </div>
+                                </div>
+                                <button id="send-btn" class="send-btn" disabled>
+                                    <i data-lucide="arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings View (Hidden by default) -->
+            <div id="settings-view" class="view">
+                <div class="settings-container">
+                    <aside class="settings-sidebar">
+                        <div class="settings-nav-item active" data-tab="general">
+                            <i data-lucide="settings-2" class="nav-icon"></i>
+                            <span>通用设置</span>
+                        </div>
+                        <div class="settings-nav-group">
+                            <div id="providers-header" class="settings-nav-item" data-tab="providers-toggle">
+                                <i data-lucide="box" class="nav-icon"></i>
+                                <span>模型提供商</span>
+                            </div>
+                            <div id="providers-list" class="nav-group-content">
+                                <div id="add-provider-trigger" class="settings-nav-item add-btn" data-tab="provider">
+                                    <i data-lucide="plus" class="nav-icon"></i>
+                                    <span>新增提供商</span>
+                                </div>
+                                <!-- Providers will be injected here -->
+                            </div>
+                        </div>
+                        <div class="settings-nav-item" data-tab="role-presets">
+                            <i data-lucide="user-cog" class="nav-icon"></i>
+                            <span>角色预设</span>
+                        </div>
+                    </aside>
+
+                    <section class="settings-main">
+                        <!-- General Settings -->
+                        <div id="general-settings" class="settings-content active">
+                            <h2>通用设置</h2>
+
+                            <!-- Appearance -->
+                            <div class="settings-group">
+                                <label>主题模式</label>
+                                <div class="theme-toggle-group">
+                                    <button class="theme-btn active" data-theme="dark">
+                                        <i data-lucide="moon"></i>
+                                        <span>深色模式</span>
+                                    </button>
+                                    <button class="theme-btn" data-theme="light">
+                                        <i data-lucide="sun"></i>
+                                        <span>浅色模式</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Wide Mode -->
+                            <div class="settings-group">
+                                <label>宽屏模式</label>
+                                <div class="toggle-container">
+                                    <label class="switch">
+                                        <input type="checkbox" id="wide-mode-checkbox">
+                                        <span class="slider round"></span>
+                                    </label>
+                                    <span class="toggle-label">开启宽屏对话视图</span>
+                                </div>
+                            </div>
+
+                            <!-- Language -->
+                            <div class="settings-group">
+                                <label>界面语言</label>
+                                <div id="language-select" class="custom-select">
+                                    <div class="select-trigger">
+                                        <span id="current-language">简体中文</span>
+                                        <i data-lucide="chevron-down"></i>
+                                    </div>
+                                    <div class="select-options">
+                                        <div class="select-option selected" data-value="zh">简体中文</div>
+                                        <div class="select-option" data-value="en">English</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- System Prompt -->
+                            <div class="settings-group">
+                                <label>全局系统提示词</label>
+                                <p class="help-text">该提示词将作为所有对话的默认背景设定（例如：你是一个有用的助手）。</p>
+                                <textarea id="global-system-prompt" class="settings-textarea" placeholder="你是一位拥有超过30年实战经验的专家..."></textarea>
+                            </div>
+
+                            <!-- Shortcuts -->
+                            <div class="settings-group">
+                                <label>快捷键</label>
+                                <div id="shortcuts-container" class="shortcuts-grid">
+                                    <!-- Shortcuts will be injected here -->
+                                </div>
+                            </div>
+
+                            <!-- Data Management -->
+                            <div class="settings-group">
+                                <label>数据管理</label>
+                                <p class="help-text">导出您的配置数据（包括模型提供商、API Key、角色预设等）为 JSON 文件。</p>
+                                <button id="export-config-btn" class="btn-primary" style="display: flex; align-items: center; gap: 8px;">
+                                    <i data-lucide="download" style="width: 14px; height: 14px;"></i>
+                                    <span>导出 JSON 配置</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Provider Settings -->
+                        <div id="provider-settings" class="settings-content">
+                            <div class="provider-title-container">
+                                <h2 id="provider-name" contenteditable="false">Groq</h2>
+                                <div id="provider-title-actions" class="title-actions">
+                                    <button id="edit-provider-btn" class="icon-btn-inline" title="编辑名称">
+                                        <i data-lucide="pencil"></i>
+                                    </button>
+                                    <button id="save-provider-btn" class="icon-btn-inline hidden" title="保存">
+                                        <i data-lucide="check"></i>
+                                    </button>
+                                    <button id="cancel-provider-btn" class="icon-btn-inline hidden" title="取消">
+                                        <i data-lucide="x"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Add Provider Form (In-page) -->
+                            <div id="add-provider-form" class="compact-form">
+                                <input type="text" id="new-provider-name" placeholder="提供商名称">
+                                <div class="form-actions">
+                                    <button class="icon-btn-inline" onclick="saveProvider()" title="保存">
+                                        <i data-lucide="check"></i>
+                                    </button>
+                                    <button class="icon-btn-inline" onclick="toggleForm('add-provider-form')" title="取消">
+                                        <i data-lucide="x"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="settings-group">
+                                <label>API Key</label>
+                                <div class="input-with-actions">
+                                    <input type="password" id="api-key" value="">
+                                    <div class="action-icons">
+                                        <button class="icon-btn"><i data-lucide="eye"></i></button>
+                                        <button class="icon-btn"><i data-lucide="copy"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-group">
+                                <label>Base URL</label>
+                                <input type="text" id="base-url" value="https://api.groq.com/openai/v1">
+                            </div>
+                            <div class="settings-group">
+                                <div class="group-header">
+                                    <label>模型</label>
+                                    <div class="header-actions">
+                                        <button id="fetch-models-btn" class="action-btn-xs-text" title="获取模型">
+                                            <i data-lucide="refresh-cw"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="model-list" class="model-list"></div>
+                            </div>
+                        </div>
+
+                        <!-- Role Presets Settings -->
+                        <div id="role-presets-settings" class="settings-content">
+                            <h2>角色预设</h2>
+
+                            <!-- Add Role Form (In-page) -->
+                            <div id="add-role-form" class="compact-form">
+                                <input type="text" id="new-role-name" placeholder="角色名称">
+                                <textarea id="new-role-prompt" placeholder="系统提示词" rows="3"></textarea>
+                                <div class="form-actions">
+                                    <button class="icon-btn-inline" onclick="saveRole()" title="保存">
+                                        <i data-lucide="check"></i>
+                                    </button>
+                                    <button class="icon-btn-inline" onclick="toggleForm('add-role-form')" title="取消">
+                                        <i data-lucide="x"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="settings-group">
+                                <div class="group-header">
+                                    <label>常用预设</label>
+                                    <button onclick="toggleForm('add-role-form')" class="icon-btn-xs"><i data-lucide="plus"></i></button>
+                                </div>
+                                <div id="role-list" class="role-list"></div>
+                            </div>
+                        </div>
+
+                    </section>
+
+                    <button id="close-settings" class="close-btn">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Model Selection Modal -->
+    <div id="model-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>从API获取的可用模型</h3>
+                <button class="modal-close" onclick="closeModelModal()">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p style="margin: 0 0 8px 0; font-size: 11px; color: var(--text-secondary);">勾选要使用的模型，未勾选的将不会出现在模型列表中</p>
+                <div id="model-selection-list" class="model-selection-list">
+                    <!-- Models will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>
