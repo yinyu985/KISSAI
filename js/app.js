@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         providers: {
             'Groq': {
-                apiKey: 'gsk_yK8x...',
+                apiKey: '',
                 baseUrl: 'https://api.groq.com/openai/v1',
                 models: [
                     { id: 1, name: 'moonshotai/kimi-k2-instruct-0905', favorite: false },
@@ -87,8 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 apiKey: '',
                 baseUrl: 'https://api.cerebras.ai/v1',
                 models: [
-                    { id: 9, name: 'cerebras/llama3-70b', favorite: true },
-                    { id: 10, name: 'cerebras/llama3-8b', favorite: false }
+                    { id: 9, name: 'gpt-oss-120b', favorite: true },
+                    { id: 10, name: 'qwen-3-235b-a22b-instruct-2507', favorite: true },
+                    { id: 11, name: 'zai-glm-4.6', favorite: true }
+
                 ]
             }
         },
@@ -220,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 messageDiv.className = `message ${msg.role === 'user' ? 'user' : 'assistant'}`;
 
                 if (msg.role === 'user') {
-                    messageDiv.innerHTML = `<div class="message-bubble">${msg.content}</div>`;
+                    messageDiv.innerHTML = `<div class="message-bubble user-message-content">${msg.content}</div>`;
                 } else {
                     if (typeof window.markdownit === 'function') {
                         const md = window.markdownit({
@@ -241,10 +243,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         }).use(anchorPlugin);
 
                         // Set default target for all links
-                        const defaultRender = md.renderer.rules.link_open || function(tokens, idx, options, env, renderer) {
+                        const defaultRender = md.renderer.rules.link_open || function (tokens, idx, options, env, renderer) {
                             return renderer.renderToken(tokens, idx, options);
                         };
-                        md.renderer.rules.link_open = function(tokens, idx, options, env, renderer) {
+                        md.renderer.rules.link_open = function (tokens, idx, options, env, renderer) {
                             const token = tokens[idx];
                             if (token && token.attrGet('target') !== '_blank') {
                                 token.attrSet('target', '_blank');
@@ -419,24 +421,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Extract the base URL up to /v1, no matter what comes after
-            if (cleanBaseUrl.includes('/v1')) {
-                // Extract everything up to and including /v1
-                const v1Index = cleanBaseUrl.indexOf('/v1');
-                cleanBaseUrl = cleanBaseUrl.substring(0, v1Index + 3); // +3 to include '/v1'
-            } else {
-                // If no /v1 found, add it
-                cleanBaseUrl += '/v1';
-            }
+            // Use normalizeBaseUrl function to handle API version paths properly
+            cleanBaseUrl = normalizeBaseUrl(cleanBaseUrl);
 
-            const response = await fetch(`${cleanBaseUrl}/models`, {
-                headers: {
-                    'Authorization': `Bearer ${originalApiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                // Add timeout
-                signal: AbortSignal.timeout(10000) // 10 second timeout
-            });
+            // Check if it's Google Gemini API and handle differently
+            let response;
+            if (cleanBaseUrl.includes('generativelanguage.googleapis.com')) {
+                // Google Gemini API uses API key as query parameter for models
+                response = await fetch(`${cleanBaseUrl}/models?key=${originalApiKey}`, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    // Add timeout
+                    signal: AbortSignal.timeout(10000) // 10 second timeout
+                });
+            } else {
+                // Standard OpenAI-compatible API
+                response = await fetch(`${cleanBaseUrl}/models`, {
+                    headers: {
+                        'Authorization': `Bearer ${originalApiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    // Add timeout
+                    signal: AbortSignal.timeout(10000) // 10 second timeout
+                });
+            }
 
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
@@ -482,7 +491,8 @@ document.addEventListener('DOMContentLoaded', () => {
         messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
 
         if (isUser) {
-            messageDiv.innerHTML = `<div class="message-bubble">${content}</div>`;
+            // Add a special class to preserve formatting for user messages
+            messageDiv.innerHTML = `<div class="message-bubble user-message-content">${content}</div>`;
         } else {
             // Use markdown-it to render AI responses
             if (typeof window.markdownit === 'function') {
@@ -504,10 +514,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }).use(anchorPlugin);
 
                 // Set default target for all links
-                const defaultRender = md.renderer.rules.link_open || function(tokens, idx, options, env, renderer) {
+                const defaultRender = md.renderer.rules.link_open || function (tokens, idx, options, env, renderer) {
                     return renderer.renderToken(tokens, idx, options);
                 };
-                md.renderer.rules.link_open = function(tokens, idx, options, env, renderer) {
+                md.renderer.rules.link_open = function (tokens, idx, options, env, renderer) {
                     const token = tokens[idx];
                     if (token && token.attrGet('target') !== '_blank') {
                         token.attrSet('target', '_blank');
@@ -610,10 +620,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }).use(anchorPlugin);
 
             // Set default target for all links
-            const defaultRender = md.renderer.rules.link_open || function(tokens, idx, options, env, renderer) {
+            const defaultRender = md.renderer.rules.link_open || function (tokens, idx, options, env, renderer) {
                 return renderer.renderToken(tokens, idx, options);
             };
-            md.renderer.rules.link_open = function(tokens, idx, options, env, renderer) {
+            md.renderer.rules.link_open = function (tokens, idx, options, env, renderer) {
                 const token = tokens[idx];
                 if (token && token.attrGet('target') !== '_blank') {
                     token.attrSet('target', '_blank');
@@ -663,10 +673,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }).use(anchorPlugin);
 
             // Set default target for all links
-            const defaultRender = md.renderer.rules.link_open || function(tokens, idx, options, env, renderer) {
+            const defaultRender = md.renderer.rules.link_open || function (tokens, idx, options, env, renderer) {
                 return renderer.renderToken(tokens, idx, options);
             };
-            md.renderer.rules.link_open = function(tokens, idx, options, env, renderer) {
+            md.renderer.rules.link_open = function (tokens, idx, options, env, renderer) {
                 const token = tokens[idx];
                 if (token && token.attrGet('target') !== '_blank') {
                     token.attrSet('target', '_blank');
@@ -692,6 +702,29 @@ document.addEventListener('DOMContentLoaded', () => {
             // Fallback: just remove cursor
             const cursor = bubble.querySelector('.cursor');
             if (cursor) cursor.remove();
+        }
+    }
+
+    // Normalize base URL - keep existing API version path (like /v1, /v1beta, etc.)
+    // Only add /v1 if no API version path is found
+    function normalizeBaseUrl(baseUrl) {
+        let cleanUrl = baseUrl.trim();
+
+        // Remove trailing slashes
+        if (cleanUrl.endsWith('/')) {
+            cleanUrl = cleanUrl.slice(0, -1);
+        }
+
+        // Check if URL already contains a version path like /v1, /v1beta, /v1alpha, etc.
+        const versionMatch = cleanUrl.match(/\/v\d+(beta|alpha)?/i);
+        if (versionMatch) {
+            // If a version path exists, return everything up to and including that version
+            const versionIndex = versionMatch.index + versionMatch[0].length;
+            return cleanUrl.substring(0, versionIndex);
+        } else {
+            // If no version path found, return the URL as is without adding anything
+            // Different providers may have different API structures (e.g., Google uses /v1beta, some might have no version)
+            return cleanUrl;
         }
     }
 
@@ -721,14 +754,8 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error('API Key 未配置');
         }
 
-        // Clean and prepare Base URL
-        let baseUrl = provider.baseUrl.trim();
-        if (baseUrl.endsWith('/')) {
-            baseUrl = baseUrl.slice(0, -1);
-        }
-        if (!baseUrl.includes('/v1')) {
-            baseUrl += '/v1';
-        }
+        // Clean and prepare Base URL using the normalizeBaseUrl function
+        const baseUrl = normalizeBaseUrl(provider.baseUrl);
 
         // Prepare messages array with context
         const messages = [];

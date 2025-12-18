@@ -208,13 +208,16 @@ body {
 .footer-btn {
     background: transparent;
     border: none;
-    padding: 8px;
+    padding: 2px; /* Further reduced padding */
     color: var(--text-secondary);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: color var(--transition-speed);
+    min-height: auto;
+    height: 24px; /* Explicit height */
+    width: 24px; /* Explicit width */
 }
 
 .footer-btn:hover {
@@ -222,9 +225,11 @@ body {
 }
 
 .sidebar-footer {
-    padding: 12px;
+    padding: 2px 4px; /* Further reduced vertical padding */
     display: flex;
     justify-content: center;
+    align-items: center; /* Vertically center the buttons */
+    gap: 4px; /* Further reduced gap */
     border-top: none;
     user-select: none;
 }
@@ -761,6 +766,7 @@ body {
     overflow: hidden;
     transition: background-color 0.3s ease, border-color 0.3s ease;
     box-sizing: border-box; /* Ensure padding doesn't add to width/height */
+    padding-top: 40px; /* Add top padding to make space for close button */
 }
 
 .settings-sidebar {
@@ -1155,12 +1161,13 @@ input:checked + .slider:before {
 
 .close-btn {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 12px;
+    right: 12px;
     background: transparent;
     border: none;
     color: var(--text-secondary);
     cursor: pointer;
+    z-index: 1001; /* Ensure it's above other elements */
 }
 
 /* Animations */
@@ -1770,12 +1777,21 @@ kbd {
 }
 
 .message-bubble {
-    padding: 8px 12px;
+    padding: 2px 4px;
     border-radius: 12px;
     font-size: 14px;
     line-height: 1.5;
     word-wrap: break-word;
     position: relative;
+}
+
+.user-message-content {
+    white-space: pre-wrap;
+}
+
+.message-bubble preformatted {
+    white-space: pre-wrap;
+    font-family: inherit;
 }
 
 /* Comprehensive Markdown styling for message bubbles */
