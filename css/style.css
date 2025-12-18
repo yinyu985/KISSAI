@@ -1763,31 +1763,33 @@ kbd {
 }
 
 .message {
-    display: flex;
-    max-width: 100%; /* Allow full width */
+    display: block; /* Fix elastic flex behavior */
+    max-width: 100%;
     animation: fadeIn 0.15s ease-out;
+    margin-bottom: 12px;
+    clear: both;
 }
 
-.message.user {
-    align-self: flex-end;
-}
 
-.message.assistant {
-    align-self: flex-start;
-}
 
 .message-bubble {
-    padding: 2px 4px;
+    padding: 8px 12px; /* Increased padding slightly for better feel */
     border-radius: 12px;
     font-size: 14px;
-    line-height: 1.5;
-    word-wrap: break-word;
+    line-height: 1.6;
+    word-wrap: break-word; /* Return to standard */
+    overflow-wrap: break-word;
+    word-break: normal; /* Fix for aggressive breaking */
     position: relative;
+    max-width: 85%;
+    display: inline-block; /* Essential for block layout bubbles */
+    text-align: left;
 }
 
 .user-message-content {
-    white-space: normal;
-    word-wrap: break-word;
+    white-space: pre-wrap; /* Preserve formatting */
+    word-break: normal; /* Don't break words */
+    overflow-wrap: anywhere; /* Break everywhere if needed */
 }
 
 .message-bubble preformatted {
@@ -1915,24 +1917,27 @@ kbd {
 .message-bubble strong { font-weight: 600; }
 .message-bubble em { font-style: italic; }
 
+.message.user {
+    text-align: right;
+}
+
 .message.user .message-bubble {
     background: var(--accent-color);
     color: white;
-    max-width: 90%;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    overflow-x: hidden;
-    margin-left: auto; /* Right-align the bubble */
+    margin-left: auto; /* Push to right */
+    text-align: left; /* Reset text align inside bubble */
+    border-bottom-right-radius: 4px;
+}
+
+.message.assistant {
+    text-align: left;
 }
 
 .message.assistant .message-bubble {
     background: var(--bg-tertiary);
     color: var(--text-primary);
-    max-width: 90%;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    overflow-x: hidden;
-    margin-right: auto; /* Left-align the bubble */
+    margin-right: auto;
+    border-bottom-left-radius: 4px;
 }
 
 /* Streaming Cursor */

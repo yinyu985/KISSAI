@@ -214,12 +214,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 messageDiv.className = `message ${msg.role === 'user' ? 'user' : 'assistant'}`;
 
                 if (msg.role === 'user') {
-                    messageDiv.innerHTML = `<div class="message-bubble user-message-content">${msg.content}</div>`;
+                    const bubble = document.createElement('div');
+                    bubble.className = 'message-bubble user-message-content';
+                    bubble.textContent = msg.content;
+                    messageDiv.appendChild(bubble);
                 } else {
                     if (typeof window.markdownit === 'function') {
                         const md = window.markdownit({
                             html: true,
-                            breaks: false,
+                            breaks: true,
                             linkify: true,
                             typographer: true,
                             quotes: '""\'\'',
@@ -484,13 +487,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isUser) {
             // Add a special class to preserve formatting for user messages
-            messageDiv.innerHTML = `<div class="message-bubble user-message-content">${content}</div>`;
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble user-message-content';
+            bubble.textContent = content;
+            messageDiv.appendChild(bubble);
         } else {
             // Use markdown-it to render AI responses
             if (typeof window.markdownit === 'function') {
                 const md = window.markdownit({
                     html: true,
-                    breaks: false,
+                    breaks: true,
                     linkify: true,
                     typographer: true,
                     quotes: '""\'\'',
