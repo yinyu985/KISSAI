@@ -432,13 +432,13 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
           user-select:      text !important;
           -webkit-user-select: text !important;
           -moz-user-select: text !important;
-          white-space:      pre-wrap !important;
+          white-space:      normal !important;
           flex:             1;
         }
         .ai-message.user-message .ai-message-content {
           background-color: #4a90e2;
           color:            #fff !important;
-          white-space: pre-wrap !important;
+          white-space: normal !important;
           margin-left:      2%;
           margin-right:     2%;
         }
@@ -467,7 +467,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
         .ai-message.user-message .ai-message-content {
           background-color: #4a90e2;
           color:            #fff !important;
-          white-space: pre-wrap !important;
+          white-space: normal !important;
         }
         .ai-message-content * {
           font-size: 11px !important;

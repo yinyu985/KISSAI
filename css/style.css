@@ -1786,7 +1786,8 @@ kbd {
 }
 
 .user-message-content {
-    white-space: pre-wrap;
+    white-space: normal;
+    word-wrap: break-word;
 }
 
 .message-bubble preformatted {

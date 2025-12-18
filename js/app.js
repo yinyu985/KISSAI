@@ -75,14 +75,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     { id: 6, name: 'meta-llama/llama-4-maverick-17b-128e-instruct', favorite: false }
                 ]
             },
-            'Gemini': {
-                apiKey: '',
-                baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-                models: [
-                    { id: 7, name: 'google/gemini-pro', favorite: true },
-                    { id: 8, name: 'google/gemini-ultra', favorite: false }
-                ]
-            },
             'Cerebras': {
                 apiKey: '',
                 baseUrl: 'https://api.cerebras.ai/v1',
@@ -227,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (typeof window.markdownit === 'function') {
                         const md = window.markdownit({
                             html: true,
-                            breaks: true,
+                            breaks: false,
                             linkify: true,
                             typographer: true,
                             quotes: '""\'\'',
@@ -498,7 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof window.markdownit === 'function') {
                 const md = window.markdownit({
                     html: true,
-                    breaks: true,
+                    breaks: false,
                     linkify: true,
                     typographer: true,
                     quotes: '""\'\'',
