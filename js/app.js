@@ -128,7 +128,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (configData.general.wideMode === undefined) configData.general.wideMode = false;
     if (configData.general.contextLimit === undefined) configData.general.contextLimit = 20;
     if (!configData.roles) configData.roles = JSON.parse(JSON.stringify(defaultData.roles));
-    let currentProviderKey = 'Groq';
+    // 初始化currentProviderKey为配置中存在的第一个提供商
+let currentProviderKey = Object.keys(configData.providers)[0] || 'Groq';
     let isRequesting = false;
     let originalProviderName = '';
     let editingRoleId = null;
