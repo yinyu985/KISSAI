@@ -1510,15 +1510,14 @@ kbd {
     margin: 0 auto;
     box-sizing: border-box;
 }
-.chat-container:not(.has-messages) {
+.chat-container {
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
     height: 100%;
     width: 100%;
 }
 .chat-container:not(.has-messages) .welcome-section {
+    flex: 1;
     text-align: center;
     padding: 40px 20px;
     color: var(--text-secondary);
@@ -1527,7 +1526,6 @@ kbd {
     justify-content: center;
     align-items: center;
     width: 100%;
-    margin-bottom: 30px;
 }
 .input-container {
     padding: 0 20px 20px 20px;
@@ -1537,17 +1535,17 @@ kbd {
     flex-shrink: 0;
     z-index: 10;
 }
-.chat-container.has-messages .input-container,
-#chat-view.has-messages .input-container {
-    position: absolute;
+.chat-container .input-container,
+#chat-view .input-container {
+    position: sticky;
     bottom: 0px;
-    left: 50%;
-    transform: translateX(-50%);
     background: linear-gradient(transparent, var(--bg-primary) 30%);
     padding-bottom: 25px;
+    margin: 0 auto;
 }
 .chat-container.wide-mode .input-container {
     width: 700px !important;
+    margin: 0 auto;
 }
 .chat-container:not(.has-messages) .welcome-section h1 {
     font-size: 48px;
@@ -1616,7 +1614,7 @@ kbd {
 
 /* 在宽屏模式下，最大化气泡宽度 */
 .chat-container.wide-mode .message-bubble {
-    max-width: 98%;
+    max-width: 100%;
 }
 .user-message-content {
     white-space: pre-wrap;
@@ -1736,6 +1734,9 @@ kbd {
     margin-left: auto;
     text-align: left;
 }
+.chat-container.wide-mode .message.user .message-bubble {
+    margin-left: 0;
+}
 .message.assistant {
     text-align: left;
 }
@@ -1743,6 +1744,9 @@ kbd {
     background: var(--bg-tertiary);
     color: var(--text-primary);
     margin-right: auto;
+}
+.chat-container.wide-mode .message.assistant .message-bubble {
+    margin-right: 0;
 }
 .cursor {
     display: inline-block;
@@ -1764,8 +1768,10 @@ kbd {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     overflow: hidden;
+}
+#chat-view:not(.has-messages) {
+    justify-content: center;
 }
 .welcome-section {
     flex: none;
@@ -1786,12 +1792,6 @@ kbd {
     padding: 20px 20px 0 20px;
     width: 100%;
     box-sizing: border-box;
-}
-#chat-view.has-messages .chat-container {
-    padding-bottom: 120px;
-}
-#chat-view.has-messages {
-    justify-content: flex-start;
 }
 .toggle-container {
     display: flex;
