@@ -1,5 +1,41 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Helper to refresh icons with consistent size
+    // 创建全局markdown实例
+    let globalMd = null;
+    function getMarkdownInstance() {
+        if (globalMd === null && typeof window.markdownit === 'function') {
+            globalMd = window.markdownit({
+                html: true,
+                breaks: true,
+                linkify: true,
+                typographer: true,
+                quotes: '""\'\'',
+                tables: true,
+                taskLists: true,
+                sup: true,
+                footnote: true,
+                deflist: true,
+                abbr: true,
+                mark: true,
+                ins: true,
+                del: true
+            });
+
+            // 设置链接渲染规则
+            const defaultRender = globalMd.renderer.rules.link_open || function (tokens, idx, options, env, renderer) {
+                return renderer.renderToken(tokens, idx, options);
+            };
+            globalMd.renderer.rules.link_open = function (tokens, idx, options, env, renderer) {
+                const token = tokens[idx];
+                if (token && token.attrGet('target') !== '_blank') {
+                    token.attrSet('target', '_blank');
+                    token.attrSet('rel', 'noopener noreferrer');
+                }
+                return defaultRender(tokens, idx, options, env, renderer);
+            };
+        }
+        return globalMd;
+    }
+
     const updateIcons = () => {
         if (typeof lucide !== 'undefined') {
             lucide.createIcons({
@@ -11,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     };
-    // DOM Elements
     const sidebar = document.getElementById('sidebar');
     const sidebarHandle = document.getElementById('sidebar-handle');
     const settingsBtn = document.getElementById('settings-btn');
@@ -21,22 +56,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendBtn = document.getElementById('send-btn');
     const chatContainer = document.querySelector('.chat-container');
     const chatView = document.getElementById('chat-view');
-
-    // Provider elements
     const providerList = document.getElementById('provider-list');
     const modelList = document.getElementById('model-list');
     const fetchModelsBtn = document.getElementById('fetch-models-btn');
     const providerNameDisplay = document.getElementById('provider-name');
     const apiKeyInput = document.getElementById('api-key');
     const baseUrlInput = document.getElementById('base-url');
-
-
-    // Provider Title Actions
     const editProviderBtn = document.getElementById('edit-provider-btn');
     const saveProviderBtn = document.getElementById('save-provider-btn');
     const cancelProviderBtn = document.getElementById('cancel-provider-btn');
-
-    // Others
     const themeBtns = document.querySelectorAll('.theme-btn');
     const providersHeader = document.getElementById('providers-header');
     const providersListContainer = document.getElementById('providers-list');
@@ -48,19 +76,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportConfigBtn = document.getElementById('export-config-btn');
     const historyList = document.getElementById('history-list');
     const newChatBtn = document.getElementById('new-chat-btn');
-
-    // Language Dropdown
     const languageSelect = document.getElementById('language-select');
     const currentLanguageSpan = document.getElementById('current-language');
     const languageOptions = languageSelect.querySelector('.select-options');
-
-    // Default State
+    const contextControlBtn = document.getElementById('context-control-btn');
+    const contextCountDisplay = document.getElementById('context-count-display');
+    const contextLimitDropdown = document.getElementById('context-limit-dropdown');
     const defaultData = {
         general: {
             theme: 'dark',
             language: 'zh',
-            systemPrompt: '',
-            wideMode: false
+            wideMode: false,
+            contextLimit: 20,
+            lastUsedModel: '',
+            systemPrompt: '一、角色职责与内容标准\n作为顾问，必须以最高程度的坦诚与严格标准提供意见，主动识别并指出用户在判断中的假设缺陷、逻辑漏洞、侥幸心理、自我安慰与被低估的风险。对用户任何结论均需进行审慎审查，不得顺从、迎合或提供模糊不清的表述，当自身判断更合理时，必须坚持专业结论，保持毫无保留的直言态度。所有建议必须基于事实、可靠来源、严谨推理与可验证依据，并辅以明确、可执行的策略与步骤。回答必须优先促进用户"长期成长"，而非短期情绪安慰，并理解用户未明说的隐含意图。所有论述必须基于权威来源（学术研究、行业标准等）或公认的专业知识体系，应主动通过互联网检索并提供明确数据、文献或案例佐证，并禁止任何未经验证的推测或主观判断。针对复杂议题，必须先给出核心结论，再展开背景、推理脉络与系统分析。回答需确保全面性，提供包括正反论证、利弊评估、短期与长期影响等多视角分析，协助用户形成经得起审视的科学判断。涉及时效敏感议题（政策、市场、科技等），必须优先使用最新英文资料，并标注政策或数据的发布时间或生效日期。依据用户问题性质选择合适的专业深度，所有内容必须严格围绕用户核心诉求展开，不得跑题或形式化。\n\n二、语言风格、表达与格式规范\n全部回答必须使用简体中文，并保持高度正式、规范、具有权威性的语体风格，适用于学术、职场与公共交流。禁止出现口语化、随意、不严谨、模棱两可、情绪化或信息密度低的表达。回答必须为清晰的陈述句，不得使用反问、设问或引导性结尾。回答需直切核心，不得使用没有意义的客套话，不得在结尾预判用户下一步行为和询问，并禁止主动扩展无关话题。内容必须按逻辑展开，要求使用明确编号、标题和分段，以保证结构清晰，力求单屏可读。禁止使用 markdown 的"三个短横线"作为分隔符。禁止输出表格里带代码块等其他形式的复杂 markdown，影响渲染观感。'
         },
         providers: {
             'Groq': {
@@ -82,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     { id: 9, name: 'gpt-oss-120b', favorite: true },
                     { id: 10, name: 'qwen-3-235b-a22b-instruct-2507', favorite: true },
                     { id: 11, name: 'zai-glm-4.6', favorite: true }
-
                 ]
             }
         },
@@ -93,61 +121,120 @@ document.addEventListener('DOMContentLoaded', () => {
         ],
         history: []
     };
-
-    // Load State and ensure history exists
     let configData = JSON.parse(localStorage.getItem('kissai_config')) || defaultData;
     if (!configData.history) configData.history = [];
     if (!configData.general) configData.general = { ...defaultData.general };
-    // Ensure wideMode is default false if not set
+    if (configData.general.lastUsedModel === undefined) configData.general.lastUsedModel = '';
     if (configData.general.wideMode === undefined) configData.general.wideMode = false;
-
+    if (configData.general.contextLimit === undefined) configData.general.contextLimit = 20;
+    if (!configData.roles) configData.roles = JSON.parse(JSON.stringify(defaultData.roles));
     let currentProviderKey = 'Groq';
     let isRequesting = false;
     let originalProviderName = '';
     let editingRoleId = null;
-    let activeChatId = null; // Track current chat session
-
+    let activeChatId = null;
     function saveToStorage() {
         if (currentProviderKey && configData.providers[currentProviderKey]) {
             configData.providers[currentProviderKey].apiKey = apiKeyInput.value;
             configData.providers[currentProviderKey].baseUrl = baseUrlInput.value;
         }
         configData.general.systemPrompt = document.getElementById('global-system-prompt').value;
+        // 上下文限制值已经在其他地方设置，这里不需要重复读取输入框
         localStorage.setItem('kissai_config', JSON.stringify(configData));
     }
-
-    // --- Sidebar Logic ---
     sidebarHandle.addEventListener('click', () => {
         sidebar.classList.toggle('collapsed');
     });
-
     newChatBtn.addEventListener('click', () => {
         createNewChat();
     });
-
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                renderHistory();
+            }, 300);
+        });
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                searchInput.value = '';
+                renderHistory();
+                searchInput.blur();
+            }
+        });
+    }
+    function setDefaultModel() {
+        let initialModel = currentModelSpan.textContent;
+        if (!initialModel || initialModel === 'Loading...' || initialModel === '未选择模型') {
+            if (configData.general && configData.general.lastUsedModel) {
+                initialModel = configData.general.lastUsedModel;
+            }
+        }
+        const currentModel = initialModel;
+        let isValidModel = false;
+        let providerKey = null;
+        if (currentModel) {
+            providerKey = getProviderForModel(currentModel);
+            if (providerKey !== 'Default') {
+                isValidModel = true;
+                setModelDisplay(currentModel, providerKey);
+            }
+        }
+        if (!isValidModel) {
+            // 如果原始模型无效，只在配置中还有有效模型时才选择替代模型并更新lastUsedModel
+            for (const [pKey, provider] of Object.entries(configData.providers)) {
+                if (provider.models) {
+                    const favoriteModel = provider.models.find(m => m.favorite && m.enabled !== false);
+                    if (favoriteModel) {
+                        setModelDisplay(favoriteModel.name, pKey);
+                        // 仅在原始模型确实不存在时才更新lastUsedModel
+                        if (configData.general && configData.general.lastUsedModel !== favoriteModel.name) {
+                            configData.general.lastUsedModel = favoriteModel.name;
+                            saveToStorage();
+                        }
+                        return;
+                    }
+                }
+            }
+            for (const [pKey, provider] of Object.entries(configData.providers)) {
+                if (provider.models) {
+                    const enabledModel = provider.models.find(m => m.enabled !== false);
+                    if (enabledModel) {
+                        setModelDisplay(enabledModel.name, pKey);
+                        // 仅在原始模型确实不存在时才更新lastUsedModel
+                        if (configData.general && configData.general.lastUsedModel !== enabledModel.name) {
+                            configData.general.lastUsedModel = enabledModel.name;
+                            saveToStorage();
+                        }
+                        return;
+                    }
+                }
+            }
+            currentModelSpan.textContent = '未选择模型';
+        }
+    }
+    setDefaultModel();
     function createNewChat() {
-        // Clear active states in sidebar
         document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
-
-        // Reset chat UI
+        if (searchInput) {
+            searchInput.value = '';
+        }
         const chatMessages = document.getElementById('chat-messages');
         if (chatMessages) chatMessages.innerHTML = '';
-
         const chatView = document.getElementById('chat-view');
         if (chatView) chatView.classList.remove('has-messages');
-
         if (chatContainer) {
             chatContainer.classList.remove('has-messages');
             updateChatLayout();
         }
-
         const welcomeSection = document.querySelector('.welcome-section');
         if (welcomeSection) welcomeSection.style.display = 'flex';
-
         const newChat = {
             id: Date.now(),
             title: '空白对话',
-            messages: [], // Store messages here
+            messages: [],
             time: Date.now()
         };
         activeChatId = newChat.id;
@@ -155,28 +242,55 @@ document.addEventListener('DOMContentLoaded', () => {
         renderHistory();
         saveToStorage();
     }
-
+    function highlightKeyword(text, keyword) {
+        if (!keyword) return text;
+        const regex = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return text.replace(regex, '<span class="search-highlight">$1</span>');
+    }
+    function searchChats(keyword) {
+        if (!keyword) return configData.history;
+        const lowerKeyword = keyword.toLowerCase();
+        return configData.history.filter(chat => {
+            if (chat.title.toLowerCase().includes(lowerKeyword)) return true;
+            if (chat.messages && chat.messages.some(msg =>
+                msg.content.toLowerCase().includes(lowerKeyword)
+            )) return true;
+            return false;
+        });
+    }
     function renderHistory() {
         if (!historyList) return;
         historyList.innerHTML = '';
-        if (configData.history.length === 0) {
-            historyList.innerHTML = `
-                <div class="empty-state">
-                    <i data-lucide="message-square"></i>
-                    <span>此处显示您的对话历史记录。</span>
-                </div>
-            `;
+        const searchInput = document.getElementById('search-input');
+        const searchKeyword = searchInput ? searchInput.value.trim() : '';
+        const filteredChats = searchChats(searchKeyword);
+        if (filteredChats.length === 0) {
+            if (searchKeyword) {
+                historyList.innerHTML = `
+                    <div class="empty-state">
+                        <i data-lucide="search"></i>
+                        <span>未找到包含 "${searchKeyword}" 的对话</span>
+                    </div>
+                `;
+            } else {
+                historyList.innerHTML = `
+                    <div class="empty-state">
+                        <i data-lucide="message-square"></i>
+                        <span>此处显示您的对话历史记录。</span>
+                    </div>
+                `;
+            }
             updateIcons();
             return;
         }
-
-        configData.history.forEach(chat => {
+        filteredChats.forEach(chat => {
             const item = document.createElement('div');
             item.className = 'history-item' + (activeChatId === chat.id ? ' active' : '');
+            const highlightedTitle = highlightKeyword(chat.title, searchKeyword);
             item.innerHTML = `
                 <div class="history-item-content">
                     <i data-lucide="message-square"></i>
-                    <span>${chat.title}</span>
+                    <span>${highlightedTitle}</span>
                 </div>
                 <div class="history-item-actions">
                     <i data-lucide="trash" onclick="event.stopPropagation(); deleteHistory(${chat.id})"></i>
@@ -189,67 +303,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         if (typeof lucide !== 'undefined') updateIcons();
     }
-
     function loadChat(id) {
         const chat = configData.history.find(c => c.id === id);
         if (!chat) return;
-
         activeChatId = id;
-
-        // Reset UI
         const chatMessages = document.getElementById('chat-messages');
         if (chatMessages) chatMessages.innerHTML = '';
-
         const chatView = document.getElementById('chat-view');
         const welcomeSection = document.querySelector('.welcome-section');
-
         if (chat.messages && chat.messages.length > 0) {
             if (chatView) chatView.classList.add('has-messages');
             if (chatContainer) chatContainer.classList.add('has-messages');
             if (welcomeSection) welcomeSection.style.display = 'none';
-
             chat.messages.forEach(msg => {
-                // We use a simplified addMessage logic here to avoid re-saving
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${msg.role === 'user' ? 'user' : 'assistant'}`;
-
                 if (msg.role === 'user') {
                     const bubble = document.createElement('div');
                     bubble.className = 'message-bubble user-message-content';
                     bubble.textContent = msg.content;
                     messageDiv.appendChild(bubble);
                 } else {
-                    if (typeof window.markdownit === 'function') {
-                        const md = window.markdownit({
-                            html: true,
-                            breaks: true,
-                            linkify: true,
-                            typographer: true,
-                            quotes: '""\'\'',
-                            tables: true,
-                            taskLists: true,
-                            sup: true,
-                            footnote: true,
-                            deflist: true,
-                            abbr: true,
-                            mark: true,
-                            ins: true,
-                            del: true
-                        }).use(anchorPlugin);
-
-                        // Set default target for all links
-                        const defaultRender = md.renderer.rules.link_open || function (tokens, idx, options, env, renderer) {
-                            return renderer.renderToken(tokens, idx, options);
-                        };
-                        md.renderer.rules.link_open = function (tokens, idx, options, env, renderer) {
-                            const token = tokens[idx];
-                            if (token && token.attrGet('target') !== '_blank') {
-                                token.attrSet('target', '_blank');
-                                token.attrSet('rel', 'noopener noreferrer');
-                            }
-                            return defaultRender(tokens, idx, options, env, renderer);
-                        };
-
+                    const md = getMarkdownInstance();
+                    if (md) {
                         messageDiv.innerHTML = `<div class="message-bubble">${md.render(msg.content)}</div>`;
                     } else {
                         messageDiv.innerHTML = `<div class="message-bubble">${msg.content}</div>`;
@@ -263,10 +339,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (chatContainer) chatContainer.classList.remove('has-messages');
             if (welcomeSection) welcomeSection.style.display = 'flex';
         }
-
-        renderHistory(); // Refresh active state
+        renderHistory();
     }
-
     window.deleteHistory = (id) => {
         configData.history = configData.history.filter(chat => chat.id !== id);
         if (activeChatId === id) {
@@ -280,28 +354,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         saveToStorage();
     };
-
-    // --- Chat Input Logic ---
     chatInput.addEventListener('input', () => {
         chatInput.style.height = 'auto';
         chatInput.style.height = Math.min(chatInput.scrollHeight, 240) + 'px';
         sendBtn.disabled = chatInput.value.trim() === '';
     });
-
     chatInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
-            // 按回车键发送（如果没有按Shift）
-            e.preventDefault(); // 阻止默认换行行为
+            e.preventDefault();
             if (!sendBtn.disabled && chatInput.value.trim()) {
-                sendBtn.click(); // 触发发送按钮点击事件
+                sendBtn.click();
             }
         }
-        // 按Shift+回车键会自然换行，不需要额外处理
     });
-
     const toggleApiKeyBtn = document.querySelector('.action-icons .icon-btn:first-child');
     const copyApiKeyBtn = document.querySelector('.action-icons .icon-btn:last-child');
-
     if (toggleApiKeyBtn) {
         toggleApiKeyBtn.addEventListener('click', () => {
             const isPassword = apiKeyInput.type === 'password';
@@ -310,7 +377,6 @@ document.addEventListener('DOMContentLoaded', () => {
             updateIcons();
         });
     }
-
     if (copyApiKeyBtn) {
         copyApiKeyBtn.addEventListener('click', () => {
             navigator.clipboard.writeText(apiKeyInput.value);
@@ -322,29 +388,39 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 1500);
         });
     }
-
     const wideModeCheckbox = document.getElementById('wide-mode-checkbox');
-
     function updateChatLayout() {
         if (!chatContainer) return;
         const isWide = configData.general.wideMode;
         chatContainer.classList.toggle('wide-mode', isWide);
         chatContainer.classList.toggle('narrow-mode', !isWide);
     }
-
-    // --- Settings Logic ---
     settingsBtn.addEventListener('click', () => {
         settingsView.classList.add('active');
         renderGeneralSettings();
     });
-
     closeSettingsBtn.addEventListener('click', () => {
         saveToStorage();
         settingsView.classList.remove('active');
     });
-
+    settingsView.addEventListener('click', (e) => {
+        if (e.target === settingsView) {
+            saveToStorage();
+            settingsView.classList.remove('active');
+        }
+    });
     function renderGeneralSettings() {
-        document.getElementById('global-system-prompt').value = configData.general.systemPrompt || '';
+        const promptTextarea = document.getElementById('global-system-prompt');
+        const defaultPrompt = promptTextarea.value; // Read HTML default
+
+        // Only override if config has a value, otherwise keep HTML default
+        if (configData.general.systemPrompt !== undefined && configData.general.systemPrompt !== null) {
+            promptTextarea.value = configData.general.systemPrompt;
+        } else if (!defaultPrompt) {
+            // If both config and HTML are empty, set to empty string
+            promptTextarea.value = '';
+        }
+        // If config is empty but HTML has default, keep HTML default (do nothing)
         themeBtns.forEach(btn => {
             btn.classList.toggle('active', btn.getAttribute('data-theme') === configData.general.theme);
         });
@@ -356,9 +432,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (wideModeCheckbox) {
             wideModeCheckbox.checked = !!configData.general.wideMode;
         }
-        renderShortcuts();
+        updateChatLayout();
     }
-
     if (wideModeCheckbox) {
         wideModeCheckbox.addEventListener('change', () => {
             configData.general.wideMode = wideModeCheckbox.checked;
@@ -366,13 +441,10 @@ document.addEventListener('DOMContentLoaded', () => {
             saveToStorage();
         });
     }
-
-    // Language Dropdown
     languageSelect.addEventListener('click', (e) => {
         e.stopPropagation();
         languageOptions.classList.toggle('active');
     });
-
     languageOptions.querySelectorAll('.select-option').forEach(opt => {
         opt.addEventListener('click', (e) => {
             const val = opt.getAttribute('data-value');
@@ -383,81 +455,57 @@ document.addEventListener('DOMContentLoaded', () => {
             saveToStorage();
         });
     });
-
-    // Fetch Models Logic
     fetchModelsBtn.addEventListener('click', async () => {
         const icon = fetchModelsBtn.querySelector('i') || fetchModelsBtn.querySelector('svg');
         const originalApiKey = apiKeyInput.value;
         const originalBaseUrl = baseUrlInput.value;
-
         if (!originalApiKey) {
-            alert('请先输入 API Key');
             return;
         }
-
         if (icon) {
             icon.classList.add('spinning');
         }
-        fetchModelsBtn.classList.add('loading'); // Use class for state
+        fetchModelsBtn.classList.add('loading');
         fetchModelsBtn.disabled = true;
-
         try {
-            // Clean and validate Base URL
             let cleanBaseUrl = originalBaseUrl.trim();
-
-            // Remove trailing slashes
             if (cleanBaseUrl.endsWith('/')) {
                 cleanBaseUrl = cleanBaseUrl.slice(0, -1);
             }
-
-            // Ensure it starts with http:// or https://
             if (!cleanBaseUrl.startsWith('http://') && !cleanBaseUrl.startsWith('https://')) {
-                alert('Base URL 必须以 http:// 或 https:// 开头');
                 return;
             }
-
-            // Use normalizeBaseUrl function to handle API version paths properly
             cleanBaseUrl = normalizeBaseUrl(cleanBaseUrl);
-
-            // Check if it's Google Gemini API and handle differently
             let response;
             if (cleanBaseUrl.includes('generativelanguage.googleapis.com')) {
-                // Google Gemini API uses API key as query parameter for models
                 response = await fetch(`${cleanBaseUrl}/models?key=${originalApiKey}`, {
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    // Add timeout
-                    signal: AbortSignal.timeout(10000) // 10 second timeout
+                    signal: AbortSignal.timeout(10000)
                 });
             } else {
-                // Standard OpenAI-compatible API
                 response = await fetch(`${cleanBaseUrl}/models`, {
                     headers: {
                         'Authorization': `Bearer ${originalApiKey}`,
                         'Content-Type': 'application/json'
                     },
-                    // Add timeout
-                    signal: AbortSignal.timeout(10000) // 10 second timeout
+                    signal: AbortSignal.timeout(10000)
                 });
             }
-
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
             const data = await response.json();
             const fetchedModels = data.data.map(m => ({
                 id: m.id,
                 name: m.id,
                 selected: false
             }));
-
-            // Show modal with fetched models
             window.showModelModal(fetchedModels);
         } catch (error) {
             if (error.name === 'AbortError') {
-                alert('请求超时，请检查网络连接或API端点是否可用');
+                console.error('请求超时，请检查网络连接或API端点是否可用');
             } else {
-                alert('获取模型失败，请检查 API Key 和 Base URL 是否正确：' + error.message);
+                console.error('获取模型失败，请检查 API Key 和 Base URL 是否正确：' + error.message);
             }
         } finally {
             const iconAfter = fetchModelsBtn.querySelector('i') || fetchModelsBtn.querySelector('svg');
@@ -468,8 +516,6 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchModelsBtn.disabled = false;
         }
     });
-
-    // Helper function to find provider by model name
     function findProviderByModel(modelName) {
         for (const [providerKey, provider] of Object.entries(configData.providers)) {
             if (provider.models && provider.models.some(m => m.name === modelName)) {
@@ -478,68 +524,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return null;
     }
-
-    // Add message to chat
     function addMessage(content, isUser = false) {
         const chatMessages = document.getElementById('chat-messages');
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
-
         if (isUser) {
-            // Add a special class to preserve formatting for user messages
             const bubble = document.createElement('div');
             bubble.className = 'message-bubble user-message-content';
             bubble.textContent = content;
             messageDiv.appendChild(bubble);
         } else {
-            // Use markdown-it to render AI responses
-            if (typeof window.markdownit === 'function') {
-                const md = window.markdownit({
-                    html: true,
-                    breaks: true,
-                    linkify: true,
-                    typographer: true,
-                    quotes: '""\'\'',
-                    tables: true,
-                    taskLists: true,
-                    sup: true,
-                    footnote: true,
-                    deflist: true,
-                    abbr: true,
-                    mark: true,
-                    ins: true,
-                    del: true
-                }).use(anchorPlugin);
-
-                // Set default target for all links
-                const defaultRender = md.renderer.rules.link_open || function (tokens, idx, options, env, renderer) {
-                    return renderer.renderToken(tokens, idx, options);
-                };
-                md.renderer.rules.link_open = function (tokens, idx, options, env, renderer) {
-                    const token = tokens[idx];
-                    if (token && token.attrGet('target') !== '_blank') {
-                        token.attrSet('target', '_blank');
-                        token.attrSet('rel', 'noopener noreferrer');
-                    }
-                    return defaultRender(tokens, idx, options, env, renderer);
-                };
-
+            const md = getMarkdownInstance();
+            if (md) {
                 messageDiv.innerHTML = `<div class="message-bubble">${md.render(content)}</div>`;
             } else {
                 messageDiv.innerHTML = `<div class="message-bubble">${content}</div>`;
             }
         }
-
         chatMessages.appendChild(messageDiv);
-
-        // Store message in active chat history
         if (activeChatId) {
             const chat = configData.history.find(c => c.id === activeChatId);
             if (chat) {
                 if (!chat.messages) chat.messages = [];
                 chat.messages.push({ role: isUser ? 'user' : 'assistant', content });
-
-                // If this is the first user message, update the title
                 if (isUser && chat.title === '空白对话') {
                     chat.title = content.length > 20 ? content.substring(0, 20) + '...' : content;
                     renderHistory();
@@ -547,145 +554,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveToStorage();
             }
         }
-
-        // Only scroll to bottom if user is at the bottom of the chat
         const shouldScroll = chatMessages.scrollHeight - chatMessages.scrollTop <= chatMessages.clientHeight + 10;
         if (shouldScroll) {
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
-
-        // Add has-messages class to chat container (to move input to bottom)
         const chatContainer = document.querySelector('.chat-container');
         if (chatContainer) {
             chatContainer.classList.add('has-messages');
         }
-
-        // Also add to chat-view for consistency
         const chatView = document.getElementById('chat-view');
         if (chatView) {
             chatView.classList.add('has-messages');
         }
     }
-
-    // Add AI message with streaming support
     function addAIMessageStream() {
         const chatMessages = document.getElementById('chat-messages');
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message assistant';
         messageDiv.innerHTML = `<div class="message-bubble">|</div>`;
         chatMessages.appendChild(messageDiv);
-
-        // Only scroll to bottom if user is at the bottom of the chat
         const shouldScroll = chatMessages.scrollHeight - chatMessages.scrollTop <= chatMessages.clientHeight + 10;
         if (shouldScroll) {
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
-
-        // Add has-messages class to chat container (to move input to bottom)
         const chatContainer = document.querySelector('.chat-container');
         if (chatContainer) {
             chatContainer.classList.add('has-messages');
         }
-
-        // Also add to chat-view for consistency
         const chatView = document.getElementById('chat-view');
         if (chatView) {
             chatView.classList.add('has-messages');
         }
-
         return messageDiv;
     }
-
-    // Update AI message content
     function updateAIMessageContent(messageElement, content) {
         const bubble = messageElement.querySelector('.message-bubble');
-        if (bubble && typeof window.markdownit === 'function') {
-            const md = new window.markdownit({
-                html: true,
-                breaks: true,
-                linkify: true,
-                typographer: true,
-                quotes: '""\'\'',
-                tables: true,
-                taskLists: true,
-                sup: true,
-                footnote: true,
-                deflist: true,
-                abbr: true,
-                mark: true,
-                ins: true,
-                del: true
-            }).use(anchorPlugin);
-
-            // Set default target for all links
-            const defaultRender = md.renderer.rules.link_open || function (tokens, idx, options, env, renderer) {
-                return renderer.renderToken(tokens, idx, options);
-            };
-            md.renderer.rules.link_open = function (tokens, idx, options, env, renderer) {
-                const token = tokens[idx];
-                if (token && token.attrGet('target') !== '_blank') {
-                    token.attrSet('target', '_blank');
-                    token.attrSet('rel', 'noopener noreferrer');
-                }
-                return defaultRender(tokens, idx, options, env, renderer);
-            };
-
+        const md = getMarkdownInstance();
+        if (bubble && md) {
             bubble.innerHTML = `${md.render(content)}<span class="cursor"></span>`;
         } else if (bubble) {
             bubble.textContent = content + '|';
         }
     }
-
-    // Create a markdown-it plugin to remove anchor links like {#...}
-    function anchorPlugin(md) {
-        const rule = function (state) {
-            for (let i = 0; i < state.tokens.length; i++) {
-                if (state.tokens[i].type === 'text') {
-                    state.tokens[i].content = state.tokens[i].content.replace(/\{#[^}]+\}/g, '');
-                }
-            }
-        };
-
-        md.core.ruler.push('remove_anchors', rule);
-    }
-
-    // Finalize AI message (remove cursor)
-    function finalizeAIMessage(messageElement, content) {
+        function finalizeAIMessage(messageElement, content) {
         const bubble = messageElement.querySelector('.message-bubble');
-        if (bubble && content && typeof window.markdownit === 'function') {
-            const md = window.markdownit({
-                html: true,
-                breaks: true,
-                linkify: true,
-                typographer: true,
-                quotes: '""\'\'',
-                tables: true,
-                taskLists: true,
-                sup: true,
-                footnote: true,
-                deflist: true,
-                abbr: true,
-                mark: true,
-                ins: true,
-                del: true
-            }).use(anchorPlugin);
-
-            // Set default target for all links
-            const defaultRender = md.renderer.rules.link_open || function (tokens, idx, options, env, renderer) {
-                return renderer.renderToken(tokens, idx, options);
-            };
-            md.renderer.rules.link_open = function (tokens, idx, options, env, renderer) {
-                const token = tokens[idx];
-                if (token && token.attrGet('target') !== '_blank') {
-                    token.attrSet('target', '_blank');
-                    token.attrSet('rel', 'noopener noreferrer');
-                }
-                return defaultRender(tokens, idx, options, env, renderer);
-            };
-
+        const md = getMarkdownInstance();
+        if (bubble && content && md) {
             bubble.innerHTML = md.render(content);
-
-            // Store AI response in active chat
             if (activeChatId) {
                 const chat = configData.history.find(c => c.id === activeChatId);
                 if (chat) {
@@ -697,107 +612,70 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (bubble && content) {
             bubble.textContent = content;
         } else if (bubble) {
-            // Fallback: just remove cursor
             const cursor = bubble.querySelector('.cursor');
             if (cursor) cursor.remove();
         }
     }
-
-    // Normalize base URL - keep existing API version path (like /v1, /v1beta, etc.)
-    // Only add /v1 if no API version path is found
     function normalizeBaseUrl(baseUrl) {
         let cleanUrl = baseUrl.trim();
-
-        // Remove trailing slashes
         if (cleanUrl.endsWith('/')) {
             cleanUrl = cleanUrl.slice(0, -1);
         }
-
-        // Check if URL already contains a version path like /v1, /v1beta, /v1alpha, etc.
         const versionMatch = cleanUrl.match(/\/v\d+(beta|alpha)?/i);
         if (versionMatch) {
-            // If a version path exists, return everything up to and including that version
             const versionIndex = versionMatch.index + versionMatch[0].length;
             return cleanUrl.substring(0, versionIndex);
         } else {
-            // If no version path found, return the URL as is without adding anything
-            // Different providers may have different API structures (e.g., Google uses /v1beta, some might have no version)
             return cleanUrl;
         }
     }
-
-    // Display error message in chat
     function displayErrorMessage(error, httpStatus = null) {
         let errorContent = '';
-
         if (httpStatus) {
             errorContent = `HTTP ${httpStatus}: ${error.message || '请求失败'}`;
         } else {
             errorContent = error.message || '未知错误';
         }
-
-        // Add the error as an assistant message
         addMessage(errorContent, false);
     }
-
-    // Send message to API with streaming support
     async function sendMessageToAPI(message, modelName, signal) {
         const providerInfo = findProviderByModel(modelName);
         if (!providerInfo) {
             throw new Error(`未找到模型 ${modelName} 的提供商配置`);
         }
-
         const { provider } = providerInfo;
         if (!provider.apiKey) {
             throw new Error('API Key 未配置');
         }
-
-        // Clean and prepare Base URL using the normalizeBaseUrl function
         const baseUrl = normalizeBaseUrl(provider.baseUrl);
-
-        // Prepare messages array with context
         const messages = [];
         const systemPrompt = configData.general.systemPrompt;
         if (systemPrompt && systemPrompt.trim()) {
             messages.push({ role: 'system', content: systemPrompt.trim() });
         }
-
-        // Add conversation history if available
         if (activeChatId) {
             const chat = configData.history.find(c => c.id === activeChatId);
             if (chat && chat.messages) {
-                chat.messages.forEach(msg => {
+                const limit = configData.general.contextLimit || 20;
+                const messagesToSend = chat.messages.slice(-limit);
+                messagesToSend.forEach(msg => {
                     messages.push({ role: msg.role, content: msg.content });
                 });
             }
         }
-
-        // Add current user message (if not already added via addMessage earlier)
-        // Wait, addMessage already pushes to history. So we should take the history but EXCLUDE the last one if we're adding it here?
-        // Actually, sendBtn handler calls addMessage(message, true) BEFORE sendMessageToAPI.
-        // So the last message in history IS the current message.
-
-        // Create initial AI message element for streaming
         const aiMessageElement = addAIMessageStream();
         let fullContent = '';
-
         try {
             const controller = new AbortController();
-            // Combine the passed signal with our own timeout
             const combinedSignal = new AbortController();
-
-            // If a signal was provided, combine it with timeout
             if (signal) {
                 signal.addEventListener('abort', () => {
                     combinedSignal.abort();
                 });
             }
-
-            // Set timeout (60s) and add to combined signal
             const timeoutId = setTimeout(() => {
                 combinedSignal.abort();
             }, 60000);
-
             const response = await fetch(`${baseUrl}/chat/completions`, {
                 method: 'POST',
                 headers: {
@@ -807,101 +685,85 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     model: modelName,
                     messages: messages,
-                    stream: true,  // Enable streaming
-                    stream_options: { include_usage: true }  // Include token usage
+                    stream: true,
+                    stream_options: { include_usage: true }
                 }),
                 signal: combinedSignal.signal
             });
-
             clearTimeout(timeoutId);
-
             if (!response.ok) {
-                // Try to get more detailed error information
                 let errorDetails = '';
                 try {
                     const errorData = await response.json();
                     errorDetails = errorData.error?.message || errorData.message || '';
                 } catch (e) {
-                    // If we can't parse JSON, use status text
                     errorDetails = response.statusText;
                 }
-
                 const error = new Error(errorDetails || `HTTP ${response.status}`);
                 error.status = response.status;
                 throw error;
             }
-
             if (!response.body) {
                 throw new Error('Response body is null');
             }
-
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
-
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
-
                 buffer += decoder.decode(value, { stream: true });
                 const lines = buffer.split('\n');
-                buffer = lines.pop() || ''; // Keep last incomplete line in buffer
-
+                buffer = lines.pop() || '';
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
-                        const data = line.slice(6); // Remove 'data: ' prefix
+                        const data = line.slice(6);
                         if (data === '[DONE]') {
                             break;
                         }
-
                         try {
                             const parsed = JSON.parse(data);
                             if (parsed.choices && parsed.choices.length > 0) {
                                 const delta = parsed.choices[0];
                                 if (delta.delta && delta.delta.content) {
                                     fullContent += delta.delta.content;
-                                    // Update the AI message content in real-time
                                     updateAIMessageContent(aiMessageElement, fullContent);
                                 }
                             }
                         } catch (e) {
-                            // Skip invalid JSON lines
                             console.warn('Failed to parse SSE data:', e);
                         }
                     }
                 }
             }
-
-            // Finalize the message (remove cursor)
             finalizeAIMessage(aiMessageElement, fullContent);
-
             reader.releaseLock();
             return fullContent;
         } catch (error) {
-            // If it's an AbortError (user cancelled), keep the partial content
-            if (error.name === 'AbortError' && fullContent) {
-                // Just finalize the current partial content without removing it
-                finalizeAIMessage(aiMessageElement, fullContent);
-                return fullContent; // Don't throw error for cancelled requests
+            if (error.name === 'AbortError') {
+                if (fullContent) {
+                    finalizeAIMessage(aiMessageElement, fullContent);
+                    return fullContent;
+                }
+                // If aborted with no content (e.g. immediate stop), remove partial element
+                if (aiMessageElement && aiMessageElement.parentNode) {
+                    aiMessageElement.parentNode.removeChild(aiMessageElement);
+                }
+                return null;
             }
 
-            // For other errors, remove the streaming message element
+            // Real Error Handling
             if (aiMessageElement && aiMessageElement.parentNode) {
-                aiMessageElement.parentNode.removeChild(aiMessageElement);
+                // Convert the partial AI message into an error message bubble
+                aiMessageElement.innerHTML = `<div style="color:var(--accent-red)">Error: ${error.message || '请求失败'}</div>`;
             }
-
-            // Re-throw error to be handled by the caller
-            throw error;
+            console.error('API Request Failed:', error);
+            throw error; // Re-throw to be caught by caller if needed
         }
     }
-
-    // Store the abort controller globally to allow stopping requests
     let abortController = null;
-
-    // Send / Stop Button Logic
     sendBtn.addEventListener('click', async () => {
         if (isRequesting) {
-            // Stop the ongoing request
             if (abortController) {
                 abortController.abort();
             }
@@ -911,36 +773,23 @@ document.addEventListener('DOMContentLoaded', () => {
             updateIcons();
             return;
         }
-
         const message = chatInput.value.trim();
         if (!message) return;
-
-        const currentModel = currentModelSpan.textContent;
-
+        const currentModel = getCurrentModelName();
         try {
             isRequesting = true;
             sendBtn.innerHTML = '<div class="stop-icon"></div>';
             sendBtn.classList.add('stop-mode');
-            sendBtn.disabled = false; // MUST be clickable
+            sendBtn.disabled = false;
             chatInput.disabled = true;
-
-            // Immediately hide welcome section
             if (chatContainer) chatContainer.classList.add('has-messages');
             if (chatView) chatView.classList.add('has-messages');
-
-            // Create new abort controller for this request
             abortController = new AbortController();
-
-            // Add user message
             addMessage(message, true);
             chatInput.value = '';
             chatInput.style.height = 'auto';
-
-            // Send to API (this handles AI response internally with streaming)
             await sendMessageToAPI(message, currentModel, abortController.signal);
-
         } catch (error) {
-            // Only display error if it's not an AbortError (user cancelled)
             if (error.name !== 'AbortError') {
                 displayErrorMessage(error, error.status);
             }
@@ -955,8 +804,6 @@ document.addEventListener('DOMContentLoaded', () => {
             chatInput.focus();
         }
     });
-
-    // JSON Export Logic
     exportConfigBtn.addEventListener('click', () => {
         saveToStorage();
         const blob = new Blob([JSON.stringify(configData, null, 2)], { type: 'application/json' });
@@ -969,67 +816,70 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     });
-
-    // --- Provider Title Editing ---
     editProviderBtn.addEventListener('click', () => {
         originalProviderName = providerNameDisplay.textContent;
         providerNameDisplay.contentEditable = "true";
         providerNameDisplay.focus();
-        document.execCommand('selectAll', false, null);
+        providerNameDisplay.focus();
+        const range = document.createRange();
+        range.selectNodeContents(providerNameDisplay);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
         editProviderBtn.classList.add('hidden');
         saveProviderBtn.classList.remove('hidden');
         cancelProviderBtn.classList.remove('hidden');
-
-        // Ensure continued editing capability after paste or other events
         providerNameDisplay.addEventListener('input', function () {
-            // Keep element editable
             providerNameDisplay.contentEditable = "true";
         });
-
-        // Also make sure to keep focus after paste
         providerNameDisplay.addEventListener('paste', function (e) {
             setTimeout(() => {
                 providerNameDisplay.contentEditable = "true";
                 providerNameDisplay.focus();
-                // Move cursor to end of text after paste
                 const range = document.createRange();
                 const selection = window.getSelection();
                 range.selectNodeContents(providerNameDisplay);
-                range.collapse(false); // false means collapse to end
+                range.collapse(false);
                 selection.removeAllRanges();
                 selection.addRange(range);
             }, 10);
         });
+        providerNameDisplay.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveProviderBtn.click();
+            }
+        });
     });
-
     function exitTitleEdit() {
         providerNameDisplay.contentEditable = "false";
         editProviderBtn.classList.remove('hidden');
         saveProviderBtn.classList.add('hidden');
         cancelProviderBtn.classList.add('hidden');
     }
-
     saveProviderBtn.addEventListener('click', () => {
         const newName = providerNameDisplay.textContent.trim();
         if (newName && newName !== currentProviderKey) {
             configData.providers[newName] = configData.providers[currentProviderKey];
             delete configData.providers[currentProviderKey];
-
-            // Update the sidebar item in-place or via re-render
             currentProviderKey = newName;
             renderProviderList();
-            renderModels(); // Refresh the list
+            renderModels();
             saveToStorage();
         }
         exitTitleEdit();
     });
-
     cancelProviderBtn.addEventListener('click', () => {
         providerNameDisplay.textContent = originalProviderName;
         exitTitleEdit();
     });
-
-    // --- Settings Tab Logic ---
+    function getCurrentModelName() {
+        const internalSpan = currentModelSpan.querySelector('span');
+        if (internalSpan) {
+            return internalSpan.textContent;
+        }
+        return currentModelSpan.textContent;
+    }
     function switchTab(tabId, element) {
         if (!tabId) return;
         if (tabId === 'providers-toggle') {
@@ -1045,13 +895,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (targetNav) targetNav.classList.add('active');
         }
         document.querySelectorAll('.settings-content').forEach(content => content.classList.remove('active'));
-
         if (tabId.startsWith('provider-')) {
             saveToStorage();
             currentProviderKey = element.getAttribute('data-key');
             providerNameDisplay.textContent = currentProviderKey;
             apiKeyInput.value = configData.providers[currentProviderKey].apiKey || '';
-            // Show real API key, not masked version
             baseUrlInput.value = configData.providers[currentProviderKey].baseUrl || '';
             document.getElementById('provider-settings').classList.add('active');
             renderModels();
@@ -1074,12 +922,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (content) {
                 content.classList.add('active');
                 if (tabId === 'general') renderGeneralSettings();
-                if (tabId === 'role-presets') renderRoles();
+                if (tabId === 'role-presets') {
+                    if (!configData.roles || configData.roles.length === 0) {
+                        configData.roles = JSON.parse(JSON.stringify(defaultData.roles));
+                    }
+                    renderRoles();
+                }
             }
         }
         if (typeof lucide !== 'undefined') updateIcons();
     }
-
     const settingsSidebar = document.querySelector('.settings-sidebar');
     if (settingsSidebar) {
         settingsSidebar.addEventListener('click', (e) => {
@@ -1087,29 +939,57 @@ document.addEventListener('DOMContentLoaded', () => {
             if (item) switchTab(item.getAttribute('data-tab'), item);
         });
     }
-
     function renderProviderList() {
         providersListContainer.querySelectorAll('.settings-nav-item:not(.add-btn)').forEach(el => el.remove());
-        Object.keys(configData.providers).forEach(provider => {
+        const colors = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#06B6D4', '#3B82F6', '#A855F7'];
+        const providers = Object.keys(configData.providers);
+        providers.forEach((provider, index) => {
             const item = document.createElement('div');
             item.className = 'settings-nav-item';
             if (provider === currentProviderKey) item.classList.add('active');
             item.setAttribute('data-tab', `provider-${provider.toLowerCase()}`);
             item.setAttribute('data-key', provider);
+            const color = colors[index % colors.length];
+            let label = provider;
+            if (provider.length > 2) {
+                label = provider.charAt(0).toUpperCase() + provider.charAt(provider.length - 1).toUpperCase();
+            } else {
+                label = provider.toUpperCase();
+            }
             item.innerHTML = `
-                <div style="display: flex; align-items: center; flex: 1;">
-                    <img src="https://api.dicebear.com/7.x/initials/svg?seed=${provider}" style="width:10px;height:10px;border-radius:2px;margin-right:8px;">
-                    <span style="flex: 1;">${provider}</span>
+                <div style="display: flex; align-items: center; flex: 1; overflow: hidden;">
+                    <div style="width:16px;height:16px;border-radius:4px;background:${color};color:white;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;margin-right:8px;flex-shrink:0;">${label}</div>
+                    <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${provider}</span>
                 </div>
-                <div class="provider-actions">
-                    <i data-lucide="trash" onclick="event.stopPropagation(); deleteProvider('${provider}')" class="provider-delete-btn"></i>
+                <div class="provider-item-actions">
+                     <button class="icon-btn-xs provider-copy-btn" onclick="event.stopPropagation(); copyProvider('${provider}')" title="复制">
+                        <i data-lucide="copy"></i>
+                    </button>
+                    <button class="icon-btn-xs provider-delete-btn" onclick="event.stopPropagation(); deleteProvider('${provider}')" title="删除">
+                        <i data-lucide="trash"></i>
+                    </button>
                 </div>
             `;
             providersListContainer.appendChild(item);
         });
+        if (typeof lucide !== 'undefined') updateIcons();
     }
-
-    // Theme Switching
+    window.copyProvider = (providerKey) => {
+        const provider = configData.providers[providerKey];
+        if (!provider) return;
+        let newName = `${providerKey} copy`;
+        let counter = 1;
+        while (configData.providers[newName]) {
+            newName = `${providerKey} copy ${counter}`;
+            counter++;
+        }
+        configData.providers[newName] = JSON.parse(JSON.stringify(provider));
+        currentProviderKey = newName;
+        renderProviderList();
+        saveToStorage();
+        const item = document.querySelector(`.settings-nav-item[data-key="${newName}"]`);
+        if (item) switchTab(`provider-${newName.toLowerCase()}`, item);
+    };
     themeBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const theme = btn.getAttribute('data-theme');
@@ -1121,72 +1001,170 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     document.body.className = configData.general.theme === 'light' ? 'light-mode' : 'dark-mode';
-
-    // Model Selector Dropdown
     modelSelector.addEventListener('click', (e) => {
         e.stopPropagation();
         modelDropdown.classList.toggle('active');
         if (modelDropdown.classList.contains('active')) renderModelDropdown();
     });
-
-    document.addEventListener('click', () => {
+    document.addEventListener('click', (event) => {
         if (modelDropdown) modelDropdown.classList.remove('active');
         if (languageOptions) languageOptions.classList.remove('active');
-
-        // Close modal when clicking outside
         const modal = document.getElementById('model-modal');
         if (modal && modal.classList.contains('active') && event.target === modal) {
             closeModelModal();
         }
     });
-
     function renderModelDropdown() {
         modelDropdown.innerHTML = '';
-
-        // 1. Favorites Section (Quick Access)
-        const favorites = [];
+        const hasProviders = Object.keys(configData.providers).length > 0;
+        let hasAnyEnabledModels = false;
         Object.values(configData.providers).forEach(p => {
-            p.models.forEach(m => {
-                if (m.favorite && m.enabled !== false) favorites.push(m);
-            });
-        });
-
-        if (favorites.length > 0) {
-            const favSection = document.createElement('div');
-            favSection.className = 'dropdown-section';
-            favSection.innerHTML = '<div class="dropdown-section-title">已收藏</div>';
-            favorites.forEach(m => favSection.appendChild(createDropdownItem(m)));
-            modelDropdown.appendChild(favSection);
-        }
-
-        // 2. Provider Sections
-        Object.keys(configData.providers).forEach(providerKey => {
-            const provider = configData.providers[providerKey];
-            const enabledModels = (provider.models || []).filter(m => m.enabled !== false);
-
+            const enabledModels = (p.models || []).filter(m => m.enabled !== false);
             if (enabledModels.length > 0) {
-                const section = document.createElement('div');
-                section.className = 'dropdown-section';
-                // Use original providerKey to preserve case
-                section.innerHTML = `<div class="dropdown-section-title">${providerKey}</div>`;
-
-                enabledModels.forEach(m => {
-                    section.appendChild(createDropdownItem(m));
-                });
-
-                modelDropdown.appendChild(section);
+                hasAnyEnabledModels = true;
             }
         });
+        if (!hasProviders) {
+            const emptySection = document.createElement('div');
+            emptySection.className = 'dropdown-section';
+            emptySection.innerHTML = '<div class="dropdown-section-title" style="color: var(--text-secondary); font-style: italic; padding: 12px 12px 4px 12px;">没有配置任何模型提供商</div>';
+            modelDropdown.appendChild(emptySection);
+        } else if (!hasAnyEnabledModels) {
+            const emptySection = document.createElement('div');
+            emptySection.className = 'dropdown-section';
+            emptySection.innerHTML = '<div class="dropdown-section-title" style="color: var(--text-secondary); font-style: italic; padding: 12px 12px 4px 12px;">没有启用任何模型</div>';
+            modelDropdown.appendChild(emptySection);
+        } else {
+            const favorites = [];
+            Object.entries(configData.providers).forEach(([providerKey, p]) => {
+                p.models.forEach(m => {
+                    if (m.favorite && m.enabled !== false) {
+                        favorites.push({ ...m, providerKey });
+                    }
+                });
+            });
+            if (favorites.length > 0) {
+                const favSection = document.createElement('div');
+                favSection.className = 'dropdown-section';
+                favSection.innerHTML = '<div class="dropdown-section-title">已收藏</div>';
+                favorites.forEach(m => favSection.appendChild(createDropdownItem(m, m.providerKey)));
+                modelDropdown.appendChild(favSection);
+            }
+            Object.keys(configData.providers).forEach(providerKey => {
+                const provider = configData.providers[providerKey];
+                const enabledModels = (provider.models || []).filter(m => m.enabled !== false);
+                if (enabledModels.length > 0) {
+                    const section = document.createElement('div');
+                    section.className = 'dropdown-section';
+                    section.innerHTML = `<div class="dropdown-section-title">${providerKey}</div>`;
+                    enabledModels.forEach(m => {
+                        section.appendChild(createDropdownItem(m, providerKey));
+                    });
+                    modelDropdown.appendChild(section);
+                }
+            });
+        }
     }
-
-    function createDropdownItem(model) {
+        function getProviderForModel(modelName) {
+        for (const [providerKey, provider] of Object.entries(configData.providers)) {
+            if (provider.models && provider.models.some(m => m.name === modelName)) {
+                return providerKey;
+            }
+        }
+        return 'Default';
+    }
+    function getProviderDisplayInfo(providerKey) {
+        if (!providerKey || providerKey === 'Default' || !configData.providers[providerKey]) {
+            return { color: '#6B7280', label: '??' };
+        }
+        const providers = Object.keys(configData.providers);
+        const index = providers.indexOf(providerKey);
+        const colors = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#06B6D4', '#3B82F6', '#A855F7'];
+        const color = index >= 0 ? colors[index % colors.length] : '#6B7280';
+        let label = providerKey;
+        if (providerKey.length > 2) {
+            label = providerKey.charAt(0) + providerKey.charAt(providerKey.length - 1);
+        }
+        label = label.toUpperCase();
+        return { color, label };
+    }
+    function setModelDisplay(modelName, providerKey) {
+        let info;
+        if (!providerKey) {
+            providerKey = currentModelSpan.dataset.provider;
+        }
+        if (providerKey) {
+            info = getProviderDisplayInfo(providerKey);
+            currentModelSpan.dataset.provider = providerKey;
+        } else {
+            info = { color: '#6B7280', label: '??' };
+        }
+        const cleanName = modelName ? modelName.trim() : '';
+        currentModelSpan.style.paddingLeft = '0px';
+        currentModelSpan.style.display = 'flex';
+        currentModelSpan.style.alignItems = 'center';
+        currentModelSpan.style.gap = '8px';
+        currentModelSpan.innerHTML = `
+            <div class="model-provider-indicator" style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background-color: ${info.color};
+                color: #fff;
+                font-size: 8px;
+                font-weight: 800;
+                padding: 0 4px;
+                border-radius: 4px;
+                min-width: 20px;
+                height: 16px;
+                line-height: 1;
+                flex-shrink: 0;
+            ">${info.label}</div>
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${cleanName}</span>
+        `;
+    }
+    function updateCurrentModelDisplay() {
+        const currentName = getCurrentModelName();
+        const currentProvider = currentModelSpan.dataset.provider;
+        if (currentName) {
+            setModelDisplay(currentName, currentProvider);
+        }
+    }
+    function createDropdownItem(model, providerKey) {
         const item = document.createElement('div');
         item.className = 'dropdown-item';
-        item.innerHTML = `<span>${model.name}</span>`;
-        item.onclick = () => { currentModelSpan.textContent = model.name; modelDropdown.classList.remove('active'); };
+        const finalProviderKey = providerKey || getProviderForModel(model.name);
+        const info = getProviderDisplayInfo(finalProviderKey);
+        item.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background-color: ${info.color};
+                    color: #fff;
+                    font-size: 8px;
+                    font-weight: 800;
+                    padding: 0 4px;
+                    border-radius: 4px;
+                    min-width: 20px;
+                    height: 16px;
+                    line-height: 1;
+                    flex-shrink: 0;
+                ">${info.label}</div>
+                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${model.name}</span>
+            </div>
+        `;
+        item.onclick = () => {
+            setModelDisplay(model.name, finalProviderKey);
+            if (configData.general) {
+                configData.general.lastUsedModel = model.name;
+                saveToStorage();
+            }
+            modelDropdown.classList.remove('active');
+        };
         return item;
     }
-
     function renderShortcuts() {
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const cmd = isMac ? '⌘' : 'Ctrl';
@@ -1197,25 +1175,26 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
         shortcutsContainer.innerHTML = shortcuts.map(s => `<div class="shortcut-item"><span>${s.name}</span><kbd>${s.key}</kbd></div>`).join('');
     }
-
+    updateCurrentModelDisplay();
     window.toggleForm = (id) => document.getElementById(id).classList.toggle('active');
-
     window.saveRole = () => {
         const nameInput = document.getElementById('new-role-name');
         const promptInput = document.getElementById('new-role-prompt');
+        if (!nameInput.value.trim()) {
+            return;
+        }
         if (editingRoleId) {
             const role = configData.roles.find(r => r.id === editingRoleId);
-            if (role) { role.name = nameInput.value; role.prompt = promptInput.value; }
+            if (role) { role.name = nameInput.value.trim(); role.prompt = promptInput.value; }
             editingRoleId = null;
         } else {
-            configData.roles.push({ id: Date.now(), name: nameInput.value, prompt: promptInput.value });
+            configData.roles.push({ id: Date.now(), name: nameInput.value.trim(), prompt: promptInput.value });
         }
         renderRoles();
         nameInput.value = ''; promptInput.value = '';
         window.toggleForm('add-role-form');
         saveToStorage();
     };
-
     function renderRoles() {
         roleList.innerHTML = '';
         configData.roles.forEach(role => {
@@ -1235,7 +1214,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         updateIcons();
     }
-
     window.editRole = (id) => {
         const role = configData.roles.find(r => r.id === id);
         if (role) {
@@ -1245,16 +1223,13 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('add-role-form').classList.add('active');
         }
     };
-
     window.deleteRole = (id) => { configData.roles = configData.roles.filter(r => r.id !== id); renderRoles(); saveToStorage(); };
-
     function renderModels() {
         const provider = configData.providers[currentProviderKey];
         modelList.innerHTML = '';
         if (provider) provider.models.forEach(model => {
             const item = document.createElement('div');
             item.className = 'model-item';
-
             item.innerHTML = `
                 <div class="model-item-info">
                     <span class="model-item-name">${model.name}</span>
@@ -1266,82 +1241,98 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             modelList.appendChild(item);
         });
-
-        // Ensure refresh icon is not sticking in spinning state
         const refreshIcon = fetchModelsBtn.querySelector('.spinning');
         if (refreshIcon) refreshIcon.classList.remove('spinning');
-
         updateIcons();
     }
-
-    // Modal functions
     window.showModelModal = (fetchedModels) => {
         const modal = document.getElementById('model-modal');
         const selectionList = document.getElementById('model-selection-list');
+        const searchInput = document.getElementById('modal-model-search-input');
         const existingModels = configData.providers[currentProviderKey].models || [];
-
         if (!modal) {
             return;
         }
-
+        if (searchInput) searchInput.value = '';
         selectionList.innerHTML = '';
-
-        fetchedModels.forEach(model => {
+        window.allFetchedModels = fetchedModels;
+        renderModelList(fetchedModels, existingModels);
+        modal.classList.add('active');
+        updateIcons();
+    };
+    function renderModelList(models, existingModels) {
+        const selectionList = document.getElementById('model-selection-list');
+        const modal = document.getElementById('model-modal');
+        selectionList.innerHTML = '';
+        models.forEach(model => {
             const existingModel = existingModels.find(m => m.name === model.name);
             const isSelected = existingModel ? true : false;
-
             const item = document.createElement('div');
             item.className = 'model-selection-item';
-            item.innerHTML = `
-                <input type="checkbox" id="model-${model.id}" ${isSelected ? 'checked' : ''} data-model-name="${model.name}">
-                <label for="model-${model.id}">${model.name}</label>
-            `;
 
-            // Add event listener to save immediately on change
-            const checkbox = item.querySelector('input[type="checkbox"]');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `model-${model.id}`;
+            if (isSelected) checkbox.checked = true;
+            checkbox.dataset.modelName = model.name;
+
+            const label = document.createElement('label');
+            label.htmlFor = `model-${model.id}`;
+            label.textContent = model.name;
+
+            item.appendChild(checkbox);
+            item.appendChild(label);
             checkbox.addEventListener('change', function () {
                 saveModelSelection();
             });
-
             selectionList.appendChild(item);
         });
-
-        modal.classList.add('active');
         if (typeof lucide !== 'undefined') updateIcons();
     };
-
     window.closeModelModal = () => {
         const modal = document.getElementById('model-modal');
         modal.classList.remove('active');
     };
-
+    const modalModelSearchInput = document.getElementById('modal-model-search-input');
+    if (modalModelSearchInput) {
+        modalModelSearchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const allItems = document.querySelectorAll('#model-selection-list .model-selection-item');
+            allItems.forEach(item => {
+                const modelName = item.querySelector('label').textContent.toLowerCase();
+                if (modelName.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+        modalModelSearchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                modalModelSearchInput.value = '';
+                modalModelSearchInput.dispatchEvent(new Event('input'));
+                modalModelSearchInput.blur();
+            }
+        });
+    }
     window.saveModelSelection = () => {
         const allCheckboxes = document.querySelectorAll('#model-selection-list input[type="checkbox"]');
         const checkedModelNames = Array.from(allCheckboxes)
             .filter(checkbox => checkbox.checked)
             .map(checkbox => checkbox.getAttribute('data-model-name'));
-
-        // Get all available models from the modal list (both existing and new)
         const allModelElements = document.querySelectorAll('#model-selection-list .model-selection-item');
         const allAvailableModels = Array.from(allModelElements).map(item => {
             const checkbox = item.querySelector('input[type="checkbox"]');
             const modelName = checkbox.getAttribute('data-model-name');
             return { name: modelName, favorite: false };
         });
-
-        // Keep only the checked models from available models
         const selectedModels = allAvailableModels.filter(model => checkedModelNames.includes(model.name));
-
-        // Preserve existing model settings (like favorite status) if they exist
         const existingModels = configData.providers[currentProviderKey].models || [];
-
         const finalModels = selectedModels.map(selectedModel => {
             const existingModel = existingModels.find(m => m.name === selectedModel.name);
             if (existingModel) {
-                // Preserve existing settings like favorite
                 return { ...existingModel, name: selectedModel.name };
             } else {
-                // New model from API, initialize with default settings
                 return {
                     id: Date.now() + Math.random(),
                     name: selectedModel.name,
@@ -1349,12 +1340,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
             }
         });
-
         configData.providers[currentProviderKey].models = finalModels;
         saveToStorage();
         renderModels();
     };
-
     window.toggleFavorite = (id) => {
         const provider = configData.providers[currentProviderKey];
         const model = provider.models.find(m => m.id === id);
@@ -1364,57 +1353,173 @@ document.addEventListener('DOMContentLoaded', () => {
             renderModels();
         }
     };
-
     window.deleteModel = (id) => {
         configData.providers[currentProviderKey].models = configData.providers[currentProviderKey].models.filter(m => m.id !== id);
         renderModels();
         saveToStorage();
     };
-
     window.deleteProvider = (providerKey) => {
-        if (Object.keys(configData.providers).length <= 1) {
-            alert('至少需要保留一个模型提供商');
-            return;
-        }
-
         if (currentProviderKey === providerKey) {
-            // 如果删除的是当前选中的provider，切换到第一个可用的provider
             const remainingProviders = Object.keys(configData.providers).filter(p => p !== providerKey);
             if (remainingProviders.length > 0) {
                 currentProviderKey = remainingProviders[0];
                 providerNameDisplay.textContent = currentProviderKey;
                 apiKeyInput.value = configData.providers[currentProviderKey].apiKey || '';
-                // Show real API key, not masked version
                 baseUrlInput.value = configData.providers[currentProviderKey].baseUrl || '';
                 renderModels();
+            } else {
+                currentProviderKey = null;
+                providerNameDisplay.textContent = '未选择提供商';
+                apiKeyInput.value = '';
+                baseUrlInput.value = '';
+                modelList.innerHTML = '';
             }
         }
-
         delete configData.providers[providerKey];
         renderProviderList();
         saveToStorage();
-
         if (typeof lucide !== 'undefined') updateIcons();
     };
-
-    // Set initial provider data
     if (configData.providers[currentProviderKey]) {
         apiKeyInput.value = configData.providers[currentProviderKey].apiKey || '';
         baseUrlInput.value = configData.providers[currentProviderKey].baseUrl || '';
     }
-
     renderProviderList();
     renderModels();
     renderGeneralSettings();
     renderHistory();
     updateChatLayout();
-
-    // Auto-load last chat or start fresh
     if (configData.history.length > 0) {
         loadChat(configData.history[0].id);
     } else {
         createNewChat();
     }
-
     updateIcons();
+    const clearChatBtn = document.getElementById('clear-chat-btn');
+    if (clearChatBtn) {
+        clearChatBtn.addEventListener('click', () => {
+            if (activeChatId) {
+                const chat = configData.history.find(c => c.id === activeChatId);
+                if (chat) {
+                    chat.messages = [];
+                    saveToStorage();
+                    loadChat(activeChatId);
+                }
+            }
+        });
+    }
+    const importConfigBtn = document.getElementById('import-config-btn');
+    const importFileInput = document.getElementById('import-file-input');
+    if (importConfigBtn && importFileInput) {
+        importConfigBtn.addEventListener('click', () => {
+            importFileInput.click();
+        });
+        importFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (importedData && importedData.general && importedData.providers) {
+                        configData = importedData;
+                        saveToStorage();
+                        location.reload();
+                    } else {
+                        console.error('无效的配置文件格式。');
+                    }
+                } catch (err) {
+                    console.error('导入失败：' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            importFileInput.value = '';
+        });
+    }
+    const sidebarThemeBtn = document.getElementById('theme-toggle-btn');
+    if (sidebarThemeBtn) {
+        const updateThemeIcon = () => {
+            const isDark = document.body.classList.contains('dark-mode');
+            sidebarThemeBtn.innerHTML = `<i data-lucide="${isDark ? 'moon' : 'sun'}"></i>`;
+            if (typeof lucide !== 'undefined') updateIcons();
+        };
+        updateThemeIcon();
+        sidebarThemeBtn.addEventListener('click', () => {
+            const isDark = document.body.classList.contains('dark-mode');
+            if (isDark) {
+                document.body.classList.remove('dark-mode');
+                document.body.classList.add('light-mode');
+                configData.general.theme = 'light';
+            } else {
+                document.body.classList.remove('light-mode');
+                document.body.classList.add('dark-mode');
+                configData.general.theme = 'dark';
+            }
+            saveToStorage();
+            updateThemeIcon();
+        });
+    }
+    const resetPromptBtn = document.getElementById('reset-prompt-btn');
+    if (resetPromptBtn) {
+        resetPromptBtn.addEventListener('click', () => {
+            const defaultPrompt = defaultData.general.systemPrompt || '';
+            document.getElementById('global-system-prompt').value = defaultPrompt;
+            configData.general.systemPrompt = defaultPrompt;
+            saveToStorage();
+        });
+    }
+    const clearHistoryBtn = document.getElementById('clear-history-btn');
+    if (clearHistoryBtn) {
+        clearHistoryBtn.addEventListener('click', () => {
+            configData.history = [];
+            activeChatId = null;
+            saveToStorage();
+            createNewChat();
+            renderHistory();
+        });
+    }
+
+    // 初始化上下文数量显示
+    if (contextCountDisplay) {
+        contextCountDisplay.textContent = configData.general.contextLimit || 20;
+    }
+
+    // 上下文数量控制按钮事件监听器 - 切换下拉框
+    if (contextControlBtn) {
+        contextControlBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            contextLimitDropdown.classList.toggle('active');
+        });
+    }
+
+    // 点击其他地方关闭下拉框
+    document.addEventListener('click', (e) => {
+        if (!contextControlBtn.contains(e.target) && !contextLimitDropdown.contains(e.target)) {
+            contextLimitDropdown.classList.remove('active');
+        }
+    });
+
+    // 为下拉框选项添加事件监听器
+    if (contextLimitDropdown) {
+        const contextOptions = contextLimitDropdown.querySelectorAll('.context-limit-option');
+        contextOptions.forEach(option => {
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const limit = parseInt(option.getAttribute('data-value'));
+
+                if (!isNaN(limit)) {
+                    configData.general.contextLimit = limit;
+                    saveToStorage();
+
+                    // 更新显示
+                    if (contextCountDisplay) {
+                        contextCountDisplay.textContent = limit;
+                    }
+
+                    // 关闭下拉框
+                    contextLimitDropdown.classList.remove('active');
+                }
+            });
+        });
+    }
 });
