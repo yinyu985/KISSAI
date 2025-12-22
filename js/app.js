@@ -640,7 +640,23 @@ let currentProviderKey = Object.keys(configData.providers)[0] || 'Groq';
         addMessage(errorContent, false);
     }
     async function sendMessageToAPI(message, modelName, signal) {
-        const providerInfo = findProviderByModel(modelName);
+        // 首先尝试使用当前模型选择器中存储的提供商
+        const currentProviderKey = currentModelSpan.dataset.provider;
+        let providerInfo = null;
+
+        // 如果当前提供商存在并且有该模型，则使用当前提供商
+        if (currentProviderKey && configData.providers[currentProviderKey]) {
+            const currentProvider = configData.providers[currentProviderKey];
+            if (currentProvider.models && currentProvider.models.some(m => m.name === modelName)) {
+                providerInfo = { providerKey: currentProviderKey, provider: currentProvider };
+            }
+        }
+
+        // 如果当前提供商没有该模型，则回退到查找所有提供商
+        if (!providerInfo) {
+            providerInfo = findProviderByModel(modelName);
+        }
+
         if (!providerInfo) {
             throw new Error(`未找到模型 ${modelName} 的提供商配置`);
         }
