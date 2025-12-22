@@ -1423,7 +1423,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     const importedData = JSON.parse(e.target.result);
                     if (importedData && importedData.general && importedData.providers) {
                         configData = importedData;
-                        saveToStorage();
+
+                        // 直接保存到localStorage，不经过saveToStorage()以避免API密钥被覆盖
+                        localStorage.setItem('kissai_config', JSON.stringify(configData));
+
+                        // 手动更新当前输入框的值
+                        if (currentProviderKey && configData.providers[currentProviderKey]) {
+                            apiKeyInput.value = configData.providers[currentProviderKey].apiKey || '';
+                            baseUrlInput.value = configData.providers[currentProviderKey].baseUrl || '';
+                        }
+
                         location.reload();
                     } else {
                         console.error('无效的配置文件格式。');
