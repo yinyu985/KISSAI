@@ -355,10 +355,51 @@ let currentProviderKey = Object.keys(configData.providers)[0] || 'Groq';
         }
         saveToStorage();
     };
+    // 初始化角色提及下拉菜单的事件监听（事件委托）
+    const roleMentionDropdown = document.getElementById('role-mention-dropdown');
+    roleMentionDropdown.addEventListener('click', (e) => {
+        const item = e.target.closest('.role-mention-item');
+        if (!item) return;
+        e.stopPropagation();
+        const roleName = item.getAttribute('data-name');
+        const beforeAt = chatInput.value.substring(0, chatInput.value.lastIndexOf('@'));
+        chatInput.value = beforeAt + '@' + roleName + ' ';
+        chatInput.selectionStart = chatInput.selectionEnd = beforeAt.length + roleName.length + 2;
+        chatInput.focus();
+        roleMentionDropdown.style.display = 'none';
+        roleMentionDropdown.classList.remove('active');
+    });
+
     chatInput.addEventListener('input', () => {
         chatInput.style.height = 'auto';
         chatInput.style.height = Math.min(chatInput.scrollHeight, 240) + 'px';
         sendBtn.disabled = chatInput.value.trim() === '';
+
+        const cursorPosition = chatInput.selectionStart;
+        const textBeforeCursor = chatInput.value.substring(0, cursorPosition);
+        const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+        if (lastAtIndex !== -1 && (lastAtIndex === 0 || textBeforeCursor[lastAtIndex - 1] === ' ' || textBeforeCursor[lastAtIndex - 1] === '\n')) {
+            const searchTerm = textBeforeCursor.substring(lastAtIndex + 1).toLowerCase();
+            const roles = configData.roles || [];
+            const filteredRoles = roles.filter(role => role.name.toLowerCase().includes(searchTerm));
+            if (filteredRoles.length > 0) {
+                roleMentionDropdown.innerHTML = filteredRoles.map(role => `
+                    <div class="role-mention-item" data-name="${role.name}" data-prompt="${role.prompt}">
+                        <div class="role-name">${role.name}</div>
+                        <div class="role-preview">${role.prompt}</div>
+                    </div>
+                `).join('');
+                roleMentionDropdown.style.display = 'flex';
+                roleMentionDropdown.classList.add('active');
+            } else {
+                roleMentionDropdown.style.display = 'none';
+                roleMentionDropdown.classList.remove('active');
+            }
+        } else {
+            roleMentionDropdown.style.display = 'none';
+            roleMentionDropdown.classList.remove('active');
+        }
     });
     chatInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -630,14 +671,8 @@ let currentProviderKey = Object.keys(configData.providers)[0] || 'Groq';
             return cleanUrl;
         }
     }
-    function displayErrorMessage(error, httpStatus = null) {
-        let errorContent = '';
-        if (httpStatus) {
-            errorContent = `HTTP ${httpStatus}: ${error.message || '请求失败'}`;
-        } else {
-            errorContent = error.message || '未知错误';
-        }
-        addMessage(errorContent, false);
+    function displayErrorMessage(error) {
+        addMessage(error.message, false);
     }
     async function sendMessageToAPI(message, modelName, signal) {
         // 首先尝试使用当前模型选择器中存储的提供商
@@ -670,15 +705,37 @@ let currentProviderKey = Object.keys(configData.providers)[0] || 'Groq';
         if (systemPrompt && systemPrompt.trim()) {
             messages.push({ role: 'system', content: systemPrompt.trim() });
         }
+
+        let processedMessage = message;
+        const roleMentions = message.match(/@([^\s@]+)/g);
+        if (roleMentions && configData.roles && configData.roles.length > 0) {
+            roleMentions.forEach(mention => {
+                const roleName = mention.substring(1);
+                const role = configData.roles.find(r => r.name === roleName);
+                if (role && role.prompt) {
+                    messages.push({ role: 'system', content: `角色预设：${role.name}\n${role.prompt}` });
+                    processedMessage = processedMessage.replace(mention, '');
+                }
+            });
+        }
         if (activeChatId) {
             const chat = configData.history.find(c => c.id === activeChatId);
             if (chat && chat.messages) {
                 const limit = configData.general.contextLimit || 20;
-                const messagesToSend = chat.messages.slice(-limit);
+                let messagesToSend = chat.messages.slice(-limit);
+                if (messagesToSend.length > 0) {
+                    const lastMsg = messagesToSend[messagesToSend.length - 1];
+                    if (lastMsg.role === 'user' && lastMsg.content === message.trim()) {
+                        messagesToSend = messagesToSend.slice(0, -1);
+                    }
+                }
                 messagesToSend.forEach(msg => {
                     messages.push({ role: msg.role, content: msg.content });
                 });
             }
+        }
+        if (processedMessage.trim()) {
+            messages.push({ role: 'user', content: processedMessage.trim() });
         }
         const aiMessageElement = addAIMessageStream();
         let fullContent = '';
@@ -709,16 +766,8 @@ let currentProviderKey = Object.keys(configData.providers)[0] || 'Groq';
             });
             clearTimeout(timeoutId);
             if (!response.ok) {
-                let errorDetails = '';
-                try {
-                    const errorData = await response.json();
-                    errorDetails = errorData.error?.message || errorData.message || '';
-                } catch (e) {
-                    errorDetails = response.statusText;
-                }
-                const error = new Error(errorDetails || `HTTP ${response.status}`);
-                error.status = response.status;
-                throw error;
+                const errorText = await response.text();
+                throw new Error(errorText || `HTTP ${response.status} ${response.statusText}`);
             }
             if (!response.body) {
                 throw new Error('Response body is null');
@@ -769,13 +818,12 @@ let currentProviderKey = Object.keys(configData.providers)[0] || 'Groq';
                 return null;
             }
 
-            // Real Error Handling
+            // Remove the partial AI message element since error will be displayed separately
             if (aiMessageElement && aiMessageElement.parentNode) {
-                // Convert the partial AI message into an error message bubble
-                aiMessageElement.innerHTML = `<div style="color:var(--accent-red)">Error: ${error.message || '请求失败'}</div>`;
+                aiMessageElement.parentNode.removeChild(aiMessageElement);
             }
             console.error('API Request Failed:', error);
-            throw error; // Re-throw to be caught by caller if needed
+            throw error;
         }
     }
     let abortController = null;
@@ -798,7 +846,6 @@ let currentProviderKey = Object.keys(configData.providers)[0] || 'Groq';
             sendBtn.innerHTML = '<div class="stop-icon"></div>';
             sendBtn.classList.add('stop-mode');
             sendBtn.disabled = false;
-            chatInput.disabled = true;
             if (chatContainer) chatContainer.classList.add('has-messages');
             if (chatView) chatView.classList.add('has-messages');
             abortController = new AbortController();
@@ -808,14 +855,13 @@ let currentProviderKey = Object.keys(configData.providers)[0] || 'Groq';
             await sendMessageToAPI(message, currentModel, abortController.signal);
         } catch (error) {
             if (error.name !== 'AbortError') {
-                displayErrorMessage(error, error.status);
+                displayErrorMessage(error);
             }
         } finally {
             isRequesting = false;
             sendBtn.innerHTML = '<i data-lucide="arrow-right"></i>';
             sendBtn.classList.remove('stop-mode');
             sendBtn.disabled = false;
-            chatInput.disabled = false;
             abortController = null;
             updateIcons();
             chatInput.focus();
@@ -1020,12 +1066,20 @@ let currentProviderKey = Object.keys(configData.providers)[0] || 'Groq';
     document.body.className = configData.general.theme === 'light' ? 'light-mode' : 'dark-mode';
     modelSelector.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (contextLimitDropdown) contextLimitDropdown.classList.remove('active');
+        if (languageOptions) languageOptions.classList.remove('active');
         modelDropdown.classList.toggle('active');
         if (modelDropdown.classList.contains('active')) renderModelDropdown();
     });
     document.addEventListener('click', (event) => {
         if (modelDropdown) modelDropdown.classList.remove('active');
         if (languageOptions) languageOptions.classList.remove('active');
+        if (contextLimitDropdown) contextLimitDropdown.classList.remove('active');
+        // 关闭角色提及下拉菜单
+        if (!event.target.closest('#role-mention-dropdown') && !event.target.closest('#chat-input')) {
+            roleMentionDropdown.style.display = 'none';
+            roleMentionDropdown.classList.remove('active');
+        }
         const modal = document.getElementById('model-modal');
         if (modal && modal.classList.contains('active') && event.target === modal) {
             closeModelModal();
@@ -1514,17 +1568,13 @@ let currentProviderKey = Object.keys(configData.providers)[0] || 'Groq';
     if (contextControlBtn) {
         contextControlBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (modelDropdown) modelDropdown.classList.remove('active');
+            if (languageOptions) languageOptions.classList.remove('active');
             contextLimitDropdown.classList.toggle('active');
         });
     }
 
-    // 点击其他地方关闭下拉框
-    document.addEventListener('click', (e) => {
-        if (!contextControlBtn.contains(e.target) && !contextLimitDropdown.contains(e.target)) {
-            contextLimitDropdown.classList.remove('active');
-        }
-    });
-
+    
     // 为下拉框选项添加事件监听器
     if (contextLimitDropdown) {
         const contextOptions = contextLimitDropdown.querySelectorAll('.context-limit-option');
