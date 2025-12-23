@@ -201,7 +201,7 @@
                                 </div>
                             </div>
 
-                            
+
                             <!-- System Prompt -->
                             <div class="settings-group" style="position: relative;">
                                 <label>全局系统提示词</label>
@@ -293,27 +293,31 @@
                         </div>
 
                         <!-- Role Presets Settings -->
-                        <div id="role-presets-settings" class="settings-content">
+                         <div id="role-presets-settings" class="settings-content">
                             <!-- Add Role Form (In-page) -->
                             <div id="add-role-form" class="compact-form">
                                 <input type="text" id="new-role-name" placeholder="角色名称">
-                                <textarea id="new-role-prompt" placeholder="系统提示词" rows="3"></textarea>
-                                <div class="form-actions">
-                                    <button class="icon-btn-inline" onclick="saveRole()" title="保存">
-                                        <i data-lucide="check"></i>
-                                    </button>
-                                    <button class="icon-btn-inline" onclick="toggleForm('add-role-form')" title="取消">
-                                        <i data-lucide="x"></i>
-                                    </button>
-                                </div>
+                                <textarea id="new-role-prompt" placeholder="系统提示词" rows="6"></textarea>
                             </div>
 
                             <div class="settings-group">
                                 <div class="group-header">
-                                    <label>常用预设</label>
-                                    <button onclick="toggleForm('add-role-form')" class="icon-btn-xs"><i data-lucide="plus"></i></button>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <label style="margin: 0;">常用预设</label>
+                                        <span class="help-text" style="margin: 0; display: flex; align-items: center;">在输入框中输入 @ 可快速调用预设角色</span>
+                                    </div>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <div id="edit-role-actions" class="form-actions hidden" style="margin: 0;">
+                                            <button class="icon-btn-inline" onclick="saveRole()" title="保存">
+                                                <i data-lucide="check"></i>
+                                            </button>
+                                            <button class="icon-btn-inline" onclick="toggleForm('add-role-form')" title="取消">
+                                                <i data-lucide="x"></i>
+                                            </button>
+                                        </div>
+                                        <button onclick="toggleForm('add-role-form')" class="icon-btn-xs"><i data-lucide="plus"></i></button>
+                                    </div>
                                 </div>
-                                <p class="help-text">在输入框中输入 @ 可快速调用预设角色，如 @翻译专家、@代码助手</p>
                                 <div id="role-list" class="role-list"></div>
                             </div>
                         </div>
