@@ -44,21 +44,33 @@ body {
 }
 
 ::selection {
+    background: none;
+    color: var(--accent-color);
 }
 
 ::-moz-selection {
+    background: none;
+    color: var(--accent-color);
 }
 
 ::-webkit-selection {
+    background: none;
+    color: var(--accent-color);
 }
 
 .message.user ::selection {
+    background: none;
+    color: #64B5F6;
 }
 
 .message.user ::-moz-selection {
+    background: none;
+    color: #64B5F6;
 }
 
 .message.user ::-webkit-selection {
+    background: none;
+    color: #64B5F6;
 }
 
 #app {
