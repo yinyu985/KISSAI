@@ -42,6 +42,25 @@ body {
     overflow: hidden;
     transition: none;
 }
+
+::selection {
+}
+
+::-moz-selection {
+}
+
+::-webkit-selection {
+}
+
+.message.user ::selection {
+}
+
+.message.user ::-moz-selection {
+}
+
+.message.user ::-webkit-selection {
+}
+
 #app {
     display: flex;
     height: 100vh;
