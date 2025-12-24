@@ -245,12 +245,16 @@ body {
     flex-shrink: 0;
     transition: none;
 }
+/* 侧边栏头部区域 - 包含Logo和副标题 */
 .sidebar-header {
-    padding: 24px 16px 12px 16px;
+    padding: 24px 16px 24px 16px;
     display: flex;
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
     user-select: none;
 }
+/* Logo容器 - 横向居中 */
 .logo {
     display: flex;
     flex-direction: column;
@@ -258,7 +262,10 @@ body {
     user-select: none;
     padding: 0 12px;
     margin-top: 0px;
+    align-items: center;
+    text-align: center;
 }
+/* Logo主标题 "KISS AI" */
 .logo-main {
     font-size: 26px;
     font-weight: 800;
@@ -267,6 +274,7 @@ body {
     line-height: 1.2;
     margin-bottom: 6px;
 }
+/* Logo副标题 "Keep it simple, stupid" */
 .logo-sub {
     font-family: 'Outfit', sans-serif;
     font-size: 11px;
@@ -276,7 +284,6 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.3px;
     line-height: 1.2;
-    margin-left: 44px;
 }
 .icon-btn {
     background: transparent;
@@ -452,31 +459,20 @@ body {
     height: 100%;
     width: 100%;
 }
+/* 激活的视图 - 聊天视图使用 flex 实现居中 */
 .view.active {
     display: flex;
     flex-direction: column;
 }
+/* 聊天视图容器 - 添加滚动支持，覆盖整个区域 */
 #chat-view {
-    justify-content: center;
-    align-items: center;
-}
-.welcome-section {
-    text-align: center;
-}
-.welcome-section h1 {
-    font-size: 32px;
-    font-weight: 700;
-    margin-bottom: 4px;
-    color: var(--text-primary);
-}
-.welcome-section p {
-    font-size: 16px;
-    color: var(--text-secondary);
-    margin-bottom: 20px;
-}
-.welcome-section p {
-    font-size: 16px;
-    color: var(--text-secondary);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    align-items: stretch;
 }
 .input-wrapper {
     /* 输入框主容器 */
@@ -758,7 +754,6 @@ body {
 .settings-nav-item.add-btn:hover {
     opacity: 1;
 }
-
 
 /* 设置内容区域主容器 - 支持滚动 */
 .settings-main {
@@ -1551,11 +1546,12 @@ kbd {
     }
 }
 .chat-container {
-    height: 100%;
+    min-height: 100%;
     position: relative;
     width: 100%;
     display: flex;
     flex-direction: column;
+    overflow: visible;
 }
 .chat-container.narrow-mode {
     width: 60%;
@@ -1568,7 +1564,7 @@ kbd {
     box-sizing: border-box;
 }
 .chat-container:not(.has-messages) .welcome-section {
-    flex: 1;
+    min-height: 100vh;
     text-align: center;
     padding: 40px 20px;
     color: var(--text-secondary);
@@ -1611,7 +1607,6 @@ kbd {
 }
 .chat-container.has-messages .chat-messages {
     flex: 1;
-    overflow-y: auto;
     padding: 16px 20px 80px 20px;
     display: flex;
     flex-direction: column;
@@ -1808,18 +1803,6 @@ kbd {
     0%, 100% { opacity: 1; }
     50% { opacity: 0; }
 }
-#chat-view {
-    position: relative;
-    height: 100%;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    overflow: hidden;
-}
-#chat-view:not(.has-messages) {
-    justify-content: center;
-}
 .welcome-section {
     flex: none;
     display: flex;
@@ -1832,14 +1815,6 @@ kbd {
 .chat-view.has-messages .welcome-section,
 .has-messages .welcome-section {
     display: none !important;
-}
-.chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px 20px 0 20px;
-    width: 100%;
-    box-sizing: border-box;
-    transition: none;
 }
 .toggle-container {
     display: flex;

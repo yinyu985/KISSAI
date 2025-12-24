@@ -250,7 +250,8 @@ document.addEventListener('DOMContentLoaded', () => {
             id: Date.now(),
             title: '空白对话',
             messages: [],
-            time: Date.now()
+            time: Date.now(),
+            activeRole: null
         };
         activeChatId = newChat.id;
         configData.history.unshift(newChat);
@@ -353,6 +354,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (chatView) chatView.classList.remove('has-messages');
             if (chatContainer) chatContainer.classList.remove('has-messages');
             if (welcomeSection) welcomeSection.style.display = 'flex';
+        }
+        if (chat.activeRole) {
+            chatInput.value = `@${chat.activeRole} `;
+        } else {
+            chatInput.value = '';
         }
         renderHistory();
     }
@@ -688,12 +694,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function displayErrorMessage(error) {
         addMessage(error.message, false);
     }
-    async function sendMessageToAPI(message, modelName, signal) {
-        // 首先尝试使用当前模型选择器中存储的提供商
+    async function sendMessageToAPI(message, modelName, signal, currentRole) {
         const currentProviderKey = currentModelSpan.dataset.provider;
         let providerInfo = null;
 
-        // 如果当前提供商存在并且有该模型，则使用当前提供商
         if (currentProviderKey && configData.providers[currentProviderKey]) {
             const currentProvider = configData.providers[currentProviderKey];
             if (currentProvider.models && currentProvider.models.some(m => m.name === modelName)) {
@@ -701,7 +705,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 如果当前提供商没有该模型，则回退到查找所有提供商
         if (!providerInfo) {
             providerInfo = findProviderByModel(modelName);
         }
@@ -732,8 +735,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
+
+        let chat = null;
         if (activeChatId) {
-            const chat = configData.history.find(c => c.id === activeChatId);
+            chat = configData.history.find(c => c.id === activeChatId);
             if (chat && chat.messages) {
                 const limit = configData.general.contextLimit || 20;
                 let messagesToSend = chat.messages.slice(-limit);
@@ -751,6 +756,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (processedMessage.trim()) {
             messages.push({ role: 'user', content: processedMessage.trim() });
         }
+
+        if (currentRole && configData.roles && chat && chat.messages) {
+            const role = configData.roles.find(r => r.name === currentRole);
+            if (role && role.prompt) {
+                const systemMsgCount = messages.filter(m => m.role === 'system').length;
+                const userMsgCount = messages.filter(m => m.role === 'user').length;
+                const assistantMsgCount = messages.filter(m => m.role === 'assistant').length;
+                const totalMsgCount = userMsgCount + assistantMsgCount;
+
+                if (totalMsgCount > 0 && totalMsgCount % 3 === 0) {
+                    messages.push({ role: 'system', content: `角色预设：${role.name}\n${role.prompt}` });
+                }
+            }
+        }
+
         const aiMessageElement = addAIMessageStream();
         let fullContent = '';
         try {
@@ -825,14 +845,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     finalizeAIMessage(aiMessageElement, fullContent);
                     return fullContent;
                 }
-                // If aborted with no content (e.g. immediate stop), remove partial element
                 if (aiMessageElement && aiMessageElement.parentNode) {
                     aiMessageElement.parentNode.removeChild(aiMessageElement);
                 }
                 return null;
             }
 
-            // Remove the partial AI message element since error will be displayed separately
             if (aiMessageElement && aiMessageElement.parentNode) {
                 aiMessageElement.parentNode.removeChild(aiMessageElement);
             }
@@ -863,10 +881,22 @@ document.addEventListener('DOMContentLoaded', () => {
             if (chatContainer) chatContainer.classList.add('has-messages');
             if (chatView) chatView.classList.add('has-messages');
             abortController = new AbortController();
+            const roleMentions = message.match(/@([^\s@]+)/g);
+            const currentRole = roleMentions && roleMentions.length > 0 ? roleMentions[0].substring(1) : null;
+            if (activeChatId) {
+                const chat = configData.history.find(c => c.id === activeChatId);
+                if (chat) {
+                    chat.activeRole = currentRole;
+                    saveToStorage();
+                }
+            }
             addMessage(message, true);
             chatInput.value = '';
             chatInput.style.height = 'auto';
-            await sendMessageToAPI(message, currentModel, abortController.signal);
+            if (currentRole) {
+                chatInput.value = `@${currentRole} `;
+            }
+            await sendMessageToAPI(message, currentModel, abortController.signal, currentRole);
         } catch (error) {
             if (error.name !== 'AbortError') {
                 displayErrorMessage(error);
