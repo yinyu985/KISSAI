@@ -82,8 +82,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const contextControlBtn = document.getElementById('context-control-btn');
     const contextCountDisplay = document.getElementById('context-count-display');
     const contextLimitDropdown = document.getElementById('context-limit-dropdown');
-    const defaultData = {
-        general: {
+        const defaultData = {
+            version: '1.0.0',
+            general: {
             theme: 'dark',
             language: 'zh',
             wideMode: false,
@@ -123,6 +124,18 @@ document.addEventListener('DOMContentLoaded', () => {
         ]
     };
     let configData = JSON.parse(localStorage.getItem('kissai_config')) || defaultData;
+    function mergeConfig() {
+        if (configData.version === defaultData.version) {
+            return false;
+        }
+        const userRoleNames = (configData.roles || []).map(r => r.name);
+        const newRoles = (defaultData.roles || []).filter(r => !userRoleNames.includes(r.name));
+        configData.roles = [...(configData.roles || []), ...newRoles];
+        configData.version = defaultData.version;
+        localStorage.setItem('kissai_config', JSON.stringify(configData));
+        return true;
+    }
+    mergeConfig();
     if (!configData.history) configData.history = [];
     if (!configData.general) configData.general = { ...defaultData.general };
     if (configData.general.lastUsedModel === undefined) configData.general.lastUsedModel = '';
