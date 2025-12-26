@@ -479,6 +479,11 @@ div.history-item.active svg.lucide.lucide-search {
     overflow: hidden;
     align-items: stretch;
 }
+
+/* 让聊天消息容器自动捕获滚动事件 */
+.chat-container.has-messages {
+    overscroll-behavior: contain;
+}
 .input-wrapper {
     /* 输入框主容器 */
     border-radius: 12px;
@@ -1810,7 +1815,7 @@ kbd {
     background: var(--bg-tertiary);
     color: var(--text-primary);
     margin-right: auto;
-    max-width: 90%;
+    max-width: 100%;
     /* 确保短消息不会被拉长，保持内容的自然宽度 */
     width: fit-content;
     min-width: auto;
@@ -2058,8 +2063,8 @@ input:checked + .slider:before {
     opacity: 0;
     transition: opacity 0.2s ease;
     position: absolute;
-    bottom: -13px;
-    right: -3px;
+    bottom: -16px;
+    right: -2px;
     width: fit-content;
     background: transparent;
 }
@@ -2068,6 +2073,45 @@ input:checked + .slider:before {
 .message-bubble:hover .message-actions-row,
 .message:hover .message-actions-row {
     opacity: 1;
+}
+
+/* 代码块复制按钮样式 */
+.message-bubble .code-copy-btn {
+    position: absolute !important;
+    top: 6px !important;
+    right: 6px !important;
+    background: rgba(33, 150, 243, 0.1) !important;
+    border: 1px solid rgba(33, 150, 243, 0.2) !important;
+    color: var(--accent-color) !important;
+    cursor: pointer !important;
+    padding: 3px 8px !important;
+    font-size: 11px !important;
+    border-radius: 4px !important;
+    z-index: 100 !important;
+    display: block !important;
+    visibility: visible !important;
+    transition: all 0.2s ease !important;
+    backdrop-filter: blur(4px) !important;
+}
+
+.message-bubble .code-copy-btn:hover {
+    background: var(--accent-color) !important;
+    color: white !important;
+    border-color: var(--accent-color) !important;
+}
+
+.code-copy-btn.copied {
+    background: #22C55E !important;
+    color: white !important;
+    border-color: #22C55E !important;
+}
+
+/* 代码块样式优化 */
+.message-bubble pre {
+    position: relative !important;
+    padding: 12px 16px !important;
+    margin: 8px 0 !important;
+    overflow: auto !important;
 }
 
 /* 操作按钮样式 */

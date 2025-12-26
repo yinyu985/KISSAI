@@ -17,7 +17,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 abbr: true,
                 mark: true,
                 ins: true,
-                del: true
+                del: true,
+                highlight: function (str, lang) {
+                    if (typeof hljs !== 'undefined') {
+                        try {
+                            // 如果指定了语言且支持该语言，使用指定语言
+                            if (lang && hljs.getLanguage(lang)) {
+                                return '<pre class="hljs"><code>' +
+                                       hljs.highlight(str, { language: lang }).value +
+                                       '</code></pre>';
+                            }
+                            // 否则使用自动检测
+                            const result = hljs.highlightAuto(str);
+                            return '<pre class="hljs"><code>' +
+                                   result.value +
+                                   '</code></pre>';
+                        } catch (__) {
+                            // 如果自动检测也失败，返回纯文本
+                        }
+                    }
+                    return '<pre class="hljs"><code>' + (globalMd ? globalMd.utils.escapeHtml(str) : str) + '</code></pre>';
+                }
             });
 
             // 设置链接渲染规则
@@ -360,6 +380,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     applyLongMessageHandling(bubble, true, msg.content);
                 } else {
                     addAssistantMessageActions(bubble, msg.content);
+                    // 为历史记录中的代码块添加复制按钮
+                    addCodeCopyButtons(bubble);
                 }
 
                 chatMessages.appendChild(messageDiv);
@@ -624,11 +646,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function addAssistantMessageActions(bubble, content) {
         if (!bubble) return;
 
+        // 如果已经处理过，不要重复处理
+        if (bubble.querySelector('.message-content')) return;
+
         // 1. 创建消息内容容器
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        // 将气泡中现有的HTML内容移动到contentDiv中
-        contentDiv.innerHTML = bubble.innerHTML;
+        
+        // 移动现有的所有子节点到 contentDiv 中，这样可以保留事件监听器
+        while (bubble.firstChild) {
+            contentDiv.appendChild(bubble.firstChild);
+        }
 
         // 2. 创建操作按钮行容器
         const actionsDiv = document.createElement('div');
@@ -645,7 +673,6 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
             const messageElement = bubble.closest('.message.assistant');
             if (messageElement) {
-                // 查找最近的上一条用户消息
                 let prevElement = messageElement.previousElementSibling;
                 while (prevElement && !prevElement.classList.contains('user')) {
                     prevElement = prevElement.previousElementSibling;
@@ -653,12 +680,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (prevElement) {
                     const userBubble = prevElement.querySelector('.user-message-content .message-content') || prevElement.querySelector('.user-message-content');
-                    // 兼容新的结构(.message-content)和旧结构(直接文本)
                     const userContent = userBubble.textContent || userBubble.innerText;
-
                     const currentModel = getCurrentModelName();
                     if (currentModel) {
-                        // 重新发送，不删除旧答案
                         sendMessageToAPI(userContent, currentModel, null, null);
                     } else {
                         alert('请先选择一个模型');
@@ -687,12 +711,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         actionsDiv.appendChild(copyBtn);
 
-        // 3. 重构DOM：将操作按钮合并到气泡内
-        bubble.innerHTML = '';
+        // 3. 将内容和操作按钮添加到气泡
         bubble.appendChild(contentDiv);
         bubble.appendChild(actionsDiv);
 
         lucide.createIcons();
+    }
+
+    // 为代码块添加复制按钮
+    function addCodeCopyButtons(container) {
+        const codeBlocks = container.querySelectorAll('pre');
+        codeBlocks.forEach(pre => {
+            // 防止重复添加
+            if (pre.querySelector('.code-copy-btn')) return;
+
+            // 创建复制按钮
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = '复制代码';
+            copyBtn.title = '复制代码';
+
+            // 添加点击事件
+            copyBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const code = pre.querySelector('code')?.textContent || pre.textContent;
+                try {
+                    await navigator.clipboard.writeText(code);
+                    copyBtn.textContent = '复制成功';
+                    copyBtn.classList.add('copied');
+                    setTimeout(() => {
+                        copyBtn.textContent = '复制代码';
+                        copyBtn.classList.remove('copied');
+                    }, 2000);
+                } catch (err) {
+                    console.error('复制失败:', err);
+                }
+            });
+
+            // 确保pre有相对定位
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
     }
 
     if (wideModeCheckbox) {
@@ -875,8 +934,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const md = getMarkdownInstance();
         if (bubble && content && md) {
             bubble.innerHTML = md.render(content);
-            // 为AI消息添加操作按钮
+            // 先添加AI消息操作按钮
             addAssistantMessageActions(bubble, content);
+            // 再为代码块添加复制按钮
+            addCodeCopyButtons(bubble);
+            
             if (activeChatId) {
                 const chat = configData.history.find(c => c.id === activeChatId);
                 if (chat) {
@@ -2066,4 +2128,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setTimeout(updateScrollbarMarkers, 500);
     }
+
+    // 一行代码解决全局滚动问题
+    document.getElementById('chat-view')?.addEventListener('wheel', e =>
+        !e.target.closest('#chat-messages') && document.getElementById('chat-messages')?.scrollBy(0, e.deltaY)
+    );
 });
