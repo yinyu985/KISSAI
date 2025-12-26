@@ -515,6 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+    preventScrollPropagation(chatInput);
 
     const toggleApiKeyBtn = document.querySelector('.action-icons .icon-btn:first-child');
     const copyApiKeyBtn = document.querySelector('.action-icons .icon-btn:last-child');
@@ -2084,7 +2085,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 初始化上下文数量显示
     if (contextCountDisplay) {
-        contextCountDisplay.textContent = configData.general.contextLimit || 20;
+        contextCountDisplay.textContent = configData.general.contextLimit || 10;
     }
 
     // 上下文数量控制按钮事件监听器 - 切换下拉框
