@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isRequesting = false;
     let originalProviderName = '';
     let editingRoleId = null;
-    let activeChatId = null;
+    let activeChatId = configData.general.activeChatId || null;
     function saveToStorage() {
         if (currentProviderKey && configData.providers[currentProviderKey]) {
             configData.providers[currentProviderKey].apiKey = apiKeyInput.value;
@@ -323,6 +323,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const chat = configData.history.find(c => c.id === id);
         if (!chat) return;
         activeChatId = id;
+
+        // 保存当前活跃的对话ID到localStorage
+        configData.general.activeChatId = id;
+        saveToStorage();
+
         const chatMessages = document.getElementById('chat-messages');
         if (chatMessages) chatMessages.innerHTML = '';
         const chatView = document.getElementById('chat-view');
@@ -547,7 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 lucide.createIcons();
             });
             actionsDiv.appendChild(expandBtn);
-            
+
             // 默认折叠
             contentDiv.classList.add('long-message-collapsed');
         }
@@ -571,7 +576,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         actionsDiv.appendChild(copyBtn);
 
-        // 3. 重构DOM：清空气泡，依次添加内容容器和操作行
+        // 3. 重构DOM：清空气泡，添加内容容器和操作按钮（合并到气泡内）
         bubble.innerHTML = '';
         bubble.appendChild(contentDiv);
         bubble.appendChild(actionsDiv);
@@ -646,7 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         actionsDiv.appendChild(copyBtn);
 
-        // 3. 重构DOM
+        // 3. 重构DOM：将操作按钮合并到气泡内
         bubble.innerHTML = '';
         bubble.appendChild(contentDiv);
         bubble.appendChild(actionsDiv);
@@ -1727,7 +1732,14 @@ document.addEventListener('DOMContentLoaded', () => {
     renderHistory();
     updateChatLayout();
     if (configData.history.length > 0) {
-        loadChat(configData.history[0].id);
+        // 优先加载上次活跃的对话，如果没有则加载第一个
+        const lastActiveChatId = configData.general.activeChatId;
+        const targetChat = configData.history.find(c => c.id === lastActiveChatId);
+        if (targetChat) {
+            loadChat(lastActiveChatId);
+        } else {
+            loadChat(configData.history[0].id);
+        }
     } else {
         createNewChat();
     }

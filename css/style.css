@@ -1632,12 +1632,13 @@ kbd {
     display: block;
     max-width: 100%;
     animation: fadeIn 0.15s ease-out;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     clear: both;
 }
+
 .message-bubble {
-    padding: 4px 8px;
-    border-radius: 10px;
+    padding: 2px 4px;
+    border-radius: clamp(2px, 0.4em, 12px);
     font-size: 14px;
     line-height: 1.3;
     word-wrap: break-word;
@@ -1647,6 +1648,9 @@ kbd {
     max-width: 96%;
     display: inline-block;
     text-align: left;
+    /* 为操作按钮留出空间，因为现在按钮在气泡外面 */
+    padding-bottom: 4px;
+    margin-bottom: 16px;  /* 给操作按钮留出空间 */
 }
 
 /* 在窄屏模式下，稍微增加气泡宽度以更好地利用空间 */
@@ -1669,7 +1673,7 @@ kbd {
 }
 .message-bubble h1, .message-bubble h2, .message-bubble h3,
 .message-bubble h4, .message-bubble h5, .message-bubble h6 {
-    margin: 0.4em 0 0.2em;
+    margin: 0.2em 0 0.1em;
     font-weight: 700;
     line-height: 1.2;
     color: var(--text-primary);
@@ -1679,12 +1683,12 @@ kbd {
 .message-bubble h3 { font-size: 1.25em; }
 .message-bubble h4 { font-size: 1.1em; }
 .message-bubble p {
-    margin: 0.3em 0;
+    margin: 0.1em 0;
     line-height: 1.3;
 }
 .message-bubble ul,
 .message-bubble ol {
-    margin: 0.3em 0;
+    margin: 0.1em 0;
     padding-left: 1.2em;
 }
 .message-bubble li {
@@ -1705,7 +1709,7 @@ kbd {
     line-height: 1.4;
     background-color: #0d1117;
     border-radius: 6px;
-    margin: 0.6em 0;
+    margin: 0.3em 0;
     border: 1px solid var(--border-color);
 }
 .message-bubble pre code {
@@ -1722,7 +1726,7 @@ kbd {
     padding: 6px 12px;
     color: var(--text-secondary);
     border-left: 0.25em solid var(--accent-color);
-    margin: 0.6em 0;
+    margin: 0.3em 0;
     background: rgba(255, 255, 255, 0.03);
     border-radius: 0 4px 4px 0;
 }
@@ -1775,6 +1779,12 @@ kbd {
     color: white;
     margin-left: auto;
     text-align: left;
+    max-width: 70%;
+    /* 确保短消息不会被拉长，保持内容的自然宽度 */
+    width: fit-content;
+    min-width: auto;
+    /* 用户消息：垂直紧凑，水平适中 */
+    padding: 1px 6px;
 }
 .chat-container.wide-mode .message.user .message-bubble {
     margin-left: 0;
@@ -1786,6 +1796,12 @@ kbd {
     background: var(--bg-tertiary);
     color: var(--text-primary);
     margin-right: auto;
+    max-width: 90%;
+    /* 确保短消息不会被拉长，保持内容的自然宽度 */
+    width: fit-content;
+    min-width: auto;
+    /* AI消息：垂直紧凑，左边留更多空间给Markdown序号 */
+    padding: 1px 4px 1px 12px;
 }
 .chat-container.wide-mode .message.assistant .message-bubble {
     margin-right: 0;
@@ -2001,7 +2017,11 @@ input:checked + .slider:before {
     word-wrap: break-word;
     overflow-wrap: break-word;
     word-break: normal;
-    min-height: 20px;
+    /* 垂直方向上铺满，移除最小高度限制 */
+    min-height: auto;
+    /* 确保内容贴近气泡顶部和底部 */
+    margin: 0;
+    padding: 0;
 }
 
 /* 长消息折叠样式 */
@@ -2013,21 +2033,29 @@ input:checked + .slider:before {
     -webkit-mask-image: linear-gradient(180deg, black 70%, transparent 100%);
 }
 
-/* 消息操作按钮容器 - 专属在右下角 */
+/* 消息操作按钮容器 - 合并到气泡内右下角，但看起来像在外面 */
 .message-actions-row {
     display: flex;
     justify-content: flex-end;
     align-items: center;
     gap: 2px;
-    margin-top: 2px;
-    padding-top: 0;
-    border-top: none;
     height: 13px;
     flex-wrap: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    /* 绝对定位在气泡右下角 */
+    position: absolute;
+    bottom: -14px;  /* 往下移动2个像素 */
+    right: 8px;
+    width: fit-content;
+    /* 透明背景，看起来像在气泡外面 */
+    background: transparent;
 }
 
-.message-actions-row:hover {
-    border-top-color: var(--border-color);
+/* 气泡悬停时显示操作按钮 */
+.message-bubble:hover .message-actions-row,
+.message:hover .message-actions-row {
+    opacity: 1;
 }
 
 /* 操作按钮样式 */
