@@ -619,6 +619,9 @@ div.history-item.active svg.lucide.lucide-search {
 .send-btn.stop-mode {
     background: transparent;
     border-color: var(--accent-red);
+    padding: 0;
+    width: 15px;
+    height: 15px;
 }
 .stop-icon {
     width: 15px;
