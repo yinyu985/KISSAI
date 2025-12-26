@@ -1604,10 +1604,10 @@ kbd {
 }
 .chat-container.has-messages .chat-messages {
     flex: 1;
-    padding: 16px 20px 100px 20px;
+    padding: 10px 20px 0px 20px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
     overflow-y: auto;
     overflow-x: hidden;
