@@ -63,7 +63,7 @@
                 <button id="theme-toggle-btn" class="footer-btn" title="切换主题">
                     <i data-lucide="moon"></i>
                 </button>
-                <button id="clear-history-btn" class="footer-btn" title="清理全部历史记录">
+                <button id="clear-history-btn" class="footer-btn" title="双击以清理全部历史记录">
                     <i data-lucide="trash-2"></i>
                 </button>
                 <button id="settings-btn" class="footer-btn" title="设置">
@@ -83,17 +83,19 @@
         <main id="main-content" class="main-content">
             <div id="chat-view" class="view active">
                 <div class="chat-container narrow-mode">
-                    <div class="welcome-section">
-                        <h1>👋嗨，你好啊！</h1>
-                        <p>今天我能为您做些什么？</p>
-                    </div>
-                    <div id="chat-messages" class="chat-messages">
-                        <!-- Messages will be appended here -->
-                    </div>
-                    <div class="input-container">
+                    <!-- 左侧主内容区域 -->
+                    <div class="chat-container-inner">
+                        <div class="welcome-section">
+                            <h1>👋嗨，你好啊！</h1>
+                            <p>今天我能为您做些什么？</p>
+                        </div>
+                        <div id="chat-messages" class="chat-messages">
+                            <!-- Messages will be appended here -->
+                        </div>
+                        <div class="input-container">
                         <div class="input-wrapper" style="position: relative;">
                             <div class="input-border"></div>
-                            <textarea id="chat-input" class="chat-input" placeholder="随便问我什么..." rows="1"></textarea>
+                            <textarea id="chat-input" class="chat-input" rows="1"></textarea>
                             <div id="role-mention-dropdown" class="role-mention-dropdown" style="display: none;"></div>
                             <div class="input-footer">
                                 <div class="left-controls" style="display: flex; gap: 8px; align-items: center;">
@@ -104,12 +106,12 @@
                                             <!-- Content will be injected by JS -->
                                         </div>
                                     </div>
-                                    <button id="clear-chat-btn" class="icon-btn-inline" title="清空对话">
-                                        <i data-lucide="eraser"></i>
+                                    <button id="clear-chat-btn" class="icon-btn-inline" title="双击以清空对话">
+                                        <i data-lucide="brush-cleaning"></i>
                                     </button>
                                     <div class="context-control" style="position: relative;">
                                         <button id="context-control-btn" class="icon-btn-inline context-btn" title="调节上下文消息数量">
-                                            <i data-lucide="brain"></i>
+                                            <i data-lucide="chevrons-down-up"></i>
                                             <span id="context-count-display" class="context-count-badge">20</span>
                                         </button>
                                         <!-- Context Limit Dropdown -->
@@ -126,21 +128,16 @@
                                             <div class="context-limit-option" data-value="20">20 条消息</div>
                                             <div class="context-limit-option" data-value="22">22 条消息</div>
                                             <div class="context-limit-option" data-value="24">24 条消息</div>
-                                            <div class="context-limit-option" data-value="26">26 条消息</div>
-                                            <div class="context-limit-option" data-value="28">28 条消息</div>
-                                            <div class="context-limit-option" data-value="30">30 条消息</div>
-                                            <div class="context-limit-option" data-value="32">32 条消息</div>
-                                            <div class="context-limit-option" data-value="34">34 条消息</div>
-                                            <div class="context-limit-option" data-value="36">36 条消息</div>
                                         </div>
                                     </div>
                                 </div>
                                 <button id="send-btn" class="send-btn" disabled>
-                                    <i data-lucide="arrow-right"></i>
+                                    <i data-lucide="send"></i>
                                 </button>
                             </div>
                         </div>
-                    </div>
+                        </div><!-- 关闭 input-container -->
+                    </div><!-- 关闭 chat-container-inner -->
                 </div>
             </div>
 
