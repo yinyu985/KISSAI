@@ -372,8 +372,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (chat.activeRole) {
             chatInput.value = `@${chat.activeRole} `;
+            chatInput.dataset.selectedRole = chat.activeRole;
         } else {
             chatInput.value = '';
+            delete chatInput.dataset.selectedRole;
         }
         renderHistory();
     }
@@ -397,9 +399,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!item) return;
         e.stopPropagation();
         const roleName = item.getAttribute('data-name');
-        const beforeAt = chatInput.value.substring(0, chatInput.value.lastIndexOf('@'));
-        chatInput.value = beforeAt + '@' + roleName + ' ';
-        chatInput.selectionStart = chatInput.selectionEnd = beforeAt.length + roleName.length + 2;
+
+        // 获取当前光标位置，精确定位要替换的@符号
+        const cursorPosition = chatInput.selectionStart;
+        const textBeforeCursor = chatInput.value.substring(0, cursorPosition);
+        const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+        if (lastAtIndex !== -1) {
+            const textAfterCursor = chatInput.value.substring(cursorPosition);
+            const selectedRoleText = '@' + roleName + ' ';
+
+            // 替换为选中的角色名
+            chatInput.value = chatInput.value.substring(0, lastAtIndex) + selectedRoleText + textAfterCursor;
+
+            // 设置光标位置
+            const newCursorPosition = lastAtIndex + selectedRoleText.length;
+            chatInput.selectionStart = chatInput.selectionEnd = newCursorPosition;
+
+            // 标记为用户明确选择的角色
+            chatInput.dataset.selectedRole = roleName;
+        }
+
         chatInput.focus();
         roleMentionDropdown.style.display = 'none';
         roleMentionDropdown.classList.remove('active');
@@ -415,6 +435,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const lastAtIndex = textBeforeCursor.lastIndexOf('@');
 
         if (lastAtIndex !== -1 && (lastAtIndex === 0 || textBeforeCursor[lastAtIndex - 1] === ' ' || textBeforeCursor[lastAtIndex - 1] === '\n')) {
+            // 检查这个@是否是已选择角色的一部分，如果是就不触发
+            const selectedRole = chatInput.dataset.selectedRole;
+            if (selectedRole) {
+                const selectedRoleText = '@' + selectedRole + ' ';
+                const roleStart = chatInput.value.indexOf(selectedRoleText);
+                // 清理不存在的角色标记
+                if (roleStart === -1) {
+                    delete chatInput.dataset.selectedRole;
+                } else if (lastAtIndex >= roleStart && lastAtIndex < roleStart + selectedRoleText.length) {
+                    // @在已选择角色范围内，不触发下拉菜单
+                    roleMentionDropdown.style.display = 'none';
+                    roleMentionDropdown.classList.remove('active');
+                    return;
+                }
+            }
+
             const searchTerm = textBeforeCursor.substring(lastAtIndex + 1).toLowerCase();
             const roles = configData.roles || [];
             const filteredRoles = roles.filter(role => role.name.toLowerCase().includes(searchTerm));
@@ -904,16 +940,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let processedMessage = message;
-        const roleMentions = message.match(/@([^\s@]+)/g);
-        if (roleMentions && configData.roles && configData.roles.length > 0) {
-            roleMentions.forEach(mention => {
-                const roleName = mention.substring(1);
-                const role = configData.roles.find(r => r.name === roleName);
-                if (role && role.prompt) {
-                    messages.push({ role: 'system', content: `角色预设：${role.name}\n${role.prompt}` });
-                    processedMessage = processedMessage.replace(mention, '');
-                }
-            });
+        // 只处理用户明确选择的角色，不处理所有@符号
+        const selectedRole = chatInput.dataset.selectedRole;
+        if (selectedRole) {
+            const role = configData.roles.find(r => r.name === selectedRole);
+            if (role && role.prompt) {
+                messages.push({ role: 'system', content: `角色预设：${role.name}\n${role.prompt}` });
+                processedMessage = processedMessage.replace(`@${selectedRole}`, '').trim();
+            }
         }
 
         let chat = null;
@@ -1061,8 +1095,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (chatContainer) chatContainer.classList.add('has-messages');
             if (chatView) chatView.classList.add('has-messages');
             abortController = new AbortController();
-            const roleMentions = message.match(/@([^\s@]+)/g);
-            const currentRole = roleMentions && roleMentions.length > 0 ? roleMentions[0].substring(1) : null;
+            // 只使用用户明确选择的角色
+            const currentRole = chatInput.dataset.selectedRole || null;
             if (activeChatId) {
                 const chat = configData.history.find(c => c.id === activeChatId);
                 if (chat) {
@@ -1075,6 +1109,9 @@ document.addEventListener('DOMContentLoaded', () => {
             chatInput.style.height = 'auto';
             if (currentRole) {
                 chatInput.value = `@${currentRole} `;
+                chatInput.dataset.selectedRole = currentRole;
+            } else {
+                delete chatInput.dataset.selectedRole;
             }
             await sendMessageToAPI(message, currentModel, abortController.signal, currentRole);
         } catch (error) {

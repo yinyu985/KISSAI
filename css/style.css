@@ -186,12 +186,12 @@ body {
 .sidebar i:not(.handle-svg),
 .sidebar svg:not(.handle-svg),
 .sidebar [data-lucide]:not(.handle-svg) {
-    width: 12px !important;
-    height: 12px !important;
-    min-width: 12px;
-    max-width: 12px;
-    min-height: 12px;
-    max-height: 12px;
+    width: 15px !important;
+    height: 15px !important;
+    min-width: 15px;
+    max-width: 15px;
+    min-height: 15px;
+    max-height: 15px;
     flex-shrink: 0;
     stroke-width: 2px !important;
 }
@@ -234,6 +234,13 @@ body {
 .footer-btn:hover {
     color: var(--text-primary);
 }
+
+
+/* 活跃历史记录项目的搜索图标大小设置 */
+div.history-item.active svg.lucide.lucide-search {
+    width: 15px !important;
+    height: 15px !important;
+}
 .sidebar-footer {
     padding: 12px;
     display: flex;
@@ -259,7 +266,6 @@ body {
     display: flex;
     flex-direction: column;
     width: 100%;
-    user-select: none;
     padding: 0 12px;
     margin-top: 0px;
     align-items: center;
@@ -267,7 +273,7 @@ body {
 }
 /* Logo主标题 "KISS AI" */
 .logo-main {
-    font-size: 26px;
+    font-size: 35px;
     font-weight: 800;
     color: var(--accent-color);
     letter-spacing: -0.5px;
@@ -617,6 +623,14 @@ body {
     border-color: var(--accent-red);
     transform: scale(1.05);
 }
+
+/* 发送按钮图标大小 - 强制覆盖内联样式 */
+#send-btn svg,
+.send-btn svg.lucide-send {
+    width: 15px !important;
+    height: 15px !important;
+}
+
 ::-webkit-scrollbar {
     width: 4px;
     height: 4px;
@@ -1552,12 +1566,12 @@ kbd {
     position: relative;
 }
 .chat-container.narrow-mode {
-    width: 60%;
+    width: 65%;
     margin: 0 auto;
     box-sizing: border-box;
 }
 .chat-container.wide-mode {
-    width: 90%;
+    width: 95%;
     margin: 0 auto;
     box-sizing: border-box;
 }
@@ -2043,12 +2057,10 @@ input:checked + .slider:before {
     flex-wrap: nowrap;
     opacity: 0;
     transition: opacity 0.2s ease;
-    /* 绝对定位在气泡右下角 */
     position: absolute;
-    bottom: -14px;  /* 往下移动2个像素 */
-    right: 8px;
+    bottom: -13px;
+    right: -3px;
     width: fit-content;
-    /* 透明背景，看起来像在气泡外面 */
     background: transparent;
 }
 
