@@ -173,7 +173,7 @@ body {
     border: 1px solid var(--border-color);
     border-radius: 6px;
     color: var(--text-secondary);
-    font-size: 13px;
+    font-size: 14px;
     transition: none;
     box-sizing: border-box;
     flex-shrink: 0;
@@ -201,7 +201,7 @@ body {
     color: inherit;
     outline: none;
     width: 100%;
-    font-size: 13px;
+    font-size: 14px;
     font-family: inherit;
     padding: 0;
     display: flex;
@@ -211,7 +211,7 @@ body {
 }
 .sidebar-action span {
     white-space: nowrap;
-    font-size: 13px;
+    font-size: 14px;
     display: flex;
     align-items: center;
     height: 100%;
@@ -283,7 +283,7 @@ div.history-item.active svg.lucide.lucide-search {
 /* Logo副标题 "Keep it simple, stupid" */
 .logo-sub {
     font-family: 'Outfit', sans-serif;
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 400;
     color: var(--text-secondary);
     opacity: 0.8;
@@ -347,7 +347,7 @@ div.history-item.active svg.lucide.lucide-search {
     justify-content: space-between;
     transition: none;
     color: var(--text-secondary);
-    font-size: 13px;
+    font-size: 14px;
     width: 100%;
     box-sizing: border-box;
     border: 1px solid transparent;
@@ -372,7 +372,7 @@ div.history-item.active svg.lucide.lucide-search {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 13px;
+    font-size: 14px;
     display: flex;
     align-items: center;
     height: 100%;
@@ -405,8 +405,8 @@ div.history-item.active svg.lucide.lucide-search {
 .history-item-actions svg,
 .model-item-actions i,
 .model-item-actions svg {
-    width: 12px !important;
-    height: 12px !important;
+    width: 15px !important;
+    height: 15px !important;
     transition: none;
 }
 .provider-item-actions {
@@ -432,27 +432,27 @@ div.history-item.active svg.lucide.lucide-search {
     color: var(--text-secondary);
 }
 .empty-state i, .empty-state svg, .empty-state [data-lucide="message-square"] {
-    width: 12px !important;
-    height: 12px !important;
+    width: 15px !important;
+    height: 15px !important;
     color: var(--text-secondary);
     opacity: 0.6;
     margin-bottom: 12px;
     stroke-width: 2px !important;
 }
 .empty-state [data-lucide] {
-    width: 12px !important;
-    height: 12px !important;
+    width: 15px !important;
+    height: 15px !important;
     stroke-width: 2px !important;
 }
 .empty-state p {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-secondary);
     margin: 4px 0;
 }
 .empty-state span {
     line-height: 1.4;
     display: block;
-    font-size: 13px;
+    font-size: 14px;
 }
 .main-content {
     flex: 1;
@@ -487,7 +487,7 @@ div.history-item.active svg.lucide.lucide-search {
 .input-wrapper {
     /* 输入框主容器 */
     border-radius: 12px;
-    padding: 12px 14px 5px 14px;
+    padding: 10px 14px 10px 14px;
     display: flex;
     flex-direction: column;
     gap: 5px;
@@ -499,6 +499,7 @@ div.history-item.active svg.lucide.lucide-search {
     isolation: isolate;
     transition: none;
     margin-top: 10px;
+    margin-bottom: 10px;
 }
 .input-border {
     /* 彩虹边框动画层 */
@@ -538,13 +539,13 @@ div.history-item.active svg.lucide.lucide-search {
     background: transparent;
     border: none;
     color: var(--text-primary);
-    font-size: 15px;
+    font-size: 14px;
     resize: none;
     outline: none;
     width: 100%;
-    min-height: 24px;
+    min-height: 20px;
     max-height: 240px;
-    padding: 4px;
+    padding: 1px;
     font-family: inherit;
     line-height: 1.5;
     overflow-y: auto;
@@ -558,7 +559,7 @@ div.history-item.active svg.lucide.lucide-search {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 8px;
+    margin-top: 1px;
 }
 .model-selector {
     position: relative;
@@ -569,7 +570,7 @@ div.history-item.active svg.lucide.lucide-search {
     height: 24px;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-secondary);
     transition: none;
     max-width: fit-content;
@@ -579,17 +580,18 @@ div.history-item.active svg.lucide.lucide-search {
     position: absolute;
     bottom: calc(100% + 5px);
     left: 0;
-    width: 200px;
+    width: 240px;
     background: var(--bg-tertiary);
     border: 1px solid var(--border-color);
     border-radius: 6px;
     box-shadow: 0 5px 20px rgba(0,0,0,0.4);
     display: none;
     flex-direction: column;
-    max-height: 180px;
+    max-height: 240px;
     overflow-y: auto;
     overflow-x: hidden;
     z-index: 2000;
+    overscroll-behavior: contain;
 }
 .model-dropdown.active {
     display: flex;
@@ -619,8 +621,8 @@ div.history-item.active svg.lucide.lucide-search {
     border-color: var(--accent-red);
 }
 .stop-icon {
-    width: 12px;
-    height: 12px;
+    width: 15px;
+    height: 15px;
     background: var(--accent-red);
     border-radius: 2px;
 }
@@ -672,9 +674,9 @@ div.history-item.active svg.lucide.lucide-search {
     padding: 1px 2px;
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 1px;
     cursor: pointer;
-    font-size: 10px;
+    font-size: 12px;
     transition: none;
     color: var(--text-primary);
     border-bottom: 1px solid var(--border-color);
@@ -689,8 +691,8 @@ div.history-item.active svg.lucide.lucide-search {
     border-bottom: none;
 }
 .dropdown-item i {
-    width: 12px;
-    height: 10px;
+    width: 15px;
+    height: 15px;
 }
 #settings-view {
     position: absolute;
@@ -738,7 +740,7 @@ div.history-item.active svg.lucide.lucide-search {
     padding: 6px 10px;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 14px;
     color: var(--text-secondary);
     transition: none;
     position: relative;
@@ -800,14 +802,13 @@ div.history-item.active svg.lucide.lucide-search {
 }
 .settings-group label {
     display: block;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 600;
     margin-bottom: 4px;
     color: var(--text-primary);
 }
-/* 帮助文本 - 压缩上方空间 */
 .help-text {
-    font-size: 11px;
+    font-size: 14px;
     color: var(--text-secondary);
     margin: 2px 0 4px 0;
 }
@@ -827,7 +828,7 @@ div.history-item.active svg.lucide.lucide-search {
     border-radius: 6px;
     padding: 6px 10px;
     color: var(--text-primary);
-    font-size: 12px;
+    font-size: 14px;
     transition: none;
 }
 input[type="number"]::-webkit-outer-spin-button,
@@ -845,7 +846,7 @@ input[type="number"] {
     padding: 0 12px;
     height: 36px;
     color: var(--text-primary);
-    font-size: 13px;
+    font-size: 14px;
     outline: none;
     transition: none;
     width: 200px;
@@ -871,14 +872,13 @@ input[type="number"] {
     box-shadow: none !important;
 }
 .action-icons .icon-btn i {
-    width: 12px !important;
-    height: 12px !important;
+    width: 15px !important;
+    height: 15px !important;
     color: var(--text-secondary);
 }
 .action-icons .icon-btn:hover i {
     color: var(--text-primary);
 }
-/* 分组标题区域 - 压缩下方间距 */
 .group-header {
     display: flex;
     justify-content: space-between;
@@ -900,7 +900,7 @@ input[type="number"] {
     align-items: center;
     gap: 1px;
     cursor: pointer;
-    font-size: 8px;
+    font-size: 10px;
 }
 .action-btn-xs-text i {
     width: 12px;
@@ -949,13 +949,13 @@ input, textarea, button {
 .settings-container .lucide,
 .model-selector i,
 .model-selector svg {
-    width: 12px !important;
-    height: 12px !important;
+    width: 15px !important;
+    height: 15px !important;
     stroke-width: 2.5px;
 }
 i[data-lucide], svg[data-lucide], .lucide {
-    width: 12px !important;
-    height: 12px !important;
+    width: 15px !important;
+    height: 15px !important;
     stroke-width: 2px !important;
     flex-shrink: 0;
 }
@@ -1049,7 +1049,7 @@ input:checked + .slider:before {
     min-width: 0;
 }
 .model-item-name {
-    font-size: 12px;
+    font-size: 14px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1062,8 +1062,8 @@ input:checked + .slider:before {
     flex-shrink: 0;
 }
 .model-item-actions i, .model-item-actions svg {
-    width: 12px !important;
-    height: 12px !important;
+    width: 15px !important;
+    height: 15px !important;
     cursor: pointer;
     color: var(--text-secondary);
     fill: none;
@@ -1134,10 +1134,9 @@ kbd {
     border-radius: 4px;
     padding: 2px 6px;
     font-family: monospace;
-    font-size: 12px;
+    font-size: 14px;
 }
-/* 角色预设列表容器 - 添加最大高度和滚动条 */
-/* 角色预设列表容器 - 压缩条目间距离 */
+
 .role-list {
     display: flex;
     flex-direction: column;
@@ -1156,15 +1155,13 @@ kbd {
     margin-bottom: 2px;
     align-items: center;
 }
-/* 角色预设条目中的名称和内容 - 统一字体大小 */
 .role-item-name {
     font-weight: 600;
-    font-size: 11px;
+    font-size: 14px;
 }
-/* 角色预设提示词内容 - 预览状态下紧凑显示一行 */
-/* 角色预设提示词内容 - 压缩行高 */
+
 .role-item-prompt {
-    font-size: 11px;
+    font-size: 14px;
     color: var(--text-secondary);
     white-space: nowrap;
     overflow: hidden;
@@ -1178,7 +1175,6 @@ kbd {
 .settings-content.active {
     display: block;
 }
-/* 编辑表单容器 - 移除最大高度，让表单可以展开 */
 .compact-form {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
@@ -1192,7 +1188,6 @@ kbd {
 .compact-form.active {
     display: flex;
 }
-/* 编辑表单输入框 - 统一字体大小 */
 .compact-form input,
 .compact-form textarea {
     width: 100%;
@@ -1202,15 +1197,14 @@ kbd {
     padding: 4px 8px;
     color: var(--text-primary);
     font-family: inherit;
-    font-size: 12px;
+    font-size: 14px;
     transition: none;
 }
 .compact-form input {
     font-weight: 600;
 }
-/* 编辑表单中的textarea - 允许调高但隐藏右下角图标 */
 .compact-form textarea {
-    font-size: 12px;
+    font-size: 14px;
     line-height: 1.4;
     resize: none;
     min-height: 60px;
@@ -1220,14 +1214,12 @@ kbd {
 .compact-form textarea:focus {
     border-color: #444;
 }
-/* 表单操作按钮容器 */
 .form-actions {
     display: flex;
     justify-content: flex-end;
     gap: 4px;
     margin-top: 2px;
 }
-/* 隐藏的表单操作按钮 */
 .form-actions.hidden {
     display: none;
 }
@@ -1252,7 +1244,7 @@ kbd {
     border-radius: 8px;
     padding: 10px;
     color: var(--text-primary);
-    font-size: 12px;
+    font-size: 14px;
     line-height: 1.5;
     outline: none;
     resize: vertical;
@@ -1269,7 +1261,7 @@ kbd {
     background: transparent;
     border: none;
     color: var(--text-secondary);
-    font-size: 11px;
+    font-size: 14px;
     cursor: pointer;
     padding: 2px 4px;
     opacity: 0.7;
@@ -1295,9 +1287,9 @@ kbd {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 0 12px;
-    height: 36px; /* Fixed height match */
+    height: 36px;
     color: var(--text-primary);
-    font-size: 13px;
+    font-size: 14px;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
@@ -1326,7 +1318,7 @@ kbd {
 }
 .select-option {
     padding: 8px 12px;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-primary);
     cursor: pointer;
     transition: none;
@@ -1497,7 +1489,7 @@ kbd {
     border-radius: 4px;
     cursor: pointer;
     transition: none;
-    font-size: 11px;
+    font-size: 14px;
 }
 .model-selection-item:hover {
     background: var(--bg-hover);
@@ -1528,14 +1520,14 @@ kbd {
     left: 50%;
     transform: translate(-50%, -50%);
     color: white;
-    font-size: 8px;
+    font-size: 14px;
     font-weight: bold;
     line-height: 1;
 }
 .model-selection-item label {
     flex: 1;
     cursor: pointer;
-    font-size: 11px;
+    font-size: 14px;
     color: var(--text-primary);
     margin: 0;
     font-weight: 500;
@@ -1903,7 +1895,7 @@ input:checked + .slider:before {
     border-radius: 50%;
 }
 .toggle-label {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-secondary);
 }
 
@@ -1911,7 +1903,7 @@ input:checked + .slider:before {
     position: absolute;
     bottom: calc(100% + 5px);
     right: 0;
-    width: 60px;
+    width: 70px;
     background: var(--bg-tertiary);
     border: 1px solid var(--border-color);
     border-radius: 6px;
@@ -1919,8 +1911,9 @@ input:checked + .slider:before {
     display: none;
     flex-direction: column;
     z-index: 2000;
-    max-height: 180px;
+    max-height: 240px;
     overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .context-limit-dropdown.active {
@@ -1930,7 +1923,7 @@ input:checked + .slider:before {
 .context-limit-option {
     padding: 1px 2px;
     cursor: pointer;
-    font-size: 10px;
+    font-size: 12px;
     color: var(--text-primary);
     border-bottom: 1px solid var(--border-color);
 }
@@ -1955,9 +1948,9 @@ input:checked + .slider:before {
     display: none;
     flex-direction: column;
     z-index: 2000;
-    max-height: 180px;
+    max-height: 230px;
     overflow-y: auto;
-    min-width: 180px;
+    min-width: 240px;
 }
 
 .role-mention-dropdown.active {
@@ -1967,7 +1960,7 @@ input:checked + .slider:before {
 .role-mention-item {
     padding: 1px 2px;
     cursor: pointer;
-    font-size: 10px;
+    font-size: 12px;
     color: var(--text-primary);
     border-bottom: 1px solid var(--border-color);
     display: flex;
@@ -2085,7 +2078,7 @@ input:checked + .slider:before {
     color: var(--accent-color) !important;
     cursor: pointer !important;
     padding: 3px 8px !important;
-    font-size: 11px !important;
+    font-size: 14px;
     border-radius: 4px !important;
     z-index: 100 !important;
     display: block !important;
@@ -2112,6 +2105,15 @@ input:checked + .slider:before {
     padding: 12px 16px !important;
     margin: 8px 0 !important;
     overflow: auto !important;
+    min-height: 42px; /* 确保有足够高度容纳按钮 */
+}
+
+.message-bubble pre code {
+    display: block; /* 确保 code 独占一行，不会和绝对定位的按钮发生奇怪的流式交互 */
+    padding-right: 60px; /* 右侧留出空间给按钮，防止代码文字和按钮重叠 */
+    overflow-x: auto;
+    background: transparent;
+    border: none;
 }
 
 /* 操作按钮样式 */
@@ -2138,7 +2140,7 @@ input:checked + .slider:before {
 .message-action-btn i,
 .message-action-btn svg,
 .message-action-btn [data-lucide] {
-    width: 12px !important;
-    height: 12px !important;
+    width: 15px !important;
+    height: 15px !important;
     stroke-width: 2px !important;
 }

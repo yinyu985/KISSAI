@@ -193,7 +193,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
           border: 1px solid rgba(255, 255, 255, 0.1);
           color: #f0f0f0 !important;
           border-radius: var(--ai-border-radius);
-          font-size: 11px !important;
+          font-size: 12px; !important;
           font-weight: normal;
           white-space: nowrap;
           cursor: pointer;
@@ -212,7 +212,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
           border: none;
           color: #f0f0f0 !important;
           padding: 1px 2px;
-          font-size: 11px !important;
+          font-size: 12px; !important;
           cursor: pointer;
           white-space: nowrap;
           line-height: 1.2;
@@ -287,7 +287,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
           border: none;
           background: transparent;
           color: #f0f0f0 !important;
-          font-size: 11px !important;
+          font-size: 12px; !important;
           cursor: pointer;
           white-space: nowrap;
           overflow: hidden;
@@ -314,7 +314,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
           padding: 4px 4px;
           color: #888;
           cursor: pointer;
-          font-size: 11px;
+          font-size: 12px;
           white-space: nowrap;
           overflow: visible;
           text-overflow: none;
@@ -355,7 +355,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
           padding: 1px 4px;
           border-radius: var(--ai-border-radius);
           cursor: pointer;
-          font-size: 11px !important;
+          font-size: 12px; !important;
           color: #888 !important;
           border-bottom: 1px solid rgba(255,255,255,0.03);
           display: flex;
@@ -372,7 +372,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
           color: #f0f0f0 !important;
         }
         .ai-history-time {
-          font-size: 11px;
+          font-size: 12px;
           opacity: 0.6;
           white-space: nowrap;
           flex-shrink: 0;
@@ -450,7 +450,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
         .ai-compact-message {
           padding: 1px 3px !important;
           margin: 0 2% !important;  /* 与AI消息和用户消息有相同的边距 */
-          font-size: 11px !important;
+          font-size: 12px; !important;
           line-height: 1.2 !important;
           color: #888 !important;
           font-style: italic;
@@ -470,7 +470,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
           white-space: normal !important;
         }
         .ai-message-content * {
-          font-size: 11px !important;
+          font-size: 12px; !important;
           line-height: 1.2 !important;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         }
@@ -490,7 +490,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
         .ai-input-field {
           flex: 1;
           padding: 2px 4px;
-          font-size: 11px !important;
+          font-size: 12px; !important;
           color: #f0f0f0 !important;
           border: 1px solid rgba(255, 255, 255, 0.1) !important;
           border-radius: var(--ai-border-radius);
@@ -1513,10 +1513,10 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
                     contentEl.innerHTML = '';
                     const compactMsg = document.createElement('div');
                     compactMsg.className = 'ai-compact-message';
-                    compactMsg.innerHTML = `<span style="font-size: 11px; color: #ff6b6b; font-style: italic;">请求失败: ${escaped}</span>`;
+                    compactMsg.innerHTML = `<span style="font-size: 12px; color: #ff6b6b; font-style: italic;">请求失败: ${escaped}</span>`;
                     contentEl.parentNode.replaceChild(compactMsg, contentEl);
                 } else {
-                    this.appendCompactMessage(`<span style="font-size: 11px; color: #ff6b6b; font-style: italic;">请求失败: ${escaped}</span>`);
+                    this.appendCompactMessage(`<span style="font-size: 12px; color: #ff6b6b; font-style: italic;">请求失败: ${escaped}</span>`);
                 }
                 this.currentRequest = null;
                 this.requestState.isRequesting = false;
@@ -1554,10 +1554,10 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
                                 contentEl.innerHTML = '';
                                 const compactMsg = document.createElement('div');
                                 compactMsg.className = 'ai-compact-message';
-                                compactMsg.innerHTML = `<span style="font-size: 11px; color: #ff9800; font-style: italic;">达到速率限制，${Math.ceil(retryAfter / 1000)}秒后自动重试 (${this.retryCount}/${this.maxRetries})...</span>`;
+                                compactMsg.innerHTML = `<span style="font-size: 12px; color: #ff9800; font-style: italic;">达到速率限制，${Math.ceil(retryAfter / 1000)}秒后自动重试 (${this.retryCount}/${this.maxRetries})...</span>`;
                                 contentEl.parentNode.replaceChild(compactMsg, contentEl);
                             } else {
-                                this.appendCompactMessage(`<span style="font-size: 11px; color: #ff9800; font-style: italic;">达到速率限制，${Math.ceil(retryAfter / 1000)}秒后自动重试 (${this.retryCount}/${this.maxRetries})...</span>`);
+                                this.appendCompactMessage(`<span style="font-size: 12px; color: #ff9800; font-style: italic;">达到速率限制，${Math.ceil(retryAfter / 1000)}秒后自动重试 (${this.retryCount}/${this.maxRetries})...</span>`);
                             }
                             this.requestState.retryTimeout = setTimeout(() => {
                                 if (!this.requestState.isRequesting) return;
@@ -1565,10 +1565,10 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
                                     contentEl.innerHTML = '';
                                     const compactMsg = document.createElement('div');
                                     compactMsg.className = 'ai-compact-message';
-                                    compactMsg.innerHTML = '<span style="font-size: 11px; color: #2196f3; font-style: italic;">正在重试...</span>';
+                                    compactMsg.innerHTML = '<span style="font-size: 12px; color: #2196f3; font-style: italic;">正在重试...</span>';
                                     contentEl.parentNode.replaceChild(compactMsg, contentEl);
                                 } else {
-                                    this.appendCompactMessage('<span style="font-size: 11px; color: #2196f3; font-style: italic;">正在重试...</span>');
+                                    this.appendCompactMessage('<span style="font-size: 12px; color: #2196f3; font-style: italic;">正在重试...</span>');
                                 }
                                 this.performRequest();
                             }, retryAfter);

@@ -10,14 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 typographer: true,
                 quotes: '""\'\'',
                 tables: true,
-                taskLists: true,
-                sup: true,
-                footnote: true,
-                deflist: true,
-                abbr: true,
-                mark: true,
-                ins: true,
-                del: true,
                 highlight: function (str, lang) {
                     if (typeof hljs !== 'undefined') {
                         try {
@@ -55,6 +47,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return globalMd;
     }
+
+    // 验证角色是否有效（存在于配置中）
+    const isValidRole = (roleName) => {
+        if (!roleName || !configData.roles) return false;
+        return configData.roles.some(role => role.name === roleName);
+    };
 
     const updateIcons = () => {
         if (typeof lucide !== 'undefined') {
@@ -392,12 +390,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (chatContainer) chatContainer.classList.remove('has-messages');
             if (welcomeSection) welcomeSection.style.display = 'flex';
         }
-        if (chat.activeRole) {
+        if (chat.activeRole && isValidRole(chat.activeRole)) {
             chatInput.value = `@${chat.activeRole} `;
             chatInput.dataset.selectedRole = chat.activeRole;
         } else {
             chatInput.value = '';
             delete chatInput.dataset.selectedRole;
+            // 清除无效的角色引用
+            if (chat.activeRole && !isValidRole(chat.activeRole)) {
+                chat.activeRole = null;
+                saveToStorage();
+            }
         }
         renderHistory();
     }
@@ -414,6 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         saveToStorage();
     };
+
     // 初始化角色提及下拉菜单的事件监听（事件委托）
     const roleMentionDropdown = document.getElementById('role-mention-dropdown');
     roleMentionDropdown.addEventListener('click', (e) => {
@@ -452,20 +456,28 @@ document.addEventListener('DOMContentLoaded', () => {
         chatInput.style.height = Math.min(chatInput.scrollHeight, 240) + 'px';
         sendBtn.disabled = chatInput.value.trim() === '';
 
+        // 检查是否需要清除角色选择（用户手动删除了@角色名）
+        const selectedRole = chatInput.dataset.selectedRole;
+        if (selectedRole) {
+            // 检查是否包含 @角色名 后面跟着空格或字符串结束
+            const roleExistsInInput = new RegExp(`@${selectedRole.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\s|$)`).test(chatInput.value);
+            if (!roleExistsInInput) {
+                delete chatInput.dataset.selectedRole;
+            }
+        }
+
+        // 只在输入框开头或空格后@时触发角色选择菜单
         const cursorPosition = chatInput.selectionStart;
         const textBeforeCursor = chatInput.value.substring(0, cursorPosition);
         const lastAtIndex = textBeforeCursor.lastIndexOf('@');
 
         if (lastAtIndex !== -1 && (lastAtIndex === 0 || textBeforeCursor[lastAtIndex - 1] === ' ' || textBeforeCursor[lastAtIndex - 1] === '\n')) {
             // 检查这个@是否是已选择角色的一部分，如果是就不触发
-            const selectedRole = chatInput.dataset.selectedRole;
-            if (selectedRole) {
-                const selectedRoleText = '@' + selectedRole + ' ';
+            const currentSelectedRole = chatInput.dataset.selectedRole;
+            if (currentSelectedRole) {
+                const selectedRoleText = '@' + currentSelectedRole + ' ';
                 const roleStart = chatInput.value.indexOf(selectedRoleText);
-                // 清理不存在的角色标记
-                if (roleStart === -1) {
-                    delete chatInput.dataset.selectedRole;
-                } else if (lastAtIndex >= roleStart && lastAtIndex < roleStart + selectedRoleText.length) {
+                if (roleStart !== -1 && lastAtIndex >= roleStart && lastAtIndex < roleStart + selectedRoleText.length) {
                     // @在已选择角色范围内，不触发下拉菜单
                     roleMentionDropdown.style.display = 'none';
                     roleMentionDropdown.classList.remove('active');
@@ -485,6 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `).join('');
                 roleMentionDropdown.style.display = 'flex';
                 roleMentionDropdown.classList.add('active');
+                preventScrollPropagation(roleMentionDropdown);
             } else {
                 roleMentionDropdown.style.display = 'none';
                 roleMentionDropdown.classList.remove('active');
@@ -652,7 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. 创建消息内容容器
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        
+
         // 移动现有的所有子节点到 contentDiv 中，这样可以保留事件监听器
         while (bubble.firstChild) {
             contentDiv.appendChild(bubble.firstChild);
@@ -720,10 +733,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 为代码块添加复制按钮
     function addCodeCopyButtons(container) {
+        // 1. 获取所有 pre 元素
         const codeBlocks = container.querySelectorAll('pre');
+
         codeBlocks.forEach(pre => {
-            // 防止重复添加
+            // 2. 必须包含 code 标签才是合法的 markdown 代码块
+            const codeElement = pre.querySelector('code');
+            if (!codeElement) return;
+
+            // 3. 防止重复添加 (检查是否已经有按钮)
             if (pre.querySelector('.code-copy-btn')) return;
+
+            // 4. 检查内容是否为空 (只包含空白字符的也不添加)
+            const codeText = codeElement.textContent || '';
+            if (!codeText.trim()) return;
 
             // 创建复制按钮
             const copyBtn = document.createElement('button');
@@ -734,9 +757,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // 添加点击事件
             copyBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                const code = pre.querySelector('code')?.textContent || pre.textContent;
+                // 重新获取最新的文本内容
+                const currentCode = pre.querySelector('code')?.textContent || pre.textContent;
+                // 去除按钮本身的文本（虽然理论上取 code 内容应该没事，但防万一）
+                const cleanCode = currentCode.replace('复制代码', '').replace('复制成功', '');
+
                 try {
-                    await navigator.clipboard.writeText(code);
+                    await navigator.clipboard.writeText(codeElement.textContent);
                     copyBtn.textContent = '复制成功';
                     copyBtn.classList.add('copied');
                     setTimeout(() => {
@@ -920,25 +947,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return messageDiv;
     }
+    // 修复AI输出的这种弱智格式：内容... ``` (结束符没有换行)
+    function fixInlineCodeBlockEnd(content) {
+        if (!content) return content;
+        // 匹配模式：非换行字符 + 可能的空格 + ``` + 可能的空格 + 行尾
+        // $1 是前面的内容，$2 是 ``` 之前可能的空格（保留），然后强行插入 \n
+        return content.replace(/([^\n])([ \t]*)```[ \t]*$/gm, '$1$2\n```');
+    }
+
     function updateAIMessageContent(messageElement, content) {
         const bubble = messageElement.querySelector('.message-bubble');
         const md = getMarkdownInstance();
+
+        // 修复代码块结束符不换行的问题
+        const safeContent = fixInlineCodeBlockEnd(content);
+
         if (bubble && md) {
-            bubble.innerHTML = `${md.render(content)}<span class="cursor"></span>`;
+            bubble.innerHTML = `${md.render(safeContent)}<span class="cursor"></span>`;
         } else if (bubble) {
-            bubble.textContent = content + '|';
+            bubble.textContent = safeContent + '|';
         }
     }
     function finalizeAIMessage(messageElement, content) {
         const bubble = messageElement.querySelector('.message-bubble');
         const md = getMarkdownInstance();
+
+        // 修复代码块结束符不换行的问题
+        const safeContent = fixInlineCodeBlockEnd(content);
+
         if (bubble && content && md) {
-            bubble.innerHTML = md.render(content);
+            bubble.innerHTML = md.render(safeContent);
             // 先添加AI消息操作按钮
-            addAssistantMessageActions(bubble, content);
+            addAssistantMessageActions(bubble, safeContent);
             // 再为代码块添加复制按钮
             addCodeCopyButtons(bubble);
-            
+
             if (activeChatId) {
                 const chat = configData.history.find(c => c.id === activeChatId);
                 if (chat) {
@@ -1002,13 +1045,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let processedMessage = message;
-        // 只处理用户明确选择的角色，不处理所有@符号
-        const selectedRole = chatInput.dataset.selectedRole;
-        if (selectedRole) {
-            const role = configData.roles.find(r => r.name === selectedRole);
+        // 处理用户明确选择的角色
+        if (currentRole && isValidRole(currentRole)) {
+            const role = configData.roles.find(r => r.name === currentRole);
             if (role && role.prompt) {
                 messages.push({ role: 'system', content: `角色预设：${role.name}\n${role.prompt}` });
-                processedMessage = processedMessage.replace(`@${selectedRole}`, '').trim();
+                processedMessage = processedMessage.replace(`@${currentRole}`, '').trim();
             }
         }
 
@@ -1033,7 +1075,8 @@ document.addEventListener('DOMContentLoaded', () => {
             messages.push({ role: 'user', content: processedMessage.trim() });
         }
 
-        if (currentRole && configData.roles && chat && chat.messages) {
+        // 如果当前有选择角色，每3条消息插入一次角色预设，保持大模型行为一致
+        if (currentRole && isValidRole(currentRole) && configData.roles && chat && chat.messages) {
             const role = configData.roles.find(r => r.name === currentRole);
             if (role && role.prompt) {
                 const systemMsgCount = messages.filter(m => m.role === 'system').length;
@@ -1085,6 +1128,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
+            let lastRenderTime = 0;
+            const RENDER_INTERVAL = 50; // 50ms 节流，约 20fps，兼顾流畅度与性能
+
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
@@ -1103,7 +1149,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const delta = parsed.choices[0];
                                 if (delta.delta && delta.delta.content) {
                                     fullContent += delta.delta.content;
-                                    updateAIMessageContent(aiMessageElement, fullContent);
+
+                                    // 节流渲染：限制界面刷新频率
+                                    const now = Date.now();
+                                    if (now - lastRenderTime >= RENDER_INTERVAL) {
+                                        updateAIMessageContent(aiMessageElement, fullContent);
+                                        lastRenderTime = now;
+                                    }
                                 }
                             }
                         } catch (e) {
@@ -1112,6 +1164,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
+            // 循环结束后确保最后一次更新（finalizeAIMessage 会处理，但为了保险这里也可以更新一次，或者直接依赖 finalize）
+            // 由于 finalizeAIMessage 会被调用，这里不需要额外的一次 updateAIMessageContent
             finalizeAIMessage(aiMessageElement, fullContent);
             reader.releaseLock();
             return fullContent;
@@ -1169,11 +1223,18 @@ document.addEventListener('DOMContentLoaded', () => {
             addMessage(message, true);
             chatInput.value = '';
             chatInput.style.height = 'auto';
-            if (currentRole) {
+            if (currentRole && isValidRole(currentRole)) {
                 chatInput.value = `@${currentRole} `;
                 chatInput.dataset.selectedRole = currentRole;
             } else {
                 delete chatInput.dataset.selectedRole;
+                // 清除无效的角色引用
+                if (activeChatId) {
+                    const chat = configData.history.find(c => c.id === activeChatId);
+                    if (chat && chat.activeRole && !isValidRole(chat.activeRole)) {
+                        chat.activeRole = null;
+                    }
+                }
             }
             await sendMessageToAPI(message, currentModel, abortController.signal, currentRole);
         } catch (error) {
@@ -1262,10 +1323,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function getCurrentModelName() {
         const internalSpan = currentModelSpan.querySelector('span');
         if (internalSpan) {
-            return internalSpan.textContent;
+            return internalSpan.textContent.trim();
         }
-        return currentModelSpan.textContent;
+        // 移除可能存在的提供商标签文本，只获取纯文本
+        return currentModelSpan.textContent.replace(/^[A-Z]+\s*/, '').trim();
     }
+
     function switchTab(tabId, element) {
         if (!tabId) return;
         if (tabId === 'providers-toggle') {
@@ -1344,7 +1407,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             item.innerHTML = `
                 <div style="display: flex; align-items: center; flex: 1; overflow: hidden;">
-                    <div style="width:16px;height:16px;border-radius:4px;background:${color};color:white;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;margin-right:8px;flex-shrink:0;">${label}</div>
+                    <div style="width:24px;height:16px;border-radius:2px;background:${color};color:white;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;margin-right:8px;flex-shrink:0;">${label}</div>
                     <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${provider}</span>
                 </div>
                 <div class="provider-item-actions">
@@ -1408,8 +1471,33 @@ document.addEventListener('DOMContentLoaded', () => {
             closeModelModal();
         }
     });
+    function preventScrollPropagation(element) {
+        if (!element) return;
+        element.addEventListener('wheel', (e) => {
+            const delta = e.deltaY;
+            const contentHeight = element.scrollHeight;
+            const visibleHeight = element.clientHeight;
+            const scrollTop = element.scrollTop;
+
+            if (contentHeight <= visibleHeight) {
+                // 内容没溢出，直接阻止冒泡，防止背后页面滚动
+                e.preventDefault();
+                return;
+            }
+
+            if ((scrollTop === 0 && delta < 0) ||
+                (scrollTop + visibleHeight >= contentHeight && delta > 0)) {
+                // 滚到顶或底，阻止冒泡
+                e.preventDefault();
+            }
+            // 这里的关键是：只要在下拉框里滚，就停止冒泡到外层
+            e.stopPropagation();
+        }, { passive: false });
+    }
+
     function renderModelDropdown() {
         modelDropdown.innerHTML = '';
+        preventScrollPropagation(modelDropdown); // 绑定防穿透
         const hasProviders = Object.keys(configData.providers).length > 0;
         let hasAnyEnabledModels = false;
         Object.values(configData.providers).forEach(p => {
@@ -1498,18 +1586,17 @@ document.addEventListener('DOMContentLoaded', () => {
         currentModelSpan.style.display = 'flex';
         currentModelSpan.style.alignItems = 'center';
         currentModelSpan.style.gap = '8px';
-        currentModelSpan.innerHTML = `
+            currentModelSpan.innerHTML = `
             <div class="model-provider-indicator" style="
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 background-color: ${info.color};
                 color: #fff;
-                font-size: 8px;
+                font-size: 10px;
                 font-weight: 800;
-                padding: 0 4px;
-                border-radius: 4px;
-                min-width: 20px;
+                border-radius: 2px;
+                width: 24px;
                 height: 16px;
                 line-height: 1;
                 flex-shrink: 0;
@@ -1529,41 +1616,77 @@ document.addEventListener('DOMContentLoaded', () => {
         item.className = 'dropdown-item';
         const finalProviderKey = providerKey || getProviderForModel(model.name);
         const info = getProviderDisplayInfo(finalProviderKey);
+
+        // 检查是否是当前选中的模型
+        const currentName = getCurrentModelName();
+        if (currentName === model.name) {
+            item.classList.add('active');
+        }
+
         item.innerHTML = `
             <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
                 <div style="
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    background-color: ${info.color};
-                    color: #fff;
-                    font-size: 8px;
-                    font-weight: 800;
-                    padding: 0 4px;
-                    border-radius: 4px;
-                    min-width: 20px;
-                    height: 16px;
-                    line-height: 1;
-                    flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background-color: ${info.color};
+                color: #fff;
+                font-size: 10px;
+                font-weight: 800;
+                border-radius: 2px;
+                width: 24px;
+                height: 16px;
+                line-height: 1;
+                flex-shrink: 0;
                 ">${info.label}</div>
                 <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${model.name}</span>
             </div>
         `;
-        item.onclick = () => {
-            // 获取当前模型名称用于比较
+        item.onclick = async () => {
+            // 获取当前模型名称用于比较（在更新显示之前！）
             const previousModel = getCurrentModelName();
-            setModelDisplay(model.name, finalProviderKey);
+            const targetModelName = model.name.trim();
+
+            setModelDisplay(targetModelName, finalProviderKey);
             if (configData.general) {
-                configData.general.lastUsedModel = model.name;
+                configData.general.lastUsedModel = targetModelName;
                 saveToStorage();
             }
             modelDropdown.classList.remove('active');
 
-            // 如果当前有对话，使用新模型重新回答最后的问题
-            if (previousModel && previousModel !== model.name) {
+            // 只有当模型真正改变，且存在上一条消息时才重试
+            if (previousModel && previousModel !== targetModelName) {
                 const lastUserMessage = getLastUserMessage();
                 if (lastUserMessage) {
-                    sendMessageToAPI(lastUserMessage.content, model.name, null, null);
+                    if (isRequesting && abortController) {
+                        abortController.abort();
+                        isRequesting = false;
+                    }
+
+                    try {
+                        isRequesting = true;
+                        sendBtn.innerHTML = '<div class="stop-icon"></div>';
+                        sendBtn.classList.add('stop-mode');
+                        sendBtn.disabled = false;
+                        abortController = new AbortController();
+
+                        // 强制滚动到底部，让用户看到新消息正在生成
+                        const chatMessages = document.getElementById('chat-messages');
+                        if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                        await sendMessageToAPI(lastUserMessage.content, targetModelName, abortController.signal, null);
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            displayErrorMessage(error);
+                        }
+                    } finally {
+                        isRequesting = false;
+                        sendBtn.innerHTML = '<i data-lucide="send"></i>';
+                        sendBtn.classList.remove('stop-mode');
+                        sendBtn.disabled = false;
+                        abortController = null;
+                        updateIcons();
+                    }
                 }
             }
         };
@@ -1664,7 +1787,28 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('new-role-prompt').style.minHeight = '120px';
         }
     };
-    window.deleteRole = (id) => { configData.roles = configData.roles.filter(r => r.id !== id); renderRoles(); saveToStorage(); };
+    window.deleteRole = (id) => {
+        const roleToDelete = configData.roles.find(r => r.id === id);
+        if (roleToDelete) {
+            // 只清理聊天记录中的activeRole引用，不修改历史消息
+            configData.history.forEach(chat => {
+                if (chat.activeRole === roleToDelete.name) {
+                    chat.activeRole = null;
+                }
+            });
+        }
+        configData.roles = configData.roles.filter(r => r.id !== id);
+        renderRoles();
+        saveToStorage();
+        // 如果当前聊天使用了这个角色，刷新显示
+        if (activeChatId) {
+            const chat = configData.history.find(c => c.id === activeChatId);
+            if (chat && !chat.activeRole) {
+                chatInput.value = '';
+                delete chatInput.dataset.selectedRole;
+            }
+        }
+    };
     function renderModels() {
         const provider = configData.providers[currentProviderKey];
         modelList.innerHTML = '';
@@ -1950,6 +2094,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (modelDropdown) modelDropdown.classList.remove('active');
             if (languageOptions) languageOptions.classList.remove('active');
             contextLimitDropdown.classList.toggle('active');
+            if (contextLimitDropdown.classList.contains('active')) {
+                preventScrollPropagation(contextLimitDropdown);
+            }
         });
     }
 
@@ -2013,39 +2160,39 @@ document.addEventListener('DOMContentLoaded', () => {
         aiMessageElements.forEach((messageElement, index) => {
             const marker = document.createElement('div');
             marker.className = 'scrollbar-marker';
-            
+
             // 计算位置：在 100px 区域内均匀分布
             let topPosition = 0;
             if (aiMessageElements.length > 1) {
                 // 留出 4px 给 active 状态，防止溢出
-                topPosition = (index / (aiMessageElements.length - 1)) * (containerHeight - 4); 
+                topPosition = (index / (aiMessageElements.length - 1)) * (containerHeight - 4);
             } else {
                 topPosition = 0;
             }
-            
+
             marker.style.top = `${topPosition}px`;
             // marker 本身不再绑定点击事件，由父容器统一接管
-            
+
             scrollbarMarkers.appendChild(marker);
         });
-        
+
         // 移除旧的监听器（如果有），添加新的区域点击监听
         // 既然 updateScrollbarMarkers 会频繁调用，最好把监听器绑在外面或者用 onclick 覆盖
         scrollbarMarkers.onclick = (e) => {
             e.stopPropagation();
-            
+
             // 获取点击位置相对于容器顶部的Y坐标
             const rect = scrollbarMarkers.getBoundingClientRect();
             const clickY = e.clientY - rect.top;
-            
+
             // 计算比例 (0 ~ 1)
             let ratio = clickY / containerHeight;
             ratio = Math.max(0, Math.min(1, ratio)); // 限制在 0-1 之间
-            
+
             // 映射到最近的消息索引
             const targetIndex = Math.round(ratio * (aiMessageElements.length - 1));
             const targetMessage = aiMessageElements[targetIndex];
-            
+
             if (targetMessage) {
                 targetMessage.scrollIntoView({
                     behavior: 'smooth',
@@ -2054,7 +2201,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 highlightActiveMarker(targetIndex);
             }
         };
-        
+
         updateActiveMarker();
     }
 
@@ -2069,20 +2216,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
+
     // 更新当前活动的刻度（根据滚动位置）
     function updateActiveMarker() {
         if (!chatMessages || aiMessageElements.length === 0) return;
-        
+
         // 判定标准：消息元素距离视口顶部的距离
         // 我们取视口顶部往下一点点的位置作为“阅读焦点”
         const containerTop = chatMessages.scrollTop;
         // 阅读焦点设为视口高度的 1/5 处，比较符合用户阅读习惯（眼睛盯着上方看）
-        const readFocus = containerTop + 100; 
-        
+        const readFocus = containerTop + 100;
+
         let activeIndex = -1;
         let minDistance = Infinity;
-        
+
         aiMessageElements.forEach((el, index) => {
             // 计算消息顶部距离阅读焦点的距离
             const distance = Math.abs(el.offsetTop - readFocus);
@@ -2091,7 +2238,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 activeIndex = index;
             }
         });
-        
+
         highlightActiveMarker(activeIndex);
     }
 
