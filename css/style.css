@@ -725,7 +725,7 @@ div.history-item.active svg.lucide.lucide-search {
     overflow: hidden;
     transition: none;
     box-sizing: border-box;
-    padding-top: 40px;
+    padding-top: 24px;
 }
 .settings-sidebar {
     width: 240px;
@@ -739,9 +739,9 @@ div.history-item.active svg.lucide.lucide-search {
 .settings-nav-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
-    border-radius: 6px;
+    gap: 4px;
+    padding: 3px 5px;
+    border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
     color: var(--text-secondary);
@@ -783,7 +783,7 @@ div.history-item.active svg.lucide.lucide-search {
 /* 设置内容区域主容器 - 支持滚动 */
 .settings-main {
     flex: 1;
-    padding: 24px;
+    padding: 16px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -801,19 +801,19 @@ div.history-item.active svg.lucide.lucide-search {
     font-weight: 700;
 }
 .settings-group {
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 .settings-group label {
     display: block;
     font-size: 14px;
     font-weight: 600;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     color: var(--text-primary);
 }
 .help-text {
     font-size: 14px;
     color: var(--text-secondary);
-    margin: 2px 0 4px 0;
+    margin: 1px 0 2px 0;
 }
 .help-text a {
     color: #f59e0b;
@@ -829,7 +829,7 @@ div.history-item.active svg.lucide.lucide-search {
     background: var(--input-bg);
     border: 1px solid var(--border-color);
     border-radius: 6px;
-    padding: 6px 10px;
+    padding: 4px 8px;
     color: var(--text-primary);
     font-size: 14px;
     transition: none;
@@ -846,8 +846,8 @@ input[type="number"] {
     background: var(--input-bg);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 0 12px;
-    height: 36px;
+    padding: 0 8px;
+    height: 32px;
     color: var(--text-primary);
     font-size: 14px;
     outline: none;
@@ -886,7 +886,7 @@ input[type="number"] {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1px;
+    margin-bottom: 0px;
 }
 .header-actions {
     display: flex;
@@ -915,7 +915,7 @@ input, textarea, button {
 .provider-title-container {
     display: flex;
     align-items: center;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
     padding-bottom: 0px;
     border-bottom: none;
     height: auto;
@@ -982,6 +982,7 @@ i[data-lucide], svg[data-lucide], .lucide {
 #api-key {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     letter-spacing: 0.5px;
+    font-size: 12px;
 }
 .switch {
     position: relative;
@@ -1037,9 +1038,9 @@ input:checked + .slider:before {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 12px;
+    padding: 4px 8px;
     border-bottom: 1px solid var(--border-color);
-    gap: 12px;
+    gap: 8px;
 }
 .model-item:last-child {
     border-bottom: none;
@@ -1149,7 +1150,7 @@ kbd {
     background: var(--bg-tertiary);
     border: 1px solid var(--border-color);
     border-radius: 6px;
-    padding: 8px;
+    padding: 4px;
 }
 /* 角色预设条目标题区域 - 压缩下方间距 */
 .role-item-header {
@@ -1182,11 +1183,11 @@ kbd {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: 6px;
-    padding: 8px;
-    margin-bottom: 12px;
+    padding: 6px;
+    margin-bottom: 8px;
     display: none;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 .compact-form.active {
     display: flex;
@@ -1197,7 +1198,7 @@ kbd {
     background: var(--bg-tertiary);
     border: 1px solid var(--border-color);
     border-radius: 4px;
-    padding: 4px 8px;
+    padding: 3px 6px;
     color: var(--text-primary);
     font-family: inherit;
     font-size: 14px;
@@ -1221,7 +1222,7 @@ kbd {
     display: flex;
     justify-content: flex-end;
     gap: 4px;
-    margin-top: 2px;
+    margin-top: 1px;
 }
 .form-actions.hidden {
     display: none;
@@ -1245,13 +1246,13 @@ kbd {
     background: var(--input-bg);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 10px;
+    padding: 8px;
     color: var(--text-primary);
     font-size: 14px;
     line-height: 1.5;
     outline: none;
     resize: vertical;
-    min-height: 80px;
+    min-height: 160px;
     font-family: inherit;
 }
 .settings-textarea::placeholder {
@@ -1289,8 +1290,8 @@ kbd {
     background: var(--input-bg);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 0 12px;
-    height: 36px;
+    padding: 0 8px;
+    height: 32px;
     color: var(--text-primary);
     font-size: 14px;
     cursor: pointer;
@@ -1320,7 +1321,7 @@ kbd {
     display: flex;
 }
 .select-option {
-    padding: 8px 12px;
+    padding: 6px 8px;
     font-size: 14px;
     color: var(--text-primary);
     cursor: pointer;
