@@ -114,7 +114,22 @@
                                     </button>
                                     <div class="context-control" style="position: relative;">
                                         <button id="context-control-btn" class="icon-btn-inline context-btn" title="调节上下文消息数量">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="18" y2="3"/><line x1="6" y1="21" x2="18" y2="21"/><line x1="12" y1="5" x2="12" y2="19"/><polyline points="9 7 12 4 15 7"/><polyline points="9 17 12 20 15 17"/></svg>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="15"
+  height="15"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round">
+  <line x1="4" y1="2" x2="22" y2="2" />
+  <line x1="4" y1="22" x2="22" y2="22" />
+  <line x1="7" y1="4" x2="7" y2="20" />
+  <polyline points="5 8 7 4 9 8" />
+  <polyline points="5 16 7 20 9 16" />
+</svg>
                                             <span id="context-count-display" class="context-count-badge">20</span>
                                         </button>
                                         <!-- Context Limit Dropdown -->
@@ -218,7 +233,7 @@
                             <!-- Data Management -->
                             <div class="settings-group">
                                 <label>数据管理</label>
-                                <p class="help-text">导入或导出您的配置数据（包括模型提供商、API Key、角色预设等）。</p>
+                                <p class="help-text">导入或导出您的配置数据（包括API配置、角色预设、对话历史等）。</p>
                                 <div style="display: flex; gap: 10px;">
                                     <button id="import-config-btn" class="btn-secondary">
                                         <input type="file" id="import-file-input" accept=".json" style="display: none;">
@@ -236,7 +251,7 @@
                         <!-- Provider Settings -->
                         <div id="provider-settings" class="settings-content">
                             <div class="provider-title-container">
-                                <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="display: flex; align-items: center; gap: 4px;">
                                     <h2 id="provider-name" contenteditable="false">Groq</h2>
                                     <div id="provider-title-actions" class="title-actions">
                                         <button id="edit-provider-btn" class="icon-btn-inline" title="编辑名称">

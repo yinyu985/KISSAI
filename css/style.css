@@ -1997,7 +1997,7 @@ input:checked + .slider:before {
 .context-btn {
     position: relative;
     padding: 0;
-    margin-top: 2px;
+    margin-top: 1px;
     display: flex;
     align-items: center;
     gap: 0;
@@ -2011,19 +2011,33 @@ input:checked + .slider:before {
     stroke-width: 2px !important;
 }
 
+/* 修改后的 .context-count-badge */
 .context-count-badge {
     color: var(--accent-color);
-    font-size: 8px;
-    font-weight: 600;
+    /* 1. 增加基础字号，使其高度足以填充空间 */
+    font-size: 10px;
+    font-weight: 800; /* 加粗，防止拉伸后变虚 */
     display: flex;
     align-items: center;
     justify-content: center;
-    line-height: 1;
+
+    /* 2. 核心：通过 scale 实现瘦长效果 */
+    /* scaleX(0.7) 让数字变瘦，scaleY(1.3) 让数字拉长 */
+    transform: scale(0.7, 1.3);
+    /* 确保拉伸的中心点在左侧，这样不会因为变瘦而离箭头太远 */
+    transform-origin: left center;
+
     z-index: 100;
-    min-width: 20px;
+    min-width: 14px; /* 减小最小宽度，配合瘦身后的数字 */
     height: 15px;
-    padding: 0 2px;
+    padding: 0;
+
+    /* 3. 精准定位：由于箭头在 x=6 (约 1/4 处)，数字需要向左微调回缩 */
+    /* 原来的 -15px 可能太靠左了，我们调整为 -9px 左右，让它贴近箭头 */
     margin-left: -10px;
+
+    line-height: 1;
+    white-space: nowrap;
 }
 
 /* 消息内容容器 - 独立于操作按钮容器 */
