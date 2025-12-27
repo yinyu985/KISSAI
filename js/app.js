@@ -803,6 +803,68 @@ document.addEventListener('DOMContentLoaded', () => {
             saveToStorage();
         });
     });
+    window.toggleAddModelForm = () => {
+        const form = document.getElementById('add-model-form');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        if (form.style.display === 'block') {
+            document.getElementById('new-model-name').focus();
+        }
+    };
+
+    window.addModel = () => {
+        const modelNameInput = document.getElementById('new-model-name');
+        const modelName = modelNameInput.value.trim();
+        if (!modelName) {
+            return;
+        }
+
+        const provider = configData.providers[currentProviderKey];
+        if (!provider) return;
+
+        const existingModel = provider.models.find(m => m.name === modelName);
+        if (existingModel) {
+            alert('该模型已存在');
+            return;
+        }
+
+        const newModel = {
+            id: Date.now() + Math.random(),
+            name: modelName,
+            favorite: false,
+            enabled: true
+        };
+
+        if (!provider.models) {
+            provider.models = [];
+        }
+        provider.models.push(newModel);
+        saveToStorage();
+        renderModels();
+
+        modelNameInput.value = '';
+        document.getElementById('add-model-form').style.display = 'none';
+    };
+
+    const newModelNameInput = document.getElementById('new-model-name');
+    if (newModelNameInput) {
+        newModelNameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addModel();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                toggleAddModelForm();
+            }
+        });
+    }
+
+    const addModelBtn = document.getElementById('add-model-btn');
+    if (addModelBtn) {
+        addModelBtn.addEventListener('click', () => {
+            toggleAddModelForm();
+        });
+    }
+
     fetchModelsBtn.addEventListener('click', async () => {
         const icon = fetchModelsBtn.querySelector('i') || fetchModelsBtn.querySelector('svg');
         const originalApiKey = apiKeyInput.value;
@@ -854,6 +916,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('请求超时，请检查网络连接或API端点是否可用');
             } else {
                 console.error('获取模型失败，请检查 API Key 和 Base URL 是否正确：' + error.message);
+                alert('获取模型列表失败，建议使用手动添加模型功能（点击左侧「+」按钮）');
             }
         } finally {
             const iconAfter = fetchModelsBtn.querySelector('i') || fetchModelsBtn.querySelector('svg');

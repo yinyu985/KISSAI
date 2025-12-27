@@ -819,6 +819,27 @@ div.history-item.active svg.lucide.lucide-search {
     color: #f59e0b;
     text-decoration: none;
 }
+/* 警告文字样式 */
+.warning-text {
+    font-size: 14px;
+    color: #ff6b6b;
+    margin: 2px 0 8px 0;
+    padding: 4px 0;
+    line-height: 1.4;
+}
+
+/* 数据管理按钮容器样式 */
+.data-management-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+/* 数据管理按钮统一样式 */
+.data-management-buttons .btn-secondary {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+}
 .input-with-actions {
     position: relative;
     display: flex;
@@ -892,10 +913,11 @@ input[type="number"] {
     display: flex;
     gap: 8px;
     align-items: center;
+    margin-right: 5px;
 }
 .action-btn-xs-text {
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
+    background: transparent;
+    border: none;
     border-radius: 4px;
     padding: 1px 4px;
     color: var(--text-primary);
@@ -1179,6 +1201,7 @@ kbd {
 .settings-content.active {
     display: block;
 }
+/* 紧凑型表单样式：用于添加角色、添加模型等内联表单 */
 .compact-form {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);

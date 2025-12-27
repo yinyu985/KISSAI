@@ -234,7 +234,8 @@
                             <div class="settings-group">
                                 <label>数据管理</label>
                                 <p class="help-text">导入或导出您的配置数据（包括API配置、角色预设、对话历史等）。</p>
-                                <div style="display: flex; gap: 10px;">
+                                <p class="warning-text">注意：导入配置文件会覆盖本地所有数据（包括API配置、角色预设、对话历史等）。<br>如需合并，请先导出当前配置，手动编辑后导入。</p>
+                                <div class="data-management-buttons">
                                     <button id="import-config-btn" class="btn-secondary">
                                         <input type="file" id="import-file-input" accept=".json" style="display: none;">
                                         <i data-lucide="upload"></i>
@@ -298,8 +299,22 @@
                                 <div class="group-header">
                                     <label>模型</label>
                                     <div class="header-actions">
+                                        <button id="add-model-btn" class="action-btn-xs-text" title="手动添加模型">
+                                            <i data-lucide="plus"></i>
+                                        </button>
                                         <button id="fetch-models-btn" class="action-btn-xs-text" title="获取模型">
                                             <i data-lucide="refresh-cw"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="add-model-form" class="compact-form" style="display: none;">
+                                    <input type="text" id="new-model-name" placeholder="模型名称">
+                                    <div class="form-actions">
+                                        <button class="icon-btn-inline" onclick="addModel()" title="添加">
+                                            <i data-lucide="check"></i>
+                                        </button>
+                                        <button class="icon-btn-inline" onclick="toggleAddModelForm()" title="取消">
+                                            <i data-lucide="x"></i>
                                         </button>
                                     </div>
                                 </div>
