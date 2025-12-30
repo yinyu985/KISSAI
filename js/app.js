@@ -646,7 +646,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (bubble.querySelector('img')) {
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'message-actions-row';
-            
+
             // 只添加复制按钮
             const copyBtn = document.createElement('button');
             copyBtn.className = 'message-action-btn';
@@ -1246,7 +1246,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const msgImages = msg.images || [];
                     if (msgImages.length > 0) {
                         msgContent.content = [
-                            { type: 'text', text: msg.content || '请描述这张图片' },
+                            { type: 'text', text: msg.content || '你是高效的OCR助手，请提取出图片里的文字，有不明确的字符不要胡乱猜测，尽可能保证原有的格式或者是合理的格式（妥善处理换行），而不是文字堆砌。' },
                             ...msgImages.map(img => ({ type: 'image_url', image_url: { url: img } }))
                         ];
                     } else {
@@ -1257,10 +1257,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         if (processedMessage.trim() || images.length > 0) {
-            const userMsg = { role: 'user', content: processedMessage.trim() || '请描述这张图片' };
+            const userMsg = { role: 'user', content: processedMessage.trim() || '你是高效的OCR助手，请提取出图片里的文字，有不明确的字符不要胡乱猜测，尽可能保证原有的格式或者是合理的格式（妥善处理换行），而不是文字堆砌。' };
             if (images.length > 0) {
                 userMsg.content = [
-                    { type: 'text', text: processedMessage.trim() || '请描述这张图片' },
+                    { type: 'text', text: processedMessage.trim() || '你是高效的OCR助手，请提取出图片里的文字，有不明确的字符不要胡乱猜测，尽可能保证原有的格式或者是合理的格式（妥善处理换行），而不是文字堆砌。' },
                     ...images.map(img => ({ type: 'image_url', image_url: { url: img } }))
                 ];
             }
