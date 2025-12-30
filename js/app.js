@@ -1246,7 +1246,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const msgImages = msg.images || [];
                     if (msgImages.length > 0) {
                         msgContent.content = [
-                            { type: 'text', text: msg.content || '你是高效的OCR助手，请提取出图片里的文字，有不明确的字符不要胡乱猜测，尽可能保证原有的格式或者是合理的格式（妥善处理换行），而不是文字堆砌。' },
+                            { type: 'text', text: msg.content || '你是高精度专业的OCR助手，请精准提取图中文字，如有特殊排版，需要完整保留，保证合理的换行，对模糊字符不作猜测，完整返回给我。' },
                             ...msgImages.map(img => ({ type: 'image_url', image_url: { url: img } }))
                         ];
                     } else {
@@ -1257,10 +1257,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         if (processedMessage.trim() || images.length > 0) {
-            const userMsg = { role: 'user', content: processedMessage.trim() || '你是高效的OCR助手，请提取出图片里的文字，有不明确的字符不要胡乱猜测，尽可能保证原有的格式或者是合理的格式（妥善处理换行），而不是文字堆砌。' };
+            const userMsg = { role: 'user', content: processedMessage.trim() || '你是高精度专业的OCR助手，请精准提取图中文字，如有特殊排版，需要完整保留，保证合理的换行，对模糊字符不作猜测，完整返回给我。' };
             if (images.length > 0) {
                 userMsg.content = [
-                    { type: 'text', text: processedMessage.trim() || '你是高效的OCR助手，请提取出图片里的文字，有不明确的字符不要胡乱猜测，尽可能保证原有的格式或者是合理的格式（妥善处理换行），而不是文字堆砌。' },
+                    { type: 'text', text: processedMessage.trim() || '你是高精度专业的OCR助手，请精准提取图中文字，如有特殊排版，需要完整保留，保证合理的换行，对模糊字符不作猜测，完整返回给我。' },
                     ...images.map(img => ({ type: 'image_url', image_url: { url: img } }))
                 ];
             }
