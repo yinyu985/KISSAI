@@ -361,7 +361,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (msg.role === 'user') {
                     bubble = document.createElement('div');
                     bubble.className = 'message-bubble user-message-content';
-                    bubble.textContent = msg.content;
+                    const images = msg.images || [];
+                    if (images.length > 0) {
+                        let html = '';
+                        images.forEach(img => {
+                            html += `<img src="${img}" style="max-width: 100%; max-height: 400px; border-radius: 4px; margin-bottom: 8px; display: block;" />`;
+                        });
+                        if (msg.content) {
+                            html += `<span>${msg.content}</span>`;
+                        }
+                        bubble.innerHTML = html;
+                    } else {
+                        bubble.textContent = msg.content;
+                    }
                     messageDiv.appendChild(bubble);
                 } else {
                     const md = getMarkdownInstance();
@@ -454,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chatInput.addEventListener('input', () => {
         chatInput.style.height = 'auto';
         chatInput.style.height = Math.min(chatInput.scrollHeight, 240) + 'px';
-        sendBtn.disabled = chatInput.value.trim() === '';
+        sendBtn.disabled = chatInput.value.trim() === '' && !chatInput.dataset.pastedImage;
 
         // 检查是否需要清除角色选择（用户手动删除了@角色名）
         const selectedRole = chatInput.dataset.selectedRole;
@@ -515,6 +527,48 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+    chatInput.addEventListener('paste', (e) => {
+        const items = e.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            if (item.type.indexOf('image') !== -1) {
+                e.preventDefault();
+                const file = item.getAsFile();
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    chatInput.dataset.pastedImage = event.target.result;
+                    updatePasteIndicator();
+                };
+                reader.readAsDataURL(file);
+                break;
+            }
+        }
+    });
+    function updatePasteIndicator() {
+        const existingIndicator = document.getElementById('paste-image-indicator');
+        if (chatInput.dataset.pastedImage) {
+            if (!existingIndicator) {
+                const indicator = document.createElement('div');
+                indicator.id = 'paste-image-indicator';
+                indicator.style.cssText = 'position: relative; display: inline-block; width: 60px; height: 60px;';
+                indicator.innerHTML = `
+                    <button id="clear-pasted-image" style="position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; padding: 0; z-index: 10;">×</button>
+                    <img src="${chatInput.dataset.pastedImage}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.1);" />
+                `;
+                chatInput.parentNode.insertBefore(indicator, chatInput);
+                document.getElementById('clear-pasted-image').addEventListener('click', () => {
+                    delete chatInput.dataset.pastedImage;
+                    const indicatorEl = document.getElementById('paste-image-indicator');
+                    if (indicatorEl) indicatorEl.remove();
+                });
+            } else {
+                const img = existingIndicator.querySelector('img');
+                if (img) img.src = chatInput.dataset.pastedImage;
+            }
+        } else {
+            if (existingIndicator) existingIndicator.remove();
+        }
+    }
     preventScrollPropagation(chatInput);
 
     const toggleApiKeyBtn = document.querySelector('.action-icons .icon-btn:first-child');
@@ -587,6 +641,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // 长消息处理函数
     function applyLongMessageHandling(bubble, isUser, content) {
         if (!bubble || !isUser) return; // 只对用户消息进行折叠
+
+        // 如果消息包含图片，不进行折叠处理
+        if (bubble.querySelector('img')) {
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'message-actions-row';
+            
+            // 只添加复制按钮
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'message-action-btn';
+            copyBtn.title = '复制';
+            copyBtn.innerHTML = `<i data-lucide="copy"></i>`;
+            copyBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                navigator.clipboard.writeText(content).then(() => {
+                    const originalHTML = copyBtn.innerHTML;
+                    copyBtn.innerHTML = `<i data-lucide="check"></i>`;
+                    lucide.createIcons();
+                    setTimeout(() => {
+                        copyBtn.innerHTML = originalHTML;
+                        lucide.createIcons();
+                    }, 1000);
+                });
+            });
+            actionsDiv.appendChild(copyBtn);
+            bubble.appendChild(actionsDiv);
+            lucide.createIcons();
+            return;
+        }
 
         // 检查是否为长消息
         const isLongMessage = content && content.length > 500;
@@ -694,10 +776,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (prevElement) {
                     const userBubble = prevElement.querySelector('.user-message-content .message-content') || prevElement.querySelector('.user-message-content');
-                    const userContent = userBubble.textContent || userBubble.innerText;
+                    let userContent = userBubble.textContent || userBubble.innerText;
+                    let userImages = [];
+                    if (activeChatId) {
+                        const chat = configData.history.find(c => c.id === activeChatId);
+                        if (chat && chat.messages) {
+                            // 通过内容匹配找到对应的用户消息
+                            const domContent = userContent;
+                            const userMsg = chat.messages.slice().reverse().find(m => m.role === 'user' && (m.content === domContent || (!m.content && !domContent)));
+                            if (userMsg) {
+                                userContent = userMsg.content || '';
+                                userImages = userMsg.images || [];
+                            }
+                        }
+                    }
                     const currentModel = getCurrentModelName();
                     if (currentModel) {
-                        sendMessageToAPI(userContent, currentModel, null, null);
+                        sendMessageToAPI(userContent, currentModel, null, null, userImages);
                     } else {
                         alert('请先选择一个模型');
                     }
@@ -935,7 +1030,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return null;
     }
-    function addMessage(content, isUser = false) {
+    function addMessage(content, isUser = false, images = []) {
         const chatMessages = document.getElementById('chat-messages');
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
@@ -944,7 +1039,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isUser) {
             bubble = document.createElement('div');
             bubble.className = 'message-bubble user-message-content';
-            bubble.textContent = content;
+            if (images.length > 0) {
+                let html = '';
+                images.forEach(img => {
+                    html += `<img src="${img}" style="max-width: 100%; max-height: 400px; border-radius: 4px; margin-bottom: 8px; display: block;" />`;
+                });
+                if (content) {
+                    html += `<span>${content}</span>`;
+                }
+                bubble.innerHTML = html;
+            } else {
+                bubble.textContent = content;
+            }
             messageDiv.appendChild(bubble);
         } else {
             const md = getMarkdownInstance();
@@ -970,9 +1076,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const chat = configData.history.find(c => c.id === activeChatId);
             if (chat) {
                 if (!chat.messages) chat.messages = [];
-                chat.messages.push({ role: isUser ? 'user' : 'assistant', content });
+                const messageData = { role: isUser ? 'user' : 'assistant', content };
+                if (images.length > 0) {
+                    messageData.images = images;
+                }
+                chat.messages.push(messageData);
                 if (isUser && chat.title === '空白对话') {
-                    chat.title = content.length > 20 ? content.substring(0, 20) + '...' : content;
+                    const titleText = content || (images.length > 0 ? '图片消息' : '空白消息');
+                    chat.title = titleText.length > 20 ? titleText.substring(0, 20) + '...' : titleText;
                     renderHistory();
                 }
                 saveToStorage();
@@ -1079,7 +1190,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function displayErrorMessage(error) {
         addMessage(error.message, false);
     }
-    async function sendMessageToAPI(message, modelName, signal, currentRole) {
+    async function sendMessageToAPI(message, modelName, signal, currentRole, images = []) {
         const currentProviderKey = currentModelSpan.dataset.provider;
         let providerInfo = null;
 
@@ -1131,12 +1242,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 messagesToSend.forEach(msg => {
-                    messages.push({ role: msg.role, content: msg.content });
+                    const msgContent = { role: msg.role };
+                    const msgImages = msg.images || [];
+                    if (msgImages.length > 0) {
+                        msgContent.content = [
+                            { type: 'text', text: msg.content || '请描述这张图片' },
+                            ...msgImages.map(img => ({ type: 'image_url', image_url: { url: img } }))
+                        ];
+                    } else {
+                        msgContent.content = msg.content;
+                    }
+                    messages.push(msgContent);
                 });
             }
         }
-        if (processedMessage.trim()) {
-            messages.push({ role: 'user', content: processedMessage.trim() });
+        if (processedMessage.trim() || images.length > 0) {
+            const userMsg = { role: 'user', content: processedMessage.trim() || '请描述这张图片' };
+            if (images.length > 0) {
+                userMsg.content = [
+                    { type: 'text', text: processedMessage.trim() || '请描述这张图片' },
+                    ...images.map(img => ({ type: 'image_url', image_url: { url: img } }))
+                ];
+            }
+            messages.push(userMsg);
         }
 
         // 如果当前有选择角色，每3条消息插入一次角色预设，保持大模型行为一致
@@ -1265,7 +1393,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const message = chatInput.value.trim();
-        if (!message) return;
+        const pastedImage = chatInput.dataset.pastedImage;
+        const images = pastedImage ? [pastedImage] : [];
+        if (!message && images.length === 0) return;
         const currentModel = getCurrentModelName();
         try {
             isRequesting = true;
@@ -1284,9 +1414,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     saveToStorage();
                 }
             }
-            addMessage(message, true);
+            addMessage(message, true, images);
             chatInput.value = '';
             chatInput.style.height = 'auto';
+            // 清除粘贴的图片
+            delete chatInput.dataset.pastedImage;
+            const indicator = document.getElementById('paste-image-indicator');
+            if (indicator) indicator.remove();
             if (currentRole && isValidRole(currentRole)) {
                 chatInput.value = `@${currentRole} `;
                 chatInput.dataset.selectedRole = currentRole;
@@ -1300,7 +1434,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
-            await sendMessageToAPI(message, currentModel, abortController.signal, currentRole);
+            await sendMessageToAPI(message, currentModel, abortController.signal, currentRole, images);
         } catch (error) {
             if (error.name !== 'AbortError') {
                 displayErrorMessage(error);
@@ -1747,7 +1881,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const chatMessages = document.getElementById('chat-messages');
                         if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
 
-                        await sendMessageToAPI(lastUserMessage.content, targetModelName, abortController.signal, null);
+                        await sendMessageToAPI(lastUserMessage.content, targetModelName, abortController.signal, null, lastUserMessage.images || []);
                     } catch (error) {
                         if (error.name !== 'AbortError') {
                             displayErrorMessage(error);
