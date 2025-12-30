@@ -532,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     chatInput.dataset.pastedImage = event.target.result;
-                    sendBtn.disabled = chatInput.value.trim() === '';
+                    sendBtn.disabled = chatInput.value.trim() === '' && !chatInput.dataset.pastedImage;
                     updatePasteIndicator();
                 };
                 reader.readAsDataURL(file);
@@ -556,7 +556,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     delete chatInput.dataset.pastedImage;
                     const indicatorEl = document.getElementById('paste-image-indicator');
                     if (indicatorEl) indicatorEl.remove();
-                    sendBtn.disabled = chatInput.value.trim() === '';
+                    sendBtn.disabled = chatInput.value.trim() === '' && !chatInput.dataset.pastedImage;
                 });
             } else {
                 const img = existingIndicator.querySelector('img');
