@@ -402,16 +402,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (chatContainer) chatContainer.classList.remove('has-messages');
             if (welcomeSection) welcomeSection.style.display = 'flex';
         }
-        if (chat.activeRole && isValidRole(chat.activeRole)) {
-            chatInput.value = `@${chat.activeRole} `;
-            chatInput.dataset.selectedRole = chat.activeRole;
-        } else {
-            chatInput.value = '';
-            delete chatInput.dataset.selectedRole;
-            // 清除无效的角色引用
-            if (chat.activeRole && !isValidRole(chat.activeRole)) {
-                chat.activeRole = null;
-                saveToStorage();
+        // 只在输入框为空时恢复角色选择，保留用户已输入的内容
+        if (chatInput.value.trim() === '' && !chatInput.dataset.pastedImage) {
+            if (chat.activeRole && isValidRole(chat.activeRole)) {
+                chatInput.value = `@${chat.activeRole} `;
+                chatInput.dataset.selectedRole = chat.activeRole;
             }
         }
         renderHistory();
@@ -537,6 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     chatInput.dataset.pastedImage = event.target.result;
+                    sendBtn.disabled = chatInput.value.trim() === '';
                     updatePasteIndicator();
                 };
                 reader.readAsDataURL(file);
@@ -560,6 +556,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     delete chatInput.dataset.pastedImage;
                     const indicatorEl = document.getElementById('paste-image-indicator');
                     if (indicatorEl) indicatorEl.remove();
+                    sendBtn.disabled = chatInput.value.trim() === '';
                 });
             } else {
                 const img = existingIndicator.querySelector('img');
@@ -1443,7 +1440,7 @@ document.addEventListener('DOMContentLoaded', () => {
             isRequesting = false;
             sendBtn.innerHTML = '<i data-lucide="send"></i>';
             sendBtn.classList.remove('stop-mode');
-            sendBtn.disabled = false;
+            sendBtn.disabled = chatInput.value.trim() === '' && !chatInput.dataset.pastedImage;
             abortController = null;
             updateIcons();
             chatInput.focus();
@@ -1451,7 +1448,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     exportConfigBtn.addEventListener('click', () => {
         saveToStorage();
-        const blob = new Blob([JSON.stringify(configData, null, 2)], { type: 'application/json' });
+        // 导出时排除图片数据以减小文件体积
+        const exportData = JSON.parse(JSON.stringify(configData));
+        if (exportData.history) {
+            exportData.history = exportData.history.map(chat => ({
+                ...chat,
+                messages: (chat.messages || []).map(msg => {
+                    const { images, ...rest } = msg;
+                    return rest;
+                })
+            }));
+        }
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -1890,7 +1898,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         isRequesting = false;
                         sendBtn.innerHTML = '<i data-lucide="send"></i>';
                         sendBtn.classList.remove('stop-mode');
-                        sendBtn.disabled = false;
+                        sendBtn.disabled = chatInput.value.trim() === '' && !chatInput.dataset.pastedImage;
                         abortController = null;
                         updateIcons();
                     }
