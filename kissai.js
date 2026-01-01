@@ -1,4 +1,3 @@
-
 // ==UserScript==
 // @name         Kiss AI
 // @namespace    http://tampermonkey.net/
@@ -625,6 +624,39 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
           height: calc(100vh - 120px) !important;
         }
     `);
+
+    /**
+     * Markdown 流式渲染修复
+     * 仅在渲染时虚拟闭合未结束的标记，不修改原始内容
+     */
+    class MarkdownStreamState {
+        // 核心逻辑：扫描并补全
+        preprocessContent(content) {
+            if (!content) return content;
+
+            let inCodeBlock = false, inBold = false;
+            const len = content.length;
+
+            for (let i = 0; i < len; i++) {
+                // 检测 ```
+                if (content[i] === '`' && content[i+1] === '`' && content[i+2] === '`') {
+                    inCodeBlock = !inCodeBlock;
+                    i += 2; // 跳过接下来的两个字符
+                }
+                // 检测 ** (仅在非代码块内)
+                else if (!inCodeBlock && content[i] === '*' && content[i+1] === '*') {
+                    inBold = !inBold;
+                    i++; // 跳过下一个字符
+                }
+            }
+
+            // 补全未闭合状态
+            if (inCodeBlock) return content + '\n\n```';
+            if (inBold) return content + '**';
+            return content;
+        }
+    }
+
     class AIAssistant {
         constructor() {
             this.toolbar = null;
@@ -657,6 +689,8 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
                 dialogPosition: null,
                 dialogInitEvent: null
             };
+            // 初始化 Markdown 流式状态跟踪器
+            this.markdownState = new MarkdownStreamState();
             this.init();
         }
         updateUIState(updates) {
@@ -1357,14 +1391,18 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
             if (role === 'assistant' && !text) {
                 contentDiv.innerHTML = '<span class="ai-send-spinner">...</span>';
             } else if (role === 'assistant') {
+                // 使用 MarkdownStreamState 处理内容
+                const tempState = new MarkdownStreamState();
+                const fixedContent = tempState.preprocessContent(text);
+
                 if (typeof window.md !== 'undefined') {
                     try {
-                        contentDiv.innerHTML = window.md.render(text);
+                        contentDiv.innerHTML = window.md.render(fixedContent);
                     } catch (e) {
-                        contentDiv.textContent = text;
+                        contentDiv.textContent = fixedContent;
                     }
                 } else {
-                    contentDiv.textContent = text;
+                    contentDiv.textContent = fixedContent;
                 }
             } else {
                 contentDiv.textContent = text;
@@ -1440,6 +1478,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
             let pendingRender = false;
             const RENDER_INTERVAL = 50;
             const MIN_CHUNK_SIZE = 10;
+
             const renderUI = (force = false) => {
                 if (renderFrameId) {
                     pendingRender = true;
@@ -1450,15 +1489,18 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
                     return;
                 }
                 renderFrameId = requestAnimationFrame(() => {
+                    // 预处理内容，确保加粗格式和代码块正确渲染
+                    const processedContent = this.markdownState.preprocessContent(fullText);
+
                     if (typeof window.md !== 'undefined') {
                         try {
-                            const parsed = window.md.render(fullText + '▌');
+                            const parsed = window.md.render(processedContent + '▌');
                             contentEl.innerHTML = parsed;
                         } catch (e) {
-                            contentEl.textContent = fullText + '▌';
+                            contentEl.textContent = processedContent + '▌';
                         }
                     } else {
-                        contentEl.textContent = fullText + '▌';
+                        contentEl.textContent = processedContent + '▌';
                     }
                     const container = this.dialog.querySelector('.ai-dialog-content');
                     if (container) {
@@ -1482,15 +1524,19 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
             const handleDone = () => {
                 requestCompleted = true;
                 if (renderFrameId) cancelAnimationFrame(renderFrameId);
+
+                // 使用 preprocessContent 处理最终内容
+                const fixedContent = this.markdownState.preprocessContent(fullText);
+
                 if (typeof window.md !== 'undefined') {
                     try {
-                        contentEl.innerHTML = window.md.render(fullText);
+                        contentEl.innerHTML = window.md.render(fixedContent);
                     }
                     catch (e) {
-                        contentEl.textContent = fullText;
+                        contentEl.textContent = fixedContent;
                     }
                 } else {
-                    contentEl.textContent = fullText;
+                    contentEl.textContent = fixedContent;
                 }
                 const container = this.dialog.querySelector('.ai-dialog-content');
                 if (container) container.scrollTop = container.scrollHeight;
@@ -1685,3 +1731,4 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
         });
     }
 })();
+
