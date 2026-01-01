@@ -1,6 +1,42 @@
 document.addEventListener('DOMContentLoaded', () => {
     // 创建全局markdown实例
     let globalMd = null;
+
+    /**
+     * Markdown 流式渲染修复
+     * 仅在渲染时虚拟闭合未结束的标记，不修改原始内容
+     */
+    class MarkdownStreamState {
+        // 核心逻辑：扫描并补全
+        preprocessContent(content) {
+            if (!content) return content;
+
+            let inCodeBlock = false, inBold = false;
+            const len = content.length;
+
+            for (let i = 0; i < len; i++) {
+                // 检测 ```
+                if (content[i] === '`' && content[i+1] === '`' && content[i+2] === '`') {
+                    inCodeBlock = !inCodeBlock;
+                    i += 2; // 跳过接下来的两个字符
+                }
+                // 检测 ** (仅在非代码块内)
+                else if (!inCodeBlock && content[i] === '*' && content[i+1] === '*') {
+                    inBold = !inBold;
+                    i++; // 跳过下一个字符
+                }
+            }
+
+            // 补全未闭合状态
+            if (inCodeBlock) return content + '\n\n```';
+            if (inBold) return content + '**';
+            return content;
+        }
+    }
+
+    // 创建全局状态跟踪器实例
+    const markdownState = new MarkdownStreamState();
+
     function getMarkdownInstance() {
         if (globalMd === null && typeof window.markdownit === 'function') {
             globalMd = window.markdownit({
@@ -1100,6 +1136,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     function addAIMessageStream() {
+        // 准备新的流式输出
         const chatMessages = document.getElementById('chat-messages');
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message assistant';
@@ -1119,38 +1156,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return messageDiv;
     }
-    // 修复AI输出的这种弱智格式：内容... ``` (结束符没有换行)
-    function fixInlineCodeBlockEnd(content) {
-        if (!content) return content;
-        // 匹配模式：非换行字符 + 可能的空格 + ``` + 可能的空格 + 行尾
-        // $1 是前面的内容，$2 是 ``` 之前可能的空格（保留），然后强行插入 \n
-        return content.replace(/([^\n])([ \t]*)```[ \t]*$/gm, '$1$2\n```');
-    }
 
     function updateAIMessageContent(messageElement, content) {
         const bubble = messageElement.querySelector('.message-bubble');
         const md = getMarkdownInstance();
 
-        // 修复代码块结束符不换行的问题
-        const safeContent = fixInlineCodeBlockEnd(content);
+        // 预处理内容，确保加粗格式和代码块正确渲染
+        // 仅在渲染时虚拟闭合未结束的标记，绝不修改原始内容
+        const processedContent = markdownState.preprocessContent(content);
 
+        // 3. 最后渲染处理后的内容
         if (bubble && md) {
-            bubble.innerHTML = `${md.render(safeContent)}<span class="cursor"></span>`;
+            bubble.innerHTML = `${md.render(processedContent)}<span class="cursor"></span>`;
         } else if (bubble) {
-            bubble.textContent = safeContent + '|';
+            bubble.textContent = processedContent + '|';
         }
     }
     function finalizeAIMessage(messageElement, content) {
         const bubble = messageElement.querySelector('.message-bubble');
         const md = getMarkdownInstance();
 
-        // 修复代码块结束符不换行的问题
-        const safeContent = fixInlineCodeBlockEnd(content);
+        // 确保状态连续性，使用 preprocessContent 处理最终内容
+        const fixedContent = markdownState.preprocessContent(content);
 
         if (bubble && content && md) {
-            bubble.innerHTML = md.render(safeContent);
+            bubble.innerHTML = md.render(fixedContent);
             // 先添加AI消息操作按钮
-            addAssistantMessageActions(bubble, safeContent);
+            addAssistantMessageActions(bubble, fixedContent);
             // 再为代码块添加复制按钮
             addCodeCopyButtons(bubble);
 
@@ -1163,9 +1195,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } else if (bubble && content) {
-            bubble.textContent = content;
+            bubble.textContent = fixedContent;
             // 为AI消息添加操作按钮
-            addAssistantMessageActions(bubble, content);
+            addAssistantMessageActions(bubble, fixedContent);
         } else if (bubble) {
             const cursor = bubble.querySelector('.cursor');
             if (cursor) cursor.remove();
@@ -2496,3 +2528,4 @@ document.addEventListener('DOMContentLoaded', () => {
         !e.target.closest('#chat-messages') && document.getElementById('chat-messages')?.scrollBy(0, e.deltaY)
     );
 });
+
