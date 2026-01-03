@@ -20,31 +20,45 @@
                 id: 'cerebras-1',
                 name: 'cerebras-1',
                 apiEndpoint: 'https://api.cerebras.ai/v1/chat/completions',
-                apiKey: 'csk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-                selectedModels: ['llama-3.3-70b', 'gpt-oss-120b', 'qwen-3-235b-a22b-instruct-2507', 'zai-glm-4.6']
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                selectedModels: ['gpt-oss-120b','qwen-3-235b-a22b-instruct-2507','zai-glm-4.6','llama-3.3-70b']
             },
             {
                 id: 'cerebras-2',
                 name: 'cerebras-2',
                 apiEndpoint: 'https://api.cerebras.ai/v1/chat/completions',
-                apiKey: 'csk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-                selectedModels: ['llama-3.3-70b', 'gpt-oss-120b', 'qwen-3-235b-a22b-instruct-2507', 'zai-glm-4.6']
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                selectedModels: ['gpt-oss-120b','qwen-3-235b-a22b-instruct-2507','zai-glm-4.6','llama-3.3-70b']
             },
             {
-                id: 'groq-2',
-                name: 'groq-2',
-                apiEndpoint: 'https://api.groq.com/openai/v1/chat/completions',
-                apiKey: 'gsk_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-                selectedModels: ['openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'moonshotai/kimi-k2-instruct-0905']
+                id: 'cerebras-3',
+                name: 'cerebras-3',
+                apiEndpoint: 'https://api.cerebras.ai/v1/chat/completions',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                selectedModels: ['gpt-oss-120b','qwen-3-235b-a22b-instruct-2507','zai-glm-4.6','llama-3.3-70b']
             },
             {
                 id: 'groq-1',
                 name: 'groq-1',
                 apiEndpoint: 'https://api.groq.com/openai/v1/chat/completions',
-                apiKey: 'gsk_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 selectedModels: ['openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'moonshotai/kimi-k2-instruct-0905']
-            }
-        ],
+            },
+            {
+                id: 'groq-2',
+                name: 'groq-2',
+                apiEndpoint: 'https://api.groq.com/openai/v1/chat/completions',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                selectedModels: ['openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'moonshotai/kimi-k2-instruct-0905']
+            },
+            {
+                id: 'groq-3',
+                name: 'groq-3',
+                apiEndpoint: 'https://api.groq.com/openai/v1/chat/completions',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                selectedModels: ['openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'moonshotai/kimi-k2-instruct-0905']
+            },
+            ],
         TRANSLATE_TARGET: '简体中文',
         systemPrompt: `一、角色职责与内容标准
 作为顾问，必须以最高程度的坦诚与严格标准提供意见，主动识别并指出用户在判断中的假设缺陷、逻辑漏洞、侥幸心理、自我安慰与被低估的风险。对用户任何结论均需进行审慎审查，不得顺从、迎合或提供模糊不清的表述，当自身判断更合理时，必须坚持专业结论，保持毫无保留的直言态度。所有建议必须基于事实、可靠来源、严谨推理与可验证依据，并辅以明确、可执行的策略与步骤。回答必须优先促进用户"长期成长"，而非短期情绪安慰，并理解用户未明说的隐含意图。所有论述必须基于权威来源（学术研究、行业标准等）或公认的专业知识体系，应主动通过互联网检索并提供明确数据、文献或案例佐证，并禁止任何未经验证的推测或主观判断。针对复杂议题，必须先给出核心结论，再展开背景、推理脉络与系统分析。回答需确保全面性，提供包括正反论证、利弊评估、短期与长期影响等多视角分析，协助用户形成经得起审视的科学判断。涉及时效敏感议题（政策、市场、科技等），必须优先使用最新英文资料，并标注政策或数据的发布时间或生效日期。依据用户问题性质选择合适的专业深度，所有内容必须严格围绕用户核心诉求展开，不得跑题或形式化。
@@ -187,12 +201,12 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 1px 1px;
+          padding: 1px 4px;
           background: #2a2a2a;
           border: 1px solid rgba(255, 255, 255, 0.1);
           color: #f0f0f0 !important;
           border-radius: var(--ai-border-radius);
-          font-size: 12px; !important;
+          font-size: 12px !important;
           font-weight: normal;
           white-space: nowrap;
           cursor: pointer;
@@ -210,8 +224,8 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
           background: none;
           border: none;
           color: #f0f0f0 !important;
-          padding: 1px 2px;
-          font-size: 12px; !important;
+          padding: 1px 4px;
+          font-size: 12px !important;
           cursor: pointer;
           white-space: nowrap;
           line-height: 1.2;
@@ -310,7 +324,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
           display: block;
         }
         .ai-model-option {
-          padding: 4px 4px;
+          padding: 2px 4px;
           color: #888;
           cursor: pointer;
           font-size: 12px;
@@ -405,24 +419,24 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
         .ai-message {
           display:          flex;
           gap:              2px;
-          margin-bottom:    4px;
+          margin-bottom:    2px;
         }
         .ai-message.user-message {
           justify-content:  flex-end;
-          margin-left:      0%;
+          margin-left:      1%;
           margin-right:     0%;
         }
         .ai-message:not(.user-message) {
           justify-content:  flex-start;
-          margin-right:     0%;
+          margin-right:     1%;
           margin-left:      0%;
         }
         .ai-message-content {
-          max-width:        96%;
-          padding:          1px 2px !important;
+          max-width:        99%;
+          padding:          2px 6px !important;
           border-radius:    var(--ai-border-radius);
-          font-size:        11px !important;
-          line-height:      1.3 !important;
+          font-size:        12px !important;
+          line-height:      1.4 !important;
           font-family:      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
           background:       rgba(30, 30, 30, 0.9);
           overflow:         visible;
@@ -432,7 +446,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
           -webkit-user-select: text !important;
           -moz-user-select: text !important;
           white-space:      normal !important;
-          flex:             1;
+          flex:             0 1 auto;
         }
         .ai-message.user-message .ai-message-content {
           background-color: #4a90e2;
@@ -447,16 +461,16 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
           margin-right:     2%;
         }
         .ai-compact-message {
-          padding: 1px 3px !important;
-          margin: 0 2% !important;  /* 与AI消息和用户消息有相同的边距 */
-          font-size: 12px; !important;
-          line-height: 1.2 !important;
+          padding: 2px 6px !important;
+          margin: 0 2px !important;
+          font-size: 12px !important;
+          line-height: 1.4 !important;
           color: #888 !important;
           font-style: italic;
           background: transparent !important;
           border: none !important;
           border-radius: 0 !important;
-          max-width: 96% !important; /* 确保在96%内容容器内 */
+          max-width: 96% !important;
         }
         .ai-message-content span:only-child {
           display:          flex !important;
@@ -469,8 +483,8 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
           white-space: normal !important;
         }
         .ai-message-content * {
-          font-size: 12px; !important;
-          line-height: 1.2 !important;
+          font-size: 12px !important;
+          line-height: 1.4 !important;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         }
         .ai-message:not(.user-message) .ai-message-content {
@@ -489,7 +503,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
         .ai-input-field {
           flex: 1;
           padding: 2px 4px;
-          font-size: 12px; !important;
+          font-size: 12px !important;
           color: #f0f0f0 !important;
           border: 1px solid rgba(255, 255, 255, 0.1) !important;
           border-radius: var(--ai-border-radius);
@@ -524,33 +538,36 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
         }
         .ai-dialog-content pre {
           background: #1e1e1e !important;
-          padding: 12px !important;
+          padding: 6px 8px !important;
           border-radius: 4px;
           overflow-x: auto;
-          margin: 1em 0 !important;
+          margin: 4px 0 !important;
           white-space: pre-wrap;
           word-wrap: break-word;
         }
         .ai-dialog-content code {
           font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace !important;
           background: rgba(255,255,255,0.1) !important;
-          padding: 2px 4px !important;
+          padding: 1px 4px !important;
           border-radius: 3px;
         }
         .ai-dialog-content pre code {
           background: none !important;
           padding: 0 !important;
         }
+        .ai-dialog-content p {
+          margin: 2px 0 !important;
+        }
         .ai-dialog-content table {
           border-collapse: collapse;
           width: 100%;
-          margin: 0.5em 0;
+          margin: 4px 0;
           background: rgba(255,255,255,0.02);
         }
         .ai-dialog-content th,
         .ai-dialog-content td {
           border: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 6px 8px;
+          padding: 4px 6px;
           text-align: left;
           vertical-align: top;
         }
@@ -573,7 +590,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
         }
         .ai-dialog-content blockquote {
           margin: 0 !important;
-          padding: 4px 8px !important;
+          padding: 2px 8px !important;
           border-left: 3px solid #4a90e2;
           background: rgba(255,255,255,0.02);
           color: #888 !important;
@@ -581,7 +598,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
         .ai-dialog-content hr {
           border: none;
           border-top: 1px solid rgba(255, 255, 255, 0.1);
-          margin: 1em 0;
+          margin: 6px 0;
         }
         .ai-dialog-content img {
           max-width: 100%;
@@ -599,8 +616,8 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
         }
         .ai-dialog-content ul,
         .ai-dialog-content ol {
-          margin: 0.5em 0 !important;
-          padding-left: 20px !important;
+          margin: 2px 0 !important;
+          padding-left: 18px !important;
         }
         .ai-dialog-content li {
           margin: 0.2em 0 !important;
@@ -1731,4 +1748,3 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
         });
     }
 })();
-
