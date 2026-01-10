@@ -165,7 +165,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 models: [
                     { id: 9, name: 'gpt-oss-120b', favorite: true },
                     { id: 10, name: 'qwen-3-235b-a22b-instruct-2507', favorite: true },
-                    { id: 11, name: 'zai-glm-4.6', favorite: true }
+                    { id: 11, name: 'zai-glm-4.6', favorite: true },
+                    { id: 11, name: 'zai-glm-4.7', favorite: true }
                 ]
             }
         },
@@ -1014,23 +1015,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             cleanBaseUrl = normalizeBaseUrl(cleanBaseUrl);
-            let response;
-            if (cleanBaseUrl.includes('generativelanguage.googleapis.com')) {
-                response = await fetch(`${cleanBaseUrl}/models?key=${originalApiKey}`, {
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    signal: AbortSignal.timeout(10000)
-                });
-            } else {
-                response = await fetch(`${cleanBaseUrl}/models`, {
-                    headers: {
-                        'Authorization': `Bearer ${originalApiKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    signal: AbortSignal.timeout(10000)
-                });
-            }
+            // 统一使用标准的OpenAI兼容API格式，包括谷歌API
+            // 谷歌API现在也支持标准的Authorization Bearer格式
+            const response = await fetch(`${cleanBaseUrl}/models`, {
+                headers: {
+                    'Authorization': `Bearer ${originalApiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                signal: AbortSignal.timeout(10000)
+            });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
             const fetchedModels = data.data.map(m => ({
@@ -1208,6 +1201,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cleanUrl.endsWith('/')) {
             cleanUrl = cleanUrl.slice(0, -1);
         }
+
+        // 特殊处理谷歌API的完整路径
+        if (cleanUrl.includes('generativelanguage.googleapis.com') && cleanUrl.includes('/openai')) {
+            // 如果已经包含/openai路径，直接返回，不再添加/v1
+            return cleanUrl;
+        }
+
         const versionMatch = cleanUrl.match(/\/v\d+(beta|alpha)?/i);
         if (versionMatch) {
             const versionIndex = versionMatch.index + versionMatch[0].length;
