@@ -1,9 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
     let globalMd = null;
-    /**
-     * Markdown 流式渲染修复
-     * 仅在渲染时虚拟闭合未结束的标记，不修改原始内容
-     */
     class MarkdownStreamState {
         preprocessContent(content) {
             if (!content) return content;
@@ -122,11 +118,11 @@ document.addEventListener('DOMContentLoaded', () => {
             version: '1.0.0',
             general: {
             theme: 'dark',
-            language: 'zh',
+            language: 'en',
             wideMode: false,
             contextLimit: 20,
             lastUsedModel: '',
-            systemPrompt: '一、角色职责与内容标准作为顾问，必须以最高程度的坦诚与严格标准提供意见，主动识别并指出用户在判断中的假设缺陷、逻辑漏洞、侥幸心理、自我安慰与被低估的风险。对用户任何结论均需进行审慎审查，不得顺从、迎合或提供模糊不清的表述，当自身判断更合理时，必须坚持专业结论，保持毫无保留的直言态度。所有建议必须基于事实、可靠来源、严谨推理与可验证依据，并辅以明确、可执行的策略与步骤。回答必须优先促进用户"长期成长"，而非短期情绪安慰，并理解用户未明说的隐含意图。所有论述必须基于权威来源（学术研究、行业标准等）或公认的专业知识体系，应主动通过互联网检索并提供明确数据、文献或案例佐证，并禁止任何未经验证的推测或主观判断。针对复杂议题，必须先给出核心结论，再展开背景、推理脉络与系统分析。回答需确保全面性，提供包括正反论证、利弊评估、短期与长期影响等多视角分析，协助用户形成经得起审视的科学判断。涉及时效敏感议题（政策、市场、科技等），必须优先使用最新英文资料，并标注政策或数据的发布时间或生效日期。依据用户问题性质选择合适的专业深度，所有内容必须严格围绕用户核心诉求展开，不得跑题或形式化。二、语言风格、表达与格式规范全部回答必须使用简体中文，并保持高度正式、规范、具有权威性的语体风格，适用于学术、职场与公共交流。禁止出现口语化、随意、不严谨、模棱两可、情绪化或信息密度低的表达。回答必须为清晰的陈述句，不得使用反问、设问或引导性结尾。回答需直切核心，不得使用没有意义的客套话，不得在结尾预判用户下一步行为和询问，并禁止主动扩展无关话题。内容必须按逻辑展开，要求使用明确编号、标题和分段，以保证结构清晰，力求单屏可读。禁止使用 markdown 的"三个短横线"作为分隔符。禁止输出表格里带代码块等其他形式的复杂 markdown，影响渲染观感。'
+            systemPrompt: ''
         },
         providers: {
             'Groq': {
@@ -161,6 +157,29 @@ document.addEventListener('DOMContentLoaded', () => {
         ]
     };
     let configData = JSON.parse(localStorage.getItem('kissai_config')) || defaultData;
+        window.configData = configData;
+
+        // Set theme immediately to prevent flash (keep loading class)
+        const themeClass = configData.general.theme === 'light' ? 'light-mode' : 'dark-mode';
+        document.body.className = `loading ${themeClass}`;
+
+        // Ensure language is set before calling t()
+        if (configData.general.language === undefined) {
+            configData.general.language = defaultData.general.language;
+        }
+
+        // Set default systemPrompt based on language if it's a default value
+        if (configData.general.systemPrompt && configData.general.systemPrompt.trim()) {
+            const isDefaultPrompt = Object.values(translations).some(lang =>
+                lang['systemPrompt.default'] === configData.general.systemPrompt
+            );
+            if (isDefaultPrompt) {
+                configData.general.systemPrompt = t('systemPrompt.default');
+            }
+        } else {
+            // No systemPrompt set or empty, use default for current language
+            configData.general.systemPrompt = t('systemPrompt.default');
+        }
     function mergeConfig() {
         if (configData.version === defaultData.version) {
             return false;
@@ -175,6 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
     mergeConfig();
     if (!configData.history) configData.history = [];
     if (!configData.general) configData.general = { ...defaultData.general };
+    if (configData.general.language === undefined) configData.general.language = defaultData.general.language;
     if (configData.general.lastUsedModel === undefined) configData.general.lastUsedModel = '';
     if (configData.general.wideMode === undefined) configData.general.wideMode = false;
     if (configData.general.contextLimit === undefined) configData.general.contextLimit = 20;
@@ -256,7 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
-            currentModelSpan.textContent = '未选择模型';
+            currentModelSpan.textContent = t('model.notSelected');
         }
     }
     setDefaultModel();
@@ -277,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (welcomeSection) welcomeSection.style.display = 'flex';
         const newChat = {
             id: Date.now(),
-            title: '空白对话',
+            title: t('chat.emptyTitle'),
             messages: [],
             time: Date.now(),
             activeRole: null
@@ -314,14 +334,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 historyList.innerHTML = `
                     <div class="empty-state">
                         <i data-lucide="search"></i>
-                        <span>未找到包含 "${searchKeyword}" 的对话</span>
+                        <span data-i18n="chat.searchNotFound">${t('chat.searchNotFound', { keyword: searchKeyword })}</span>
                     </div>
                 `;
             } else {
                 historyList.innerHTML = `
                     <div class="empty-state">
                         <i data-lucide="message-square"></i>
-                        <span>此处显示您的对话历史记录。</span>
+                        <span data-i18n="chat.historyEmpty">${t('chat.historyEmpty')}</span>
                     </div>
                 `;
             }
@@ -599,11 +619,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     function renderGeneralSettings() {
         const promptTextarea = document.getElementById('global-system-prompt');
-        const defaultPrompt = promptTextarea.value;
         if (configData.general.systemPrompt !== undefined && configData.general.systemPrompt !== null) {
             promptTextarea.value = configData.general.systemPrompt;
-        } else if (!defaultPrompt) {
-            promptTextarea.value = '';
         }
         themeBtns.forEach(btn => {
             btn.classList.toggle('active', btn.getAttribute('data-theme') === configData.general.theme);
@@ -613,6 +630,7 @@ document.addEventListener('DOMContentLoaded', () => {
         languageOptions.querySelectorAll('.select-option').forEach(opt => {
             opt.classList.toggle('selected', opt.getAttribute('data-value') === configData.general.language);
         });
+        updateAllText();
         if (wideModeCheckbox) {
             wideModeCheckbox.checked = !!configData.general.wideMode;
         }
@@ -625,7 +643,7 @@ document.addEventListener('DOMContentLoaded', () => {
             actionsDiv.className = 'message-actions-row';
             const copyBtn = document.createElement('button');
             copyBtn.className = 'message-action-btn';
-            copyBtn.title = '复制';
+            copyBtn.title = t('copy.title');
             copyBtn.innerHTML = `<i data-lucide="copy"></i>`;
             copyBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
@@ -653,20 +671,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isLongMessage) {
             const expandBtn = document.createElement('button');
             expandBtn.className = 'message-action-btn';
-            expandBtn.title = '展开/收起';
+            expandBtn.title = t('message.expand');
             expandBtn.innerHTML = `<i data-lucide="list-chevrons-up-down"></i>`;
-            expandBtn.setAttribute('aria-label', '展开完整消息');
+            expandBtn.setAttribute('aria-label', t('message.expandFull'));
             expandBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 const isCollapsed = contentDiv.classList.contains('long-message-collapsed');
                 if (isCollapsed) {
                     contentDiv.classList.remove('long-message-collapsed');
                     expandBtn.innerHTML = `<i data-lucide="list-chevrons-down-up"></i>`;
-                    expandBtn.setAttribute('aria-label', '收起消息');
+                    expandBtn.setAttribute('aria-label', t('message.collapse'));
                 } else {
                     contentDiv.classList.add('long-message-collapsed');
                     expandBtn.innerHTML = `<i data-lucide="list-chevrons-up-down"></i>`;
-                    expandBtn.setAttribute('aria-label', '展开完整消息');
+                    expandBtn.setAttribute('aria-label', t('message.expandFull'));
                 }
                 lucide.createIcons();
             });
@@ -707,9 +725,9 @@ document.addEventListener('DOMContentLoaded', () => {
         actionsDiv.className = 'message-actions-row';
         const regenerateBtn = document.createElement('button');
         regenerateBtn.className = 'message-action-btn';
-        regenerateBtn.title = '重试';
+        regenerateBtn.title = t('message.regenerate');
         regenerateBtn.innerHTML = `<i data-lucide="refresh-cw"></i>`;
-        regenerateBtn.setAttribute('aria-label', '重新回答');
+        regenerateBtn.setAttribute('aria-label', t('message.regenerateLabel'));
         regenerateBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             const messageElement = bubble.closest('.message.assistant');
@@ -737,7 +755,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (currentModel) {
                         sendMessageToAPI(userContent, currentModel, null, null, userImages);
                     } else {
-                        alert('请先选择一个模型');
+                        alert(t('alert.selectModel'));
                     }
                 }
             }
@@ -745,7 +763,7 @@ document.addEventListener('DOMContentLoaded', () => {
         actionsDiv.appendChild(regenerateBtn);
         const copyBtn = document.createElement('button');
         copyBtn.className = 'message-action-btn';
-        copyBtn.title = '复制';
+        copyBtn.title = t('copy.title');
         copyBtn.innerHTML = `<i data-lucide="copy"></i>`;
         copyBtn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -774,22 +792,22 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!codeText.trim()) return;
             const copyBtn = document.createElement('button');
             copyBtn.className = 'code-copy-btn';
-            copyBtn.textContent = '复制代码';
-            copyBtn.title = '复制代码';
+            copyBtn.textContent = t('code.copy');
+            copyBtn.title = t('code.copy');
             copyBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const currentCode = pre.querySelector('code')?.textContent || pre.textContent;
-                const cleanCode = currentCode.replace('复制代码', '').replace('复制成功', '');
+                const cleanCode = currentCode.replace(t('code.copy'), '').replace(t('code.copySuccess'), '');
                 try {
                     await navigator.clipboard.writeText(codeElement.textContent);
-                    copyBtn.textContent = '复制成功';
+                    copyBtn.textContent = t('code.copySuccess');
                     copyBtn.classList.add('copied');
                     setTimeout(() => {
-                        copyBtn.textContent = '复制代码';
+                        copyBtn.textContent = t('code.copy');
                         copyBtn.classList.remove('copied');
                     }, 2000);
                 } catch (err) {
-                    console.error('复制失败:', err);
+                    console.error(t('error.copyFailed'), err);
                 }
             });
             pre.style.position = 'relative';
@@ -811,10 +829,42 @@ document.addEventListener('DOMContentLoaded', () => {
         opt.addEventListener('click', (e) => {
             const val = opt.getAttribute('data-value');
             configData.general.language = val;
+            window.configData = configData; // Ensure window.configData is updated
             currentLanguageSpan.textContent = opt.textContent;
             languageOptions.querySelectorAll('.select-option').forEach(o => o.classList.remove('selected'));
             opt.classList.add('selected');
+
+            // Update systemPrompt if it's a default systemPrompt (for any language)
+            const currentPrompt = configData.general.systemPrompt;
+            const zhDefault = translations.zh['systemPrompt.default'];
+            const enDefault = translations.en['systemPrompt.default'];
+            const isEmpty = !currentPrompt || !currentPrompt.trim();
+            const isDefaultPrompt = isEmpty || currentPrompt === zhDefault || currentPrompt === enDefault;
+            if (isDefaultPrompt) {
+                const newPrompt = t('systemPrompt.default');
+                configData.general.systemPrompt = newPrompt;
+                // Update the textarea value immediately so saveToStorage() reads the correct value
+                const promptTextarea = document.getElementById('global-system-prompt');
+                if (promptTextarea) {
+                    promptTextarea.value = newPrompt;
+                }
+            }
+
             saveToStorage();
+            // Close dropdown
+            languageOptions.classList.remove('active');
+
+            // Update all text
+            updateAllText();
+            // Re-render dynamic content that depends on language
+            renderHistory();
+            renderModelDropdown();
+            renderShortcuts();
+
+            // Re-render general settings if settings view is open
+            if (settingsView.classList.contains('active')) {
+                renderGeneralSettings();
+            }
         });
     });
     window.toggleAddModelForm = () => {
@@ -834,7 +884,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!provider) return;
         const existingModel = provider.models.find(m => m.name === modelName);
         if (existingModel) {
-            alert('该模型已存在');
+            alert(t('alert.modelExists'));
             return;
         }
         const newModel = {
@@ -908,10 +958,10 @@ document.addEventListener('DOMContentLoaded', () => {
             window.showModelModal(fetchedModels);
         } catch (error) {
             if (error.name === 'AbortError') {
-                console.error('请求超时，请检查网络连接或API端点是否可用');
+                console.error(t('error.requestTimeout'));
             } else {
-                console.error('获取模型失败，请检查 API Key 和 Base URL 是否正确：' + error.message);
-                alert('获取模型列表失败，建议使用手动添加模型功能（点击左侧「+」按钮）');
+                console.error(t('error.fetchFailed') + error.message);
+                alert(t('alert.fetchFailed'));
             }
         } finally {
             const iconAfter = fetchModelsBtn.querySelector('i') || fetchModelsBtn.querySelector('svg');
@@ -975,8 +1025,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     messageData.images = images;
                 }
                 chat.messages.push(messageData);
-                if (isUser && chat.title === '空白对话') {
-                    const titleText = content || (images.length > 0 ? '图片消息' : '空白消息');
+                if (isUser && chat.title === t('chat.emptyTitle')) {
+                    const titleText = content || (images.length > 0 ? t('chat.imageMessage') : t('chat.emptyMessage'));
                     chat.title = titleText.length > 20 ? titleText.substring(0, 20) + '...' : titleText;
                     renderHistory();
                 }
@@ -1082,11 +1132,11 @@ document.addEventListener('DOMContentLoaded', () => {
             providerInfo = findProviderByModel(modelName);
         }
         if (!providerInfo) {
-            throw new Error(`未找到模型 ${modelName} 的提供商配置`);
+            throw new Error(t('error.providerNotFound', { modelName }));
         }
         const { provider } = providerInfo;
         if (!provider.apiKey) {
-            throw new Error('API Key 未配置');
+            throw new Error(t('error.apiKeyNotConfigured'));
         }
         const baseUrl = normalizeBaseUrl(provider.baseUrl);
         const messages = [];
@@ -1098,7 +1148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentRole && isValidRole(currentRole)) {
             const role = configData.roles.find(r => r.name === currentRole);
             if (role && role.prompt) {
-                messages.push({ role: 'system', content: `角色预设：${role.name}\n${role.prompt}` });
+                messages.push({ role: 'system', content: `${t('role.prefix')}${role.name}\n${role.prompt}` });
                 processedMessage = processedMessage.replace(`@${currentRole}`, '').trim();
             }
         }
@@ -1119,7 +1169,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const msgImages = msg.images || [];
                     if (msgImages.length > 0) {
                         msgContent.content = [
-                            { type: 'text', text: msg.content || '你是高精度专业的OCR助手，请精准提取图中文字，如有特殊排版，需要完整保留，保证合理的换行，对模糊字符不作猜测，完整返回给我。' },
+                            { type: 'text', text: msg.content || t('ocr.prompt') },
                             ...msgImages.map(img => ({ type: 'image_url', image_url: { url: img } }))
                         ];
                     } else {
@@ -1130,10 +1180,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         if (processedMessage.trim() || images.length > 0) {
-            const userMsg = { role: 'user', content: processedMessage.trim() || '你是高精度专业的OCR助手，请精准提取图中文字，如有特殊排版，需要完整保留，保证合理的换行，对模糊字符不作猜测，完整返回给我。' };
+            const userMsg = { role: 'user', content: processedMessage.trim() || t('ocr.prompt') };
             if (images.length > 0) {
                 userMsg.content = [
-                    { type: 'text', text: processedMessage.trim() || '你是高精度专业的OCR助手，请精准提取图中文字，如有特殊排版，需要完整保留，保证合理的换行，对模糊字符不作猜测，完整返回给我。' },
+                    { type: 'text', text: processedMessage.trim() || t('ocr.prompt') },
                     ...images.map(img => ({ type: 'image_url', image_url: { url: img } }))
                 ];
             }
@@ -1147,7 +1197,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const assistantMsgCount = messages.filter(m => m.role === 'assistant').length;
                 const totalMsgCount = userMsgCount + assistantMsgCount;
                 if (totalMsgCount > 0 && totalMsgCount % 3 === 0) {
-                    messages.push({ role: 'system', content: `角色预设：${role.name}\n${role.prompt}` });
+                    messages.push({ role: 'system', content: `${t('role.prefix')}${role.name}\n${role.prompt}` });
                 }
             }
         }
@@ -1331,8 +1381,18 @@ document.addEventListener('DOMContentLoaded', () => {
             textarea.select();
             const success = document.execCommand('copy');
             document.body.removeChild(textarea);
-            if (!success) {
-                console.error('复制失败');
+            if (success) {
+                // Show visual feedback
+                const span = exportClipboardBtn.querySelector('span');
+                const originalText = span.textContent;
+                exportClipboardBtn.classList.add('copied');
+                span.textContent = t('code.copySuccess');
+                setTimeout(() => {
+                    exportClipboardBtn.classList.remove('copied');
+                    span.textContent = originalText;
+                }, 800);
+            } else {
+                console.error(t('error.copyFailed'));
             }
         });
     }
@@ -1345,7 +1405,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 const importedData = JSON.parse(text);
                 if (importedData && importedData.general && importedData.providers) {
-                    if (confirm('导入配置将覆盖本地所有数据，确定要继续吗？')) {
+                    if (confirm(t('alert.importConfirm'))) {
                         configData = importedData;
                         localStorage.setItem('kissai_config', JSON.stringify(configData));
                         if (currentProviderKey && configData.providers[currentProviderKey]) {
@@ -1356,7 +1416,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             } catch (err) {
-                console.error('导入失败：' + err.message);
+                console.error(t('alert.importFailed') + err.message);
             }
         });
     }
@@ -1538,10 +1598,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${provider}</span>
                 </div>
                 <div class="provider-item-actions">
-                     <button class="icon-btn-xs provider-copy-btn" onclick="event.stopPropagation(); copyProvider('${provider}')" title="复制">
+                     <button class="icon-btn-xs provider-copy-btn" onclick="event.stopPropagation(); copyProvider('${provider}')" title="${t('provider.copy')}">
                         <i data-lucide="copy"></i>
                     </button>
-                    <button class="icon-btn-xs provider-delete-btn" onclick="event.stopPropagation(); deleteProvider('${provider}')" title="删除">
+                    <button class="icon-btn-xs provider-delete-btn" onclick="event.stopPropagation(); deleteProvider('${provider}')" title="${t('provider.delete')}">
                         <i data-lucide="trash"></i>
                     </button>
                 </div>
@@ -1572,11 +1632,19 @@ document.addEventListener('DOMContentLoaded', () => {
             configData.general.theme = theme;
             themeBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            document.body.className = theme === 'light' ? 'light-mode' : 'dark-mode';
+            const themeClass = theme === 'light' ? 'light-mode' : 'dark-mode';
+            const isLoading = document.body.classList.contains('loading');
+            const isLoaded = document.body.classList.contains('loaded');
+            if (isLoading) {
+                document.body.className = `loading ${themeClass}`;
+            } else if (isLoaded) {
+                document.body.className = `loaded ${themeClass}`;
+            } else {
+                document.body.className = themeClass;
+            }
             saveToStorage();
         });
     });
-    document.body.className = configData.general.theme === 'light' ? 'light-mode' : 'dark-mode';
     modelSelector.addEventListener('click', (e) => {
         e.stopPropagation();
         if (contextLimitDropdown) contextLimitDropdown.classList.remove('active');
@@ -1629,12 +1697,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!hasProviders) {
             const emptySection = document.createElement('div');
             emptySection.className = 'dropdown-section';
-            emptySection.innerHTML = '<div class="dropdown-section-title" style="color: var(--text-secondary); font-style: italic; padding: 12px 12px 4px 12px;">没有配置任何模型提供商</div>';
+            emptySection.innerHTML = `<div class="dropdown-section-title" style="color: var(--text-secondary); font-style: italic; padding: 12px 12px 4px 12px;">${t('model.noProviders')}</div>`;
             modelDropdown.appendChild(emptySection);
         } else if (!hasAnyEnabledModels) {
             const emptySection = document.createElement('div');
             emptySection.className = 'dropdown-section';
-            emptySection.innerHTML = '<div class="dropdown-section-title" style="color: var(--text-secondary); font-style: italic; padding: 12px 12px 4px 12px;">没有启用任何模型</div>';
+            emptySection.innerHTML = `<div class="dropdown-section-title" style="color: var(--text-secondary); font-style: italic; padding: 12px 12px 4px 12px;">${t('model.noEnabled')}</div>`;
             modelDropdown.appendChild(emptySection);
         } else {
             const favorites = [];
@@ -1648,7 +1716,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (favorites.length > 0) {
                 const favSection = document.createElement('div');
                 favSection.className = 'dropdown-section';
-                favSection.innerHTML = '<div class="dropdown-section-title">已收藏</div>';
+                favSection.innerHTML = `<div class="dropdown-section-title">${t('model.favorites')}</div>`;
                 favorites.forEach(m => favSection.appendChild(createDropdownItem(m, m.providerKey)));
                 modelDropdown.appendChild(favSection);
             }
@@ -1813,12 +1881,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     }
     function renderShortcuts() {
+        if (!shortcutsContainer) return;
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const cmd = isMac ? '⌘' : 'Ctrl';
         const shortcuts = [
-            { name: '新建对话', key: `${cmd} + N` }, { name: '侧边栏', key: `${cmd} + \\` },
-            { name: '发送', key: 'Enter' }, { name: '换行', key: 'Shift + Enter' },
-            { name: '搜索', key: `${cmd} + F` }, { name: '设置', key: `${cmd} + ,` }
+            { name: t('shortcuts.newChat'), key: `${cmd} + N` }, { name: t('shortcuts.sidebar'), key: `${cmd} + \\` },
+            { name: t('shortcuts.send'), key: 'Enter' }, { name: t('shortcuts.newLine'), key: 'Shift + Enter' },
+            { name: t('shortcuts.search'), key: `${cmd} + F` }, { name: t('shortcuts.settings'), key: `${cmd} + ,` }
         ];
         shortcutsContainer.innerHTML = shortcuts.map(s => `<div class="shortcut-item"><span>${s.name}</span><kbd>${s.key}</kbd></div>`).join('');
     }
@@ -2053,7 +2122,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderModels();
             } else {
                 currentProviderKey = null;
-                providerNameDisplay.textContent = '未选择提供商';
+                providerNameDisplay.textContent = t('model.notProvider');
                 apiKeyInput.value = '';
                 baseUrlInput.value = '';
                 modelList.innerHTML = '';
@@ -2087,7 +2156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateIcons();
     const clearChatBtn = document.getElementById('clear-chat-btn');
     if (clearChatBtn) {
-        clearChatBtn.title = "双击以清空对话";
+        clearChatBtn.title = t('chat.clearChat');
         clearChatBtn.addEventListener('dblclick', () => {
             if (activeChatId) {
                 const chat = configData.history.find(c => c.id === activeChatId);
@@ -2121,10 +2190,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         location.reload();
                     } else {
-                        console.error('无效的配置文件格式。');
+                        console.error(t('alert.invalidConfig'));
                     }
                 } catch (err) {
-                    console.error('导入失败：' + err.message);
+                    console.error(t('alert.importFailed') + err.message);
                 }
             };
             reader.readAsText(file);
@@ -2157,7 +2226,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetPromptBtn = document.getElementById('reset-prompt-btn');
     if (resetPromptBtn) {
         resetPromptBtn.addEventListener('click', () => {
-            const defaultPrompt = defaultData.general.systemPrompt || '';
+            const defaultPrompt = t('systemPrompt.default');
             document.getElementById('global-system-prompt').value = defaultPrompt;
             configData.general.systemPrompt = defaultPrompt;
             saveToStorage();
@@ -2165,7 +2234,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const clearHistoryBtn = document.getElementById('clear-history-btn');
     if (clearHistoryBtn) {
-        clearHistoryBtn.title = "双击以清理全部历史记录";
+        clearHistoryBtn.title = t('footer.clearHistory');
         clearHistoryBtn.addEventListener('dblclick', () => {
             configData.history = [];
             activeChatId = null;
@@ -2309,4 +2378,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('chat-view')?.addEventListener('wheel', e =>
         !e.target.closest('#chat-messages') && document.getElementById('chat-messages')?.scrollBy(0, e.deltaY)
     );
+    // Initialize i18n on page load
+    updateAllText();
+    // Remove loading state to show the page (keep theme class)
+    document.body.classList.remove('loading');
+    document.body.classList.add('loaded');
 });
