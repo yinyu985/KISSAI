@@ -6,23 +6,17 @@
     <title>KISSAI Web</title>
     <meta name="description" content="KISSAI 是一个现代、极简且高质感的 AI 聊天交互平台，支持多种模型提供商。">
     <link rel="stylesheet" href="css/style.css">
-    <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- 网站 favicon -->
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
-    <!-- Markdown-it for rendering markdown content -->
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
-    <!-- Highlight.js for code syntax highlighting -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body class="dark-mode">
     <div id="app">
-        <!-- Sidebar -->
         <aside id="sidebar" class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
@@ -30,15 +24,12 @@
                     <div class="logo-sub">Keep it simple, stupid</div>
                 </div>
             </div>
-
-            <!-- Fixed Search -->
             <div style="padding: 0 12px 12px 12px; flex-shrink: 0;">
                 <div class="sidebar-action">
                     <i data-lucide="search"></i>
                     <input type="text" id="search-input" placeholder="搜索对话">
                 </div>
             </div>
-
             <div class="sidebar-content" style="padding-top: 0;">
                 <div class="history-list-container" style="margin-top: 0; border-top: none;">
                     <div id="history-list" class="history-list">
@@ -50,15 +41,12 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Fixed New Chat Button -->
             <div style="padding: 12px; padding-top: 0; flex-shrink: 0;">
                 <button id="new-chat-btn" class="sidebar-action" style="cursor: pointer; justify-content: center;">
                     <i data-lucide="plus"></i>
                     <span>新建对话</span>
                 </button>
             </div>
-
             <div class="sidebar-footer">
                 <button id="github-btn" class="footer-btn" title="GitHub Repository" onclick="window.open('https://github.com/yinyu985/KISSAI.git', '_blank')">
                     <i data-lucide="github"></i>
@@ -73,27 +61,21 @@
                     <i data-lucide="settings"></i>
                 </button>
             </div>
-
-            <!-- Sidebar Toggle Handle moved inside -->
             <div id="sidebar-handle" class="sidebar-handle">
                 <svg viewBox="0 0 12 64" class="handle-svg">
                     <path id="handle-path" d="M 6 2 L 6 32 L 6 62" />
                 </svg>
             </div>
         </aside>
-
-        <!-- Main Content -->
         <main id="main-content" class="main-content">
             <div id="chat-view" class="view active">
                 <div class="chat-container narrow-mode">
-                    <!-- 左侧主内容区域 -->
                     <div class="chat-container-inner">
                         <div class="welcome-section">
                             <h1>👋嗨，你好啊！</h1>
                             <p>今天我能为您做些什么？</p>
                         </div>
                         <div id="chat-messages" class="chat-messages">
-                            <!-- Messages will be appended here -->
                         </div>
                         <div class="input-container">
                         <div class="input-wrapper" style="position: relative;">
@@ -104,9 +86,7 @@
                                 <div class="left-controls" style="display: flex; gap: 8px; align-items: center;">
                                     <div id="model-selector" class="model-selector">
                                         <span id="current-model">openai/gpt-oss-120b</span>
-                                        <!-- Dropdown Menu -->
                                         <div id="model-dropdown" class="model-dropdown">
-                                            <!-- Content will be injected by JS -->
                                         </div>
                                     </div>
                                     <button id="clear-chat-btn" class="icon-btn-inline" title="双击以清空对话">
@@ -132,7 +112,6 @@
 </svg>
                                             <span id="context-count-display" class="context-count-badge">20</span>
                                         </button>
-                                        <!-- Context Limit Dropdown -->
                                         <div id="context-limit-dropdown" class="context-limit-dropdown">
                                             <div class="context-limit-option" data-value="2">2 条消息</div>
                                             <div class="context-limit-option" data-value="4">4 条消息</div>
@@ -154,12 +133,10 @@
                                 </button>
                             </div>
                         </div>
-                        </div><!-- 关闭 input-container -->
-                    </div><!-- 关闭 chat-container-inner -->
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <!-- Settings View (Hidden by default) -->
             <div id="settings-view" class="view">
                 <div class="settings-container">
                     <aside class="settings-sidebar">
@@ -177,7 +154,6 @@
                                     <i data-lucide="plus" class="nav-icon"></i>
                                     <span>新增提供商</span>
                                 </div>
-                                <!-- Providers will be injected here -->
                             </div>
                         </div>
                         <div class="settings-nav-item" data-tab="role-presets">
@@ -185,11 +161,8 @@
                             <span>角色预设</span>
                         </div>
                     </aside>
-
                     <section class="settings-main">
-                        <!-- General Settings -->
                         <div id="general-settings" class="settings-content active">
-                            <!-- Wide Mode -->
                             <div class="settings-group">
                                 <label>宽屏模式</label>
                                 <div class="toggle-container">
@@ -200,8 +173,6 @@
                                     <span class="toggle-label">开启宽屏对话视图</span>
                                 </div>
                             </div>
-
-                            <!-- Language -->
                             <div class="settings-group">
                                 <label>界面语言</label>
                                 <div id="language-select" class="custom-select short-select">
@@ -215,41 +186,39 @@
                                     </div>
                                 </div>
                             </div>
-
-
-                            <!-- System Prompt -->
                             <div class="settings-group" style="position: relative;">
                                 <label>全局系统提示词</label>
                                 <textarea id="global-system-prompt" class="settings-textarea no-resize" placeholder="提示词...">一、角色职责与内容标准
 作为顾问，必须以最高程度的坦诚与严格标准提供意见，主动识别并指出用户在判断中的假设缺陷、逻辑漏洞、侥幸心理、自我安慰与被低估的风险。对用户任何结论均需进行审慎审查，不得顺从、迎合或提供模糊不清的表述，当自身判断更合理时，必须坚持专业结论，保持毫无保留的直言态度。所有建议必须基于事实、可靠来源、严谨推理与可验证依据，并辅以明确、可执行的策略与步骤。回答必须优先促进用户“长期成长”，而非短期情绪安慰，并理解用户未明说的隐含意图。所有论述必须基于权威来源（学术研究、行业标准等）或公认的专业知识体系，应主动通过互联网检索并提供明确数据、文献或案例佐证，并禁止任何未经验证的推测或主观判断。针对复杂议题，必须先给出核心结论，再展开背景、推理脉络与系统分析。回答需确保全面性，提供包括正反论证、利弊评估、短期与长期影响等多视角分析，协助用户形成经得起审视的科学判断。涉及时效敏感议题（政策、市场、科技等），必须优先使用最新英文资料，并标注政策或数据的发布时间或生效日期。依据用户问题性质选择合适的专业深度，所有内容必须严格围绕用户核心诉求展开，不得跑题或形式化。
-
 二、语言风格、表达与格式规范
 全部回答必须使用简体中文，并保持高度正式、规范、具有权威性的语体风格，适用于学术、职场与公共交流。禁止出现口语化、随意、不严谨、模棱两可、情绪化或信息密度低的表达。回答必须为清晰的陈述句，不得使用反问、设问或引导性结尾。回答需直切核心，不得使用没有意义的客套话，不得在结尾预判用户下一步行为和询问，并禁止主动扩展无关话题。内容必须按逻辑展开，要求使用明确编号、标题和分段，以保证结构清晰，力求单屏可读。禁止使用 markdown 的“三个短横线”作为分隔符。禁止输出表格里带代码块等其他形式的复杂 markdown，影响渲染观感。</textarea>
                                 <button id="reset-prompt-btn" class="text-btn-overlay">重置为默认值</button>
                             </div>
-
-
-
-                            <!-- Data Management -->
                             <div class="settings-group">
                                 <label>数据管理</label>
-                                <p class="help-text">导入或导出您的配置数据（包括API配置、角色预设、对话历史等）。</p>
-                                <p class="warning-text">注意：导入配置文件会覆盖本地所有数据（包括API配置、角色预设、对话历史等）。<br>如需合并，请先导出当前配置，手动编辑后导入。</p>
+                                <p class="help-text">支持通过剪贴板或文件导入或导出您的配置数据（包括API配置、角色预设、对话历史等）。</p>
+                                <p class="warning-text">注意：导入配置会覆盖本地所有数据（包括API配置、角色预设、对话历史等）。<br>导出时会自动移除图片数据以减小体积。</p>
                                 <div class="data-management-buttons">
-                                    <button id="import-config-btn" class="btn-secondary">
+                                    <button id="export-clipboard-btn" class="btn-secondary">
+                                        <i data-lucide="copy"></i>
+                                        <span>复制到剪贴板</span>
+                                    </button>
+                                    <button id="import-clipboard-btn" class="btn-secondary">
+                                        <i data-lucide="clipboard"></i>
+                                        <span>从剪贴板导入</span>
+                                    </button>
+                                    <button id="export-file-btn" class="btn-secondary">
+                                        <i data-lucide="download"></i>
+                                        <span>导出 JSON 文件</span>
+                                    </button>
+                                    <button id="import-file-btn" class="btn-secondary">
                                         <input type="file" id="import-file-input" accept=".json" style="display: none;">
                                         <i data-lucide="upload"></i>
-                                        <span>导入 JSON 配置</span>
-                                    </button>
-                                     <button id="export-config-btn" class="btn-secondary">
-                                        <i data-lucide="download"></i>
-                                        <span>导出 JSON 配置</span>
+                                        <span>导入 JSON 文件</span>
                                     </button>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Provider Settings -->
                         <div id="provider-settings" class="settings-content">
                             <div class="provider-title-container">
                                 <div style="display: flex; align-items: center; gap: 4px;">
@@ -267,8 +236,6 @@
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- Add Provider Form (In-page) -->
                             <div id="add-provider-form" class="compact-form">
                                 <input type="text" id="new-provider-name" placeholder="提供商名称">
                                 <div class="form-actions">
@@ -280,7 +247,6 @@
                                     </button>
                                 </div>
                             </div>
-
                             <div class="settings-group">
                                 <label>API Key</label>
                                 <div class="input-with-actions">
@@ -321,15 +287,11 @@
                                 <div id="model-list" class="model-list"></div>
                             </div>
                         </div>
-
-                        <!-- Role Presets Settings -->
                          <div id="role-presets-settings" class="settings-content">
-                            <!-- Add Role Form (In-page) -->
                             <div id="add-role-form" class="compact-form">
                                 <input type="text" id="new-role-name" placeholder="角色名称">
                                 <textarea id="new-role-prompt" placeholder="系统提示词" rows="6"></textarea>
                             </div>
-
                             <div class="settings-group">
                                 <div class="group-header">
                                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -351,9 +313,7 @@
                                 <div id="role-list" class="role-list"></div>
                             </div>
                         </div>
-
                     </section>
-
                     <button id="close-settings" class="close-btn">
                         <i data-lucide="x"></i>
                     </button>
@@ -361,8 +321,6 @@
             </div>
         </main>
     </div>
-
-    <!-- Model Selection Modal -->
     <div id="model-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -373,20 +331,15 @@
             </div>
             <div class="modal-body">
                 <p style="margin: 0 0 8px 0; font-size: 12px; color: var(--text-secondary);">勾选要使用的模型，未勾选的将不会出现在模型列表中</p>
-
-                <!-- Search Input -->
                 <div class="sidebar-action" style="margin-bottom: 12px; height: 24px; min-height: 24px;">
                     <i data-lucide="search"></i>
                     <input type="text" id="modal-model-search-input" placeholder="搜索模型...">
                 </div>
-
                 <div id="model-selection-list" class="model-selection-list">
-                    <!-- Models will be populated here -->
                 </div>
             </div>
         </div>
     </div>
-
     <script src="js/app.js"></script>
     <script>
         // Initialize Lucide icons

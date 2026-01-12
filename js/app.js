@@ -1,42 +1,30 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 创建全局markdown实例
     let globalMd = null;
-
     /**
      * Markdown 流式渲染修复
      * 仅在渲染时虚拟闭合未结束的标记，不修改原始内容
      */
     class MarkdownStreamState {
-        // 核心逻辑：扫描并补全
         preprocessContent(content) {
             if (!content) return content;
-
             let inCodeBlock = false, inBold = false;
             const len = content.length;
-
             for (let i = 0; i < len; i++) {
-                // 检测 ```
                 if (content[i] === '`' && content[i+1] === '`' && content[i+2] === '`') {
                     inCodeBlock = !inCodeBlock;
-                    i += 2; // 跳过接下来的两个字符
+                    i += 2;
                 }
-                // 检测 ** (仅在非代码块内)
                 else if (!inCodeBlock && content[i] === '*' && content[i+1] === '*') {
                     inBold = !inBold;
-                    i++; // 跳过下一个字符
+                    i++;
                 }
             }
-
-            // 补全未闭合状态
             if (inCodeBlock) return content + '\n\n```';
             if (inBold) return content + '**';
             return content;
         }
     }
-
-    // 创建全局状态跟踪器实例
     const markdownState = new MarkdownStreamState();
-
     function getMarkdownInstance() {
         if (globalMd === null && typeof window.markdownit === 'function') {
             globalMd = window.markdownit({
@@ -49,26 +37,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 highlight: function (str, lang) {
                     if (typeof hljs !== 'undefined') {
                         try {
-                            // 如果指定了语言且支持该语言，使用指定语言
                             if (lang && hljs.getLanguage(lang)) {
                                 return '<pre class="hljs"><code>' +
                                        hljs.highlight(str, { language: lang }).value +
                                        '</code></pre>';
                             }
-                            // 否则使用自动检测
                             const result = hljs.highlightAuto(str);
                             return '<pre class="hljs"><code>' +
                                    result.value +
                                    '</code></pre>';
                         } catch (__) {
-                            // 如果自动检测也失败，返回纯文本
                         }
                     }
                     return '<pre class="hljs"><code>' + (globalMd ? globalMd.utils.escapeHtml(str) : str) + '</code></pre>';
                 }
             });
-
-            // 设置链接渲染规则
             const defaultRender = globalMd.renderer.rules.link_open || function (tokens, idx, options, env, renderer) {
                 return renderer.renderToken(tokens, idx, options);
             };
@@ -83,13 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return globalMd;
     }
-
-    // 验证角色是否有效（存在于配置中）
     const isValidRole = (roleName) => {
         if (!roleName || !configData.roles) return false;
         return configData.roles.some(role => role.name === roleName);
     };
-
     const updateIcons = () => {
         if (typeof lucide !== 'undefined') {
             lucide.createIcons({
@@ -127,7 +107,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const modelDropdown = document.getElementById('model-dropdown');
     const currentModelSpan = document.getElementById('current-model');
     const shortcutsContainer = document.getElementById('shortcuts-container');
-    const exportConfigBtn = document.getElementById('export-config-btn');
+    const exportClipboardBtn = document.getElementById('export-clipboard-btn');
+    const importClipboardBtn = document.getElementById('import-clipboard-btn');
+    const exportFileBtn = document.getElementById('export-file-btn');
     const historyList = document.getElementById('history-list');
     const newChatBtn = document.getElementById('new-chat-btn');
     const languageSelect = document.getElementById('language-select');
@@ -197,7 +179,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (configData.general.wideMode === undefined) configData.general.wideMode = false;
     if (configData.general.contextLimit === undefined) configData.general.contextLimit = 20;
     if (!configData.roles) configData.roles = JSON.parse(JSON.stringify(defaultData.roles));
-    // 初始化currentProviderKey为配置中存在的第一个提供商
     let currentProviderKey = Object.keys(configData.providers)[0] || 'Groq';
     let isRequesting = false;
     let originalProviderName = '';
@@ -209,7 +190,6 @@ document.addEventListener('DOMContentLoaded', () => {
             configData.providers[currentProviderKey].baseUrl = baseUrlInput.value;
         }
         configData.general.systemPrompt = document.getElementById('global-system-prompt').value;
-        // 上下文限制值已经在其他地方设置，这里不需要重复读取输入框
         localStorage.setItem('kissai_config', JSON.stringify(configData));
     }
     sidebarHandle.addEventListener('click', () => {
@@ -236,12 +216,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     function setDefaultModel() {
-        // 优先使用存储中的上次使用模型
         let currentModel = null;
         if (configData.general && configData.general.lastUsedModel) {
             currentModel = configData.general.lastUsedModel;
         }
-
         let isValidModel = false;
         let providerKey = null;
         if (currentModel) {
@@ -251,15 +229,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 setModelDisplay(currentModel, providerKey);
             }
         }
-
         if (!isValidModel) {
-            // 如果存储的模型无效或不存在，查找首选模型并更新lastUsedModel
             for (const [pKey, provider] of Object.entries(configData.providers)) {
                 if (provider.models) {
                     const favoriteModel = provider.models.find(m => m.favorite && m.enabled !== false);
                     if (favoriteModel) {
                         setModelDisplay(favoriteModel.name, pKey);
-                        // 更新lastUsedModel为找到的模型
                         if (configData.general) {
                             configData.general.lastUsedModel = favoriteModel.name;
                             saveToStorage();
@@ -273,7 +248,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const enabledModel = provider.models.find(m => m.enabled !== false);
                     if (enabledModel) {
                         setModelDisplay(enabledModel.name, pKey);
-                        // 更新lastUsedModel为找到的模型
                         if (configData.general) {
                             configData.general.lastUsedModel = enabledModel.name;
                             saveToStorage();
@@ -378,11 +352,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const chat = configData.history.find(c => c.id === id);
         if (!chat) return;
         activeChatId = id;
-
-        // 保存当前活跃的对话ID到localStorage
         configData.general.activeChatId = id;
         saveToStorage();
-
         const chatMessages = document.getElementById('chat-messages');
         if (chatMessages) chatMessages.innerHTML = '';
         const chatView = document.getElementById('chat-view');
@@ -421,16 +392,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     bubble = messageDiv.querySelector('.message-bubble');
                 }
-
-                // 添加操作按钮：用户消息添加折叠和复制按钮，AI消息添加复制按钮
                 if (msg.role === 'user') {
                     applyLongMessageHandling(bubble, true, msg.content);
                 } else {
                     addAssistantMessageActions(bubble, msg.content);
-                    // 为历史记录中的代码块添加复制按钮
                     addCodeCopyButtons(bubble);
                 }
-
                 chatMessages.appendChild(messageDiv);
             });
             chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -439,7 +406,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (chatContainer) chatContainer.classList.remove('has-messages');
             if (welcomeSection) welcomeSection.style.display = 'flex';
         }
-        // 只在输入框为空时恢复角色选择，保留用户已输入的内容
         if (chatInput.value.trim() === '' && !chatInput.dataset.pastedImage) {
             if (chat.activeRole && isValidRole(chat.activeRole)) {
                 chatInput.value = `@${chat.activeRole} `;
@@ -461,74 +427,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         saveToStorage();
     };
-
-    // 初始化角色提及下拉菜单的事件监听（事件委托）
     const roleMentionDropdown = document.getElementById('role-mention-dropdown');
     roleMentionDropdown.addEventListener('click', (e) => {
         const item = e.target.closest('.role-mention-item');
         if (!item) return;
         e.stopPropagation();
         const roleName = item.getAttribute('data-name');
-
-        // 获取当前光标位置，精确定位要替换的@符号
         const cursorPosition = chatInput.selectionStart;
         const textBeforeCursor = chatInput.value.substring(0, cursorPosition);
         const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-
         if (lastAtIndex !== -1) {
             const textAfterCursor = chatInput.value.substring(cursorPosition);
             const selectedRoleText = '@' + roleName + ' ';
-
-            // 替换为选中的角色名
             chatInput.value = chatInput.value.substring(0, lastAtIndex) + selectedRoleText + textAfterCursor;
-
-            // 设置光标位置
             const newCursorPosition = lastAtIndex + selectedRoleText.length;
             chatInput.selectionStart = chatInput.selectionEnd = newCursorPosition;
-
-            // 标记为用户明确选择的角色
             chatInput.dataset.selectedRole = roleName;
         }
-
         chatInput.focus();
         roleMentionDropdown.style.display = 'none';
         roleMentionDropdown.classList.remove('active');
     });
-
     chatInput.addEventListener('input', () => {
         chatInput.style.height = 'auto';
         chatInput.style.height = Math.min(chatInput.scrollHeight, 240) + 'px';
         sendBtn.disabled = chatInput.value.trim() === '' && !chatInput.dataset.pastedImage;
-
-        // 检查是否需要清除角色选择（用户手动删除了@角色名）
         const selectedRole = chatInput.dataset.selectedRole;
         if (selectedRole) {
-            // 检查是否包含 @角色名 后面跟着空格或字符串结束
             const roleExistsInInput = new RegExp(`@${selectedRole.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\s|$)`).test(chatInput.value);
             if (!roleExistsInInput) {
                 delete chatInput.dataset.selectedRole;
             }
         }
-
-        // 只在输入框开头或空格后@时触发角色选择菜单
         const cursorPosition = chatInput.selectionStart;
         const textBeforeCursor = chatInput.value.substring(0, cursorPosition);
         const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-
         if (lastAtIndex !== -1 && (lastAtIndex === 0 || textBeforeCursor[lastAtIndex - 1] === ' ' || textBeforeCursor[lastAtIndex - 1] === '\n')) {
-            // 检查这个@是否是已选择角色的一部分，如果是就不触发
             const currentSelectedRole = chatInput.dataset.selectedRole;
             if (currentSelectedRole) {
                 const selectedRoleText = '@' + currentSelectedRole + ' ';
                 const roleStart = chatInput.value.indexOf(selectedRoleText);
                 if (roleStart !== -1 && lastAtIndex >= roleStart && lastAtIndex < roleStart + selectedRoleText.length) {
-                    // @在已选择角色范围内，不触发下拉菜单
                     roleMentionDropdown.style.display = 'none';
                     roleMentionDropdown.classList.remove('active');
                     return;
                 }
             }
-
             const searchTerm = textBeforeCursor.substring(lastAtIndex + 1).toLowerCase();
             const roles = configData.roles || [];
             const filteredRoles = roles.filter(role => role.name.toLowerCase().includes(searchTerm));
@@ -604,7 +548,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     preventScrollPropagation(chatInput);
-
     const toggleApiKeyBtn = document.querySelector('.action-icons .icon-btn:first-child');
     const copyApiKeyBtn = document.querySelector('.action-icons .icon-btn:last-child');
     if (toggleApiKeyBtn) {
@@ -641,24 +584,27 @@ document.addEventListener('DOMContentLoaded', () => {
         saveToStorage();
         settingsView.classList.remove('active');
     });
-    settingsView.addEventListener('click', (e) => {
+    document.addEventListener('click', (e) => {
+        if (!settingsView.classList.contains('active')) return;
         if (e.target === settingsView) {
             saveToStorage();
             settingsView.classList.remove('active');
+            return;
+        }
+        if (sidebar && sidebar.contains(e.target) && !settingsBtn.contains(e.target)) {
+            saveToStorage();
+            settingsView.classList.remove('active');
+            return;
         }
     });
     function renderGeneralSettings() {
         const promptTextarea = document.getElementById('global-system-prompt');
-        const defaultPrompt = promptTextarea.value; // Read HTML default
-
-        // Only override if config has a value, otherwise keep HTML default
+        const defaultPrompt = promptTextarea.value;
         if (configData.general.systemPrompt !== undefined && configData.general.systemPrompt !== null) {
             promptTextarea.value = configData.general.systemPrompt;
         } else if (!defaultPrompt) {
-            // If both config and HTML are empty, set to empty string
             promptTextarea.value = '';
         }
-        // If config is empty but HTML has default, keep HTML default (do nothing)
         themeBtns.forEach(btn => {
             btn.classList.toggle('active', btn.getAttribute('data-theme') === configData.general.theme);
         });
@@ -672,16 +618,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         updateChatLayout();
     }
-    // 长消息处理函数
     function applyLongMessageHandling(bubble, isUser, content) {
-        if (!bubble || !isUser) return; // 只对用户消息进行折叠
-
-        // 如果消息包含图片，不进行折叠处理
+        if (!bubble || !isUser) return;
         if (bubble.querySelector('img')) {
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'message-actions-row';
-
-            // 只添加复制按钮
             const copyBtn = document.createElement('button');
             copyBtn.className = 'message-action-btn';
             copyBtn.title = '复制';
@@ -703,28 +644,18 @@ document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             return;
         }
-
-        // 检查是否为长消息
         const isLongMessage = content && content.length > 500;
-
-        // 1. 创建消息内容容器
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        // 将气泡中的纯文本内容移动到contentDiv中
         contentDiv.textContent = content;
-
-        // 2. 创建操作按钮行容器
         const actionsDiv = document.createElement('div');
         actionsDiv.className = 'message-actions-row';
-
-        // 创建展开/折叠按钮（只对长消息显示）
         if (isLongMessage) {
             const expandBtn = document.createElement('button');
             expandBtn.className = 'message-action-btn';
             expandBtn.title = '展开/收起';
             expandBtn.innerHTML = `<i data-lucide="list-chevrons-up-down"></i>`;
             expandBtn.setAttribute('aria-label', '展开完整消息');
-
             expandBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 const isCollapsed = contentDiv.classList.contains('long-message-collapsed');
@@ -740,12 +671,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 lucide.createIcons();
             });
             actionsDiv.appendChild(expandBtn);
-
-            // 默认折叠
             contentDiv.classList.add('long-message-collapsed');
         }
-
-        // 创建复制按钮
         const copyBtn = document.createElement('button');
         copyBtn.className = 'message-action-btn';
         copyBtn.title = '复制';
@@ -763,42 +690,26 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         actionsDiv.appendChild(copyBtn);
-
-        // 3. 重构DOM：清空气泡，添加内容容器和操作按钮（合并到气泡内）
         bubble.innerHTML = '';
         bubble.appendChild(contentDiv);
         bubble.appendChild(actionsDiv);
-
         lucide.createIcons();
     }
-
-    // 为AI消息添加操作按钮
     function addAssistantMessageActions(bubble, content) {
         if (!bubble) return;
-
-        // 如果已经处理过，不要重复处理
         if (bubble.querySelector('.message-content')) return;
-
-        // 1. 创建消息内容容器
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-
-        // 移动现有的所有子节点到 contentDiv 中，这样可以保留事件监听器
         while (bubble.firstChild) {
             contentDiv.appendChild(bubble.firstChild);
         }
-
-        // 2. 创建操作按钮行容器
         const actionsDiv = document.createElement('div');
         actionsDiv.className = 'message-actions-row';
-
-        // 创建重试（重新回答）按钮
         const regenerateBtn = document.createElement('button');
         regenerateBtn.className = 'message-action-btn';
         regenerateBtn.title = '重试';
         regenerateBtn.innerHTML = `<i data-lucide="refresh-cw"></i>`;
         regenerateBtn.setAttribute('aria-label', '重新回答');
-
         regenerateBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             const messageElement = bubble.closest('.message.assistant');
@@ -807,7 +718,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 while (prevElement && !prevElement.classList.contains('user')) {
                     prevElement = prevElement.previousElementSibling;
                 }
-
                 if (prevElement) {
                     const userBubble = prevElement.querySelector('.user-message-content .message-content') || prevElement.querySelector('.user-message-content');
                     let userContent = userBubble.textContent || userBubble.innerText;
@@ -815,7 +725,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (activeChatId) {
                         const chat = configData.history.find(c => c.id === activeChatId);
                         if (chat && chat.messages) {
-                            // 通过内容匹配找到对应的用户消息
                             const domContent = userContent;
                             const userMsg = chat.messages.slice().reverse().find(m => m.role === 'user' && (m.content === domContent || (!m.content && !domContent)));
                             if (userMsg) {
@@ -834,8 +743,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         actionsDiv.appendChild(regenerateBtn);
-
-        // 创建复制按钮
         const copyBtn = document.createElement('button');
         copyBtn.className = 'message-action-btn';
         copyBtn.title = '复制';
@@ -853,45 +760,26 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         actionsDiv.appendChild(copyBtn);
-
-        // 3. 将内容和操作按钮添加到气泡
         bubble.appendChild(contentDiv);
         bubble.appendChild(actionsDiv);
-
         lucide.createIcons();
     }
-
-    // 为代码块添加复制按钮
     function addCodeCopyButtons(container) {
-        // 1. 获取所有 pre 元素
         const codeBlocks = container.querySelectorAll('pre');
-
         codeBlocks.forEach(pre => {
-            // 2. 必须包含 code 标签才是合法的 markdown 代码块
             const codeElement = pre.querySelector('code');
             if (!codeElement) return;
-
-            // 3. 防止重复添加 (检查是否已经有按钮)
             if (pre.querySelector('.code-copy-btn')) return;
-
-            // 4. 检查内容是否为空 (只包含空白字符的也不添加)
             const codeText = codeElement.textContent || '';
             if (!codeText.trim()) return;
-
-            // 创建复制按钮
             const copyBtn = document.createElement('button');
             copyBtn.className = 'code-copy-btn';
             copyBtn.textContent = '复制代码';
             copyBtn.title = '复制代码';
-
-            // 添加点击事件
             copyBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                // 重新获取最新的文本内容
                 const currentCode = pre.querySelector('code')?.textContent || pre.textContent;
-                // 去除按钮本身的文本（虽然理论上取 code 内容应该没事，但防万一）
                 const cleanCode = currentCode.replace('复制代码', '').replace('复制成功', '');
-
                 try {
                     await navigator.clipboard.writeText(codeElement.textContent);
                     copyBtn.textContent = '复制成功';
@@ -904,13 +792,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error('复制失败:', err);
                 }
             });
-
-            // 确保pre有相对定位
             pre.style.position = 'relative';
             pre.appendChild(copyBtn);
         });
     }
-
     if (wideModeCheckbox) {
         wideModeCheckbox.addEventListener('change', () => {
             configData.general.wideMode = wideModeCheckbox.checked;
@@ -939,41 +824,34 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('new-model-name').focus();
         }
     };
-
     window.addModel = () => {
         const modelNameInput = document.getElementById('new-model-name');
         const modelName = modelNameInput.value.trim();
         if (!modelName) {
             return;
         }
-
         const provider = configData.providers[currentProviderKey];
         if (!provider) return;
-
         const existingModel = provider.models.find(m => m.name === modelName);
         if (existingModel) {
             alert('该模型已存在');
             return;
         }
-
         const newModel = {
             id: Date.now() + Math.random(),
             name: modelName,
             favorite: false,
             enabled: true
         };
-
         if (!provider.models) {
             provider.models = [];
         }
         provider.models.push(newModel);
         saveToStorage();
         renderModels();
-
         modelNameInput.value = '';
         document.getElementById('add-model-form').style.display = 'none';
     };
-
     const newModelNameInput = document.getElementById('new-model-name');
     if (newModelNameInput) {
         newModelNameInput.addEventListener('keydown', (e) => {
@@ -986,14 +864,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
     const addModelBtn = document.getElementById('add-model-btn');
     if (addModelBtn) {
         addModelBtn.addEventListener('click', () => {
             toggleAddModelForm();
         });
     }
-
     fetchModelsBtn.addEventListener('click', async () => {
         const icon = fetchModelsBtn.querySelector('i') || fetchModelsBtn.querySelector('svg');
         const originalApiKey = apiKeyInput.value;
@@ -1015,8 +891,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             cleanBaseUrl = normalizeBaseUrl(cleanBaseUrl);
-            // 统一使用标准的OpenAI兼容API格式，包括谷歌API
-            // 谷歌API现在也支持标准的Authorization Bearer格式
             const response = await fetch(`${cleanBaseUrl}/models`, {
                 headers: {
                     'Authorization': `Bearer ${originalApiKey}`,
@@ -1060,7 +934,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const chatMessages = document.getElementById('chat-messages');
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
-
         let bubble;
         if (isUser) {
             bubble = document.createElement('div');
@@ -1087,15 +960,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             bubble = messageDiv.querySelector('.message-bubble');
         }
-
-        // 先添加消息到DOM，再添加按钮
         chatMessages.appendChild(messageDiv);
-
-        // 检查是否是长消息并应用折叠，或添加操作按钮
         if (isUser) {
             applyLongMessageHandling(bubble, isUser, content);
         } else {
-            // 为AI消息添加操作按钮
             addAssistantMessageActions(bubble, content);
         }
         if (activeChatId) {
@@ -1129,7 +997,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     function addAIMessageStream() {
-        // 准备新的流式输出
         const chatMessages = document.getElementById('chat-messages');
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message assistant';
@@ -1149,16 +1016,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return messageDiv;
     }
-
     function updateAIMessageContent(messageElement, content) {
         const bubble = messageElement.querySelector('.message-bubble');
         const md = getMarkdownInstance();
-
-        // 预处理内容，确保加粗格式和代码块正确渲染
-        // 仅在渲染时虚拟闭合未结束的标记，绝不修改原始内容
         const processedContent = markdownState.preprocessContent(content);
-
-        // 3. 最后渲染处理后的内容
         if (bubble && md) {
             bubble.innerHTML = `${md.render(processedContent)}<span class="cursor"></span>`;
         } else if (bubble) {
@@ -1168,17 +1029,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function finalizeAIMessage(messageElement, content) {
         const bubble = messageElement.querySelector('.message-bubble');
         const md = getMarkdownInstance();
-
-        // 确保状态连续性，使用 preprocessContent 处理最终内容
         const fixedContent = markdownState.preprocessContent(content);
-
         if (bubble && content && md) {
             bubble.innerHTML = md.render(fixedContent);
-            // 先添加AI消息操作按钮
             addAssistantMessageActions(bubble, fixedContent);
-            // 再为代码块添加复制按钮
             addCodeCopyButtons(bubble);
-
             if (activeChatId) {
                 const chat = configData.history.find(c => c.id === activeChatId);
                 if (chat) {
@@ -1189,7 +1044,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else if (bubble && content) {
             bubble.textContent = fixedContent;
-            // 为AI消息添加操作按钮
             addAssistantMessageActions(bubble, fixedContent);
         } else if (bubble) {
             const cursor = bubble.querySelector('.cursor');
@@ -1201,13 +1055,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cleanUrl.endsWith('/')) {
             cleanUrl = cleanUrl.slice(0, -1);
         }
-
-        // 特殊处理谷歌API的完整路径
         if (cleanUrl.includes('generativelanguage.googleapis.com') && cleanUrl.includes('/openai')) {
-            // 如果已经包含/openai路径，直接返回，不再添加/v1
             return cleanUrl;
         }
-
         const versionMatch = cleanUrl.match(/\/v\d+(beta|alpha)?/i);
         if (versionMatch) {
             const versionIndex = versionMatch.index + versionMatch[0].length;
@@ -1222,18 +1072,15 @@ document.addEventListener('DOMContentLoaded', () => {
     async function sendMessageToAPI(message, modelName, signal, currentRole, images = []) {
         const currentProviderKey = currentModelSpan.dataset.provider;
         let providerInfo = null;
-
         if (currentProviderKey && configData.providers[currentProviderKey]) {
             const currentProvider = configData.providers[currentProviderKey];
             if (currentProvider.models && currentProvider.models.some(m => m.name === modelName)) {
                 providerInfo = { providerKey: currentProviderKey, provider: currentProvider };
             }
         }
-
         if (!providerInfo) {
             providerInfo = findProviderByModel(modelName);
         }
-
         if (!providerInfo) {
             throw new Error(`未找到模型 ${modelName} 的提供商配置`);
         }
@@ -1247,9 +1094,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (systemPrompt && systemPrompt.trim()) {
             messages.push({ role: 'system', content: systemPrompt.trim() });
         }
-
         let processedMessage = message;
-        // 处理用户明确选择的角色
         if (currentRole && isValidRole(currentRole)) {
             const role = configData.roles.find(r => r.name === currentRole);
             if (role && role.prompt) {
@@ -1257,7 +1102,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 processedMessage = processedMessage.replace(`@${currentRole}`, '').trim();
             }
         }
-
         let chat = null;
         if (activeChatId) {
             chat = configData.history.find(c => c.id === activeChatId);
@@ -1295,8 +1139,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             messages.push(userMsg);
         }
-
-        // 如果当前有选择角色，每3条消息插入一次角色预设，保持大模型行为一致
         if (currentRole && isValidRole(currentRole) && configData.roles && chat && chat.messages) {
             const role = configData.roles.find(r => r.name === currentRole);
             if (role && role.prompt) {
@@ -1304,13 +1146,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const userMsgCount = messages.filter(m => m.role === 'user').length;
                 const assistantMsgCount = messages.filter(m => m.role === 'assistant').length;
                 const totalMsgCount = userMsgCount + assistantMsgCount;
-
                 if (totalMsgCount > 0 && totalMsgCount % 3 === 0) {
                     messages.push({ role: 'system', content: `角色预设：${role.name}\n${role.prompt}` });
                 }
             }
         }
-
         const aiMessageElement = addAIMessageStream();
         let fullContent = '';
         try {
@@ -1350,8 +1190,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const decoder = new TextDecoder();
             let buffer = '';
             let lastRenderTime = 0;
-            const RENDER_INTERVAL = 50; // 50ms 节流，约 20fps，兼顾流畅度与性能
-
+            const RENDER_INTERVAL = 50;
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
@@ -1370,8 +1209,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const delta = parsed.choices[0];
                                 if (delta.delta && delta.delta.content) {
                                     fullContent += delta.delta.content;
-
-                                    // 节流渲染：限制界面刷新频率
                                     const now = Date.now();
                                     if (now - lastRenderTime >= RENDER_INTERVAL) {
                                         updateAIMessageContent(aiMessageElement, fullContent);
@@ -1385,8 +1222,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
-            // 循环结束后确保最后一次更新（finalizeAIMessage 会处理，但为了保险这里也可以更新一次，或者直接依赖 finalize）
-            // 由于 finalizeAIMessage 会被调用，这里不需要额外的一次 updateAIMessageContent
             finalizeAIMessage(aiMessageElement, fullContent);
             reader.releaseLock();
             return fullContent;
@@ -1401,7 +1236,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 return null;
             }
-
             if (aiMessageElement && aiMessageElement.parentNode) {
                 aiMessageElement.parentNode.removeChild(aiMessageElement);
             }
@@ -1434,7 +1268,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (chatContainer) chatContainer.classList.add('has-messages');
             if (chatView) chatView.classList.add('has-messages');
             abortController = new AbortController();
-            // 只使用用户明确选择的角色
             const currentRole = chatInput.dataset.selectedRole || null;
             if (activeChatId) {
                 const chat = configData.history.find(c => c.id === activeChatId);
@@ -1446,7 +1279,6 @@ document.addEventListener('DOMContentLoaded', () => {
             addMessage(message, true, images);
             chatInput.value = '';
             chatInput.style.height = 'auto';
-            // 清除粘贴的图片
             delete chatInput.dataset.pastedImage;
             const indicator = document.getElementById('paste-image-indicator');
             if (indicator) indicator.remove();
@@ -1455,7 +1287,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 chatInput.dataset.selectedRole = currentRole;
             } else {
                 delete chatInput.dataset.selectedRole;
-                // 清除无效的角色引用
                 if (activeChatId) {
                     const chat = configData.history.find(c => c.id === activeChatId);
                     if (chat && chat.activeRole && !isValidRole(chat.activeRole)) {
@@ -1478,38 +1309,89 @@ document.addEventListener('DOMContentLoaded', () => {
             chatInput.focus();
         }
     });
-    exportConfigBtn.addEventListener('click', () => {
-        saveToStorage();
-        // 导出时排除图片数据以减小文件体积
-        const exportData = JSON.parse(JSON.stringify(configData));
-        if (exportData.history) {
-            exportData.history = exportData.history.map(chat => ({
-                ...chat,
-                messages: (chat.messages || []).map(msg => {
-                    const { images, ...rest } = msg;
-                    return rest;
-                })
-            }));
-        }
-        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        // 获取当前日期和时间并格式化为 YYYY-MM-DD_HH-mm-ss
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-        const timestamp = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
-        a.download = `kissai-full-config-${timestamp}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    });
+    if (exportClipboardBtn) {
+        exportClipboardBtn.addEventListener('click', async () => {
+            saveToStorage();
+            const exportData = JSON.parse(JSON.stringify(configData));
+            if (exportData.history) {
+                exportData.history = exportData.history.map(chat => ({
+                    ...chat,
+                    messages: (chat.messages || []).map(msg => {
+                        const { images, ...rest } = msg;
+                        return rest;
+                    })
+                }));
+            }
+            const configText = JSON.stringify(exportData, null, 2);
+            const textarea = document.createElement('textarea');
+            textarea.value = configText;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            const success = document.execCommand('copy');
+            document.body.removeChild(textarea);
+            if (!success) {
+                console.error('复制失败');
+            }
+        });
+    }
+    if (importClipboardBtn) {
+        importClipboardBtn.addEventListener('click', async () => {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (!text.trim()) {
+                    return;
+                }
+                const importedData = JSON.parse(text);
+                if (importedData && importedData.general && importedData.providers) {
+                    if (confirm('导入配置将覆盖本地所有数据，确定要继续吗？')) {
+                        configData = importedData;
+                        localStorage.setItem('kissai_config', JSON.stringify(configData));
+                        if (currentProviderKey && configData.providers[currentProviderKey]) {
+                            apiKeyInput.value = configData.providers[currentProviderKey].apiKey || '';
+                            baseUrlInput.value = configData.providers[currentProviderKey].baseUrl || '';
+                        }
+                        location.reload();
+                    }
+                }
+            } catch (err) {
+                console.error('导入失败：' + err.message);
+            }
+        });
+    }
+    if (exportFileBtn) {
+        exportFileBtn.addEventListener('click', () => {
+            saveToStorage();
+            const exportData = JSON.parse(JSON.stringify(configData));
+            if (exportData.history) {
+                exportData.history = exportData.history.map(chat => ({
+                    ...chat,
+                    messages: (chat.messages || []).map(msg => {
+                        const { images, ...rest } = msg;
+                        return rest;
+                    })
+                }));
+            }
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const timestamp = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+            a.download = `kissai-full-config-${timestamp}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    }
     editProviderBtn.addEventListener('click', () => {
         originalProviderName = providerNameDisplay.textContent;
         providerNameDisplay.contentEditable = "true";
@@ -1572,10 +1454,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (internalSpan) {
             return internalSpan.textContent.trim();
         }
-        // 移除可能存在的提供商标签文本，只获取纯文本
         return currentModelSpan.textContent.replace(/^[A-Z]+\s*/, '').trim();
     }
-
     function switchTab(tabId, element) {
         if (!tabId) return;
         if (tabId === 'providers-toggle') {
@@ -1708,7 +1588,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (modelDropdown) modelDropdown.classList.remove('active');
         if (languageOptions) languageOptions.classList.remove('active');
         if (contextLimitDropdown) contextLimitDropdown.classList.remove('active');
-        // 关闭角色提及下拉菜单
         if (!event.target.closest('#role-mention-dropdown') && !event.target.closest('#chat-input')) {
             roleMentionDropdown.style.display = 'none';
             roleMentionDropdown.classList.remove('active');
@@ -1725,26 +1604,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const contentHeight = element.scrollHeight;
             const visibleHeight = element.clientHeight;
             const scrollTop = element.scrollTop;
-
             if (contentHeight <= visibleHeight) {
-                // 内容没溢出，直接阻止冒泡，防止背后页面滚动
                 e.preventDefault();
                 return;
             }
-
             if ((scrollTop === 0 && delta < 0) ||
                 (scrollTop + visibleHeight >= contentHeight && delta > 0)) {
-                // 滚到顶或底，阻止冒泡
                 e.preventDefault();
             }
-            // 这里的关键是：只要在下拉框里滚，就停止冒泡到外层
             e.stopPropagation();
         }, { passive: false });
     }
-
     function renderModelDropdown() {
         modelDropdown.innerHTML = '';
-        preventScrollPropagation(modelDropdown); // 绑定防穿透
+        preventScrollPropagation(modelDropdown);
         const hasProviders = Object.keys(configData.providers).length > 0;
         let hasAnyEnabledModels = false;
         Object.values(configData.providers).forEach(p => {
@@ -1863,13 +1736,10 @@ document.addEventListener('DOMContentLoaded', () => {
         item.className = 'dropdown-item';
         const finalProviderKey = providerKey || getProviderForModel(model.name);
         const info = getProviderDisplayInfo(finalProviderKey);
-
-        // 检查是否是当前选中的模型
         const currentName = getCurrentModelName();
         if (currentName === model.name) {
             item.classList.add('active');
         }
-
         item.innerHTML = `
             <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
                 <div style="
@@ -1890,18 +1760,14 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         item.onclick = async () => {
-            // 获取当前模型名称用于比较（在更新显示之前！）
             const previousModel = getCurrentModelName();
             const targetModelName = model.name.trim();
-
             setModelDisplay(targetModelName, finalProviderKey);
             if (configData.general) {
                 configData.general.lastUsedModel = targetModelName;
                 saveToStorage();
             }
             modelDropdown.classList.remove('active');
-
-            // 只有当模型真正改变，且存在上一条消息时才重试
             if (previousModel && previousModel !== targetModelName) {
                 const lastUserMessage = getLastUserMessage();
                 if (lastUserMessage) {
@@ -1909,18 +1775,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         abortController.abort();
                         isRequesting = false;
                     }
-
                     try {
                         isRequesting = true;
                         sendBtn.innerHTML = '<div class="stop-icon"></div>';
                         sendBtn.classList.add('stop-mode');
                         sendBtn.disabled = false;
                         abortController = new AbortController();
-
-                        // 强制滚动到底部，让用户看到新消息正在生成
                         const chatMessages = document.getElementById('chat-messages');
                         if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
-
                         await sendMessageToAPI(lastUserMessage.content, targetModelName, abortController.signal, null, lastUserMessage.images || []);
                     } catch (error) {
                         if (error.name !== 'AbortError') {
@@ -1939,14 +1801,10 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         return item;
     }
-    // 获取最后的用户消息
     function getLastUserMessage() {
         if (!activeChatId) return null;
-
         const chat = configData.history.find(c => c.id === activeChatId);
         if (!chat || !chat.messages) return null;
-
-        // 从后往前找最后一条用户消息
         for (let i = chat.messages.length - 1; i >= 0; i--) {
             if (chat.messages[i].role === 'user') {
                 return chat.messages[i];
@@ -1954,7 +1812,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return null;
     }
-
     function renderShortcuts() {
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const cmd = isMac ? '⌘' : 'Ctrl';
@@ -1973,7 +1830,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (form.classList.contains('active')) {
             editingRoleId = null;
             actions.classList.remove('hidden');
-            document.getElementById('new-role-prompt').style.minHeight = '120px';
+            document.getElementById('new-role-prompt').style.minHeight = '200px';
         } else {
             editingRoleId = null;
             actions.classList.add('hidden');
@@ -2031,13 +1888,12 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('new-role-prompt').value = role.prompt;
             document.getElementById('add-role-form').classList.add('active');
             document.getElementById('edit-role-actions').classList.remove('hidden');
-            document.getElementById('new-role-prompt').style.minHeight = '120px';
+            document.getElementById('new-role-prompt').style.minHeight = '200px';
         }
     };
     window.deleteRole = (id) => {
         const roleToDelete = configData.roles.find(r => r.id === id);
         if (roleToDelete) {
-            // 只清理聊天记录中的activeRole引用，不修改历史消息
             configData.history.forEach(chat => {
                 if (chat.activeRole === roleToDelete.name) {
                     chat.activeRole = null;
@@ -2047,7 +1903,6 @@ document.addEventListener('DOMContentLoaded', () => {
         configData.roles = configData.roles.filter(r => r.id !== id);
         renderRoles();
         saveToStorage();
-        // 如果当前聊天使用了这个角色，刷新显示
         if (activeChatId) {
             const chat = configData.history.find(c => c.id === activeChatId);
             if (chat && !chat.activeRole) {
@@ -2101,17 +1956,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const isSelected = existingModel ? true : false;
             const item = document.createElement('div');
             item.className = 'model-selection-item';
-
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.id = `model-${model.id}`;
             if (isSelected) checkbox.checked = true;
             checkbox.dataset.modelName = model.name;
-
             const label = document.createElement('label');
             label.htmlFor = `model-${model.id}`;
             label.textContent = model.name;
-
             item.appendChild(checkbox);
             item.appendChild(label);
             checkbox.addEventListener('change', function () {
@@ -2222,7 +2074,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderHistory();
     updateChatLayout();
     if (configData.history.length > 0) {
-        // 优先加载上次活跃的对话，如果没有则加载第一个
         const lastActiveChatId = configData.general.activeChatId;
         const targetChat = configData.history.find(c => c.id === lastActiveChatId);
         if (targetChat) {
@@ -2248,10 +2099,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    const importConfigBtn = document.getElementById('import-config-btn');
+    const importFileBtn = document.getElementById('import-file-btn');
     const importFileInput = document.getElementById('import-file-input');
-    if (importConfigBtn && importFileInput) {
-        importConfigBtn.addEventListener('click', () => {
+    if (importFileBtn && importFileInput) {
+        importFileBtn.addEventListener('click', () => {
             importFileInput.click();
         });
         importFileInput.addEventListener('change', (e) => {
@@ -2263,16 +2114,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const importedData = JSON.parse(e.target.result);
                     if (importedData && importedData.general && importedData.providers) {
                         configData = importedData;
-
-                        // 直接保存到localStorage，不经过saveToStorage()以避免API密钥被覆盖
                         localStorage.setItem('kissai_config', JSON.stringify(configData));
-
-                        // 手动更新当前输入框的值
                         if (currentProviderKey && configData.providers[currentProviderKey]) {
                             apiKeyInput.value = configData.providers[currentProviderKey].apiKey || '';
                             baseUrlInput.value = configData.providers[currentProviderKey].baseUrl || '';
                         }
-
                         location.reload();
                     } else {
                         console.error('无效的配置文件格式。');
@@ -2328,13 +2174,9 @@ document.addEventListener('DOMContentLoaded', () => {
             renderHistory();
         });
     }
-
-    // 初始化上下文数量显示
     if (contextCountDisplay) {
         contextCountDisplay.textContent = configData.general.contextLimit || 10;
     }
-
-    // 上下文数量控制按钮事件监听器 - 切换下拉框
     if (contextControlBtn) {
         contextControlBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -2346,39 +2188,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
-
-    // 为下拉框选项添加事件监听器
     if (contextLimitDropdown) {
         const contextOptions = contextLimitDropdown.querySelectorAll('.context-limit-option');
         contextOptions.forEach(option => {
             option.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const limit = parseInt(option.getAttribute('data-value'));
-
                 if (!isNaN(limit)) {
                     configData.general.contextLimit = limit;
                     saveToStorage();
-
-                    // 更新显示
                     if (contextCountDisplay) {
                         contextCountDisplay.textContent = limit;
                     }
-
-                    // 关闭下拉框
                     contextLimitDropdown.classList.remove('active');
                 }
             });
         });
     }
-
-    // 侧边滚动条功能实现 - HUD 风格 (重构版)
     const chatMessages = document.getElementById('chat-messages');
     const scrollbarMarkers = document.getElementById('scrollbar-markers');
     const scrollbarTopZone = document.querySelector('.scrollbar-top-zone');
     let aiMessageElements = [];
-
-    // 顶部快速回滚逻辑
     if (scrollbarTopZone) {
         scrollbarTopZone.addEventListener('click', () => {
             chatMessages.scrollTo({
@@ -2387,72 +2217,42 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
-
-    // 更新侧边滚动条的函数
     function updateScrollbarMarkers() {
         if (!chatMessages || !scrollbarMarkers) return;
-
-        // 清空现有的标记
         scrollbarMarkers.innerHTML = '';
-
-        // 收集所有AI消息元素
         aiMessageElements = Array.from(chatMessages.querySelectorAll('.message.assistant'));
-
         if (aiMessageElements.length === 0) return;
-
-        // 刻度区域高度固定为 100px
         const containerHeight = 100;
-
-        // 生成视觉刻度
         aiMessageElements.forEach((messageElement, index) => {
             const marker = document.createElement('div');
             marker.className = 'scrollbar-marker';
-
-            // 计算位置：在 100px 区域内均匀分布
             let topPosition = 0;
             if (aiMessageElements.length > 1) {
-                // 留出 4px 给 active 状态，防止溢出
                 topPosition = (index / (aiMessageElements.length - 1)) * (containerHeight - 4);
             } else {
                 topPosition = 0;
             }
-
             marker.style.top = `${topPosition}px`;
-            // marker 本身不再绑定点击事件，由父容器统一接管
-
             scrollbarMarkers.appendChild(marker);
         });
-
-        // 移除旧的监听器（如果有），添加新的区域点击监听
-        // 既然 updateScrollbarMarkers 会频繁调用，最好把监听器绑在外面或者用 onclick 覆盖
         scrollbarMarkers.onclick = (e) => {
             e.stopPropagation();
-
-            // 获取点击位置相对于容器顶部的Y坐标
             const rect = scrollbarMarkers.getBoundingClientRect();
             const clickY = e.clientY - rect.top;
-
-            // 计算比例 (0 ~ 1)
             let ratio = clickY / containerHeight;
-            ratio = Math.max(0, Math.min(1, ratio)); // 限制在 0-1 之间
-
-            // 映射到最近的消息索引
+            ratio = Math.max(0, Math.min(1, ratio));
             const targetIndex = Math.round(ratio * (aiMessageElements.length - 1));
             const targetMessage = aiMessageElements[targetIndex];
-
             if (targetMessage) {
                 targetMessage.scrollIntoView({
                     behavior: 'smooth',
-                    block: 'start' // 精准跳转头部
+                    block: 'start'
                 });
                 highlightActiveMarker(targetIndex);
             }
         };
-
         updateActiveMarker();
     }
-
-    // 辅助函数：高亮指定索引的刻度
     function highlightActiveMarker(targetIndex) {
         const markers = scrollbarMarkers.children;
         Array.from(markers).forEach((marker, index) => {
@@ -2463,33 +2263,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
-    // 更新当前活动的刻度（根据滚动位置）
     function updateActiveMarker() {
         if (!chatMessages || aiMessageElements.length === 0) return;
-
-        // 判定标准：消息元素距离视口顶部的距离
-        // 我们取视口顶部往下一点点的位置作为“阅读焦点”
         const containerTop = chatMessages.scrollTop;
-        // 阅读焦点设为视口高度的 1/5 处，比较符合用户阅读习惯（眼睛盯着上方看）
         const readFocus = containerTop + 100;
-
         let activeIndex = -1;
         let minDistance = Infinity;
-
         aiMessageElements.forEach((el, index) => {
-            // 计算消息顶部距离阅读焦点的距离
             const distance = Math.abs(el.offsetTop - readFocus);
             if (distance < minDistance) {
                 minDistance = distance;
                 activeIndex = index;
             }
         });
-
         highlightActiveMarker(activeIndex);
     }
-
-    // 监听聊天消息容器的滚动和内容变化
     if (chatMessages) {
         let scrollTimeout;
         chatMessages.addEventListener('scroll', () => {
@@ -2500,7 +2288,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         });
-
         const observer = new MutationObserver((mutations) => {
             let shouldUpdate = false;
             mutations.forEach((mutation) => {
@@ -2509,23 +2296,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     shouldUpdate = true;
                 }
             });
-
             if (shouldUpdate) {
                 setTimeout(updateScrollbarMarkers, 100);
             }
         });
-
         observer.observe(chatMessages, {
             childList: true,
             subtree: true
         });
-
         setTimeout(updateScrollbarMarkers, 500);
     }
-
-    // 一行代码解决全局滚动问题
     document.getElementById('chat-view')?.addEventListener('wheel', e =>
         !e.target.closest('#chat-messages') && document.getElementById('chat-messages')?.scrollBy(0, e.deltaY)
     );
 });
-

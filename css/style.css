@@ -1,7 +1,7 @@
 :root {
     --bg-primary: #0d0d0d;
-    --bg-secondary: #0d0d0d; /* Unified with primary */
-    --bg-tertiary: #161616; /* Slight separation */
+    --bg-secondary: #0d0d0d;
+    --bg-tertiary: #161616;
     --text-primary: #ffffff;
     --text-secondary: #888888;
     --accent-color: #2196F3;
@@ -42,37 +42,30 @@ body {
     overflow: hidden;
     transition: none;
 }
-
 ::selection {
     background: none;
     color: var(--accent-color);
 }
-
 ::-moz-selection {
     background: none;
     color: var(--accent-color);
 }
-
 ::-webkit-selection {
     background: none;
     color: var(--accent-color);
 }
-
 .message.user ::selection {
     background: none;
     color: #64B5F6;
 }
-
 .message.user ::-moz-selection {
     background: none;
     color: #64B5F6;
 }
-
 .message.user ::-webkit-selection {
     background: none;
     color: #64B5F6;
 }
-
 #app {
     display: flex;
     height: 100vh;
@@ -234,9 +227,6 @@ body {
 .footer-btn:hover {
     color: var(--text-primary);
 }
-
-
-/* 活跃历史记录项目的搜索图标大小设置 */
 div.history-item.active svg.lucide.lucide-search {
     width: 15px !important;
     height: 15px !important;
@@ -252,7 +242,6 @@ div.history-item.active svg.lucide.lucide-search {
     flex-shrink: 0;
     transition: none;
 }
-/* 侧边栏头部区域 - 包含Logo和副标题 */
 .sidebar-header {
     padding: 24px 16px 24px 16px;
     display: flex;
@@ -261,7 +250,6 @@ div.history-item.active svg.lucide.lucide-search {
     justify-content: center;
     user-select: none;
 }
-/* Logo容器 - 横向居中 */
 .logo {
     display: flex;
     flex-direction: column;
@@ -271,7 +259,6 @@ div.history-item.active svg.lucide.lucide-search {
     align-items: center;
     text-align: center;
 }
-/* Logo主标题 "KISS AI" */
 .logo-main {
     font-size: 35px;
     font-weight: 800;
@@ -280,7 +267,6 @@ div.history-item.active svg.lucide.lucide-search {
     line-height: 1.2;
     margin-bottom: 6px;
 }
-/* Logo副标题 "Keep it simple, stupid" */
 .logo-sub {
     font-family: 'Outfit', sans-serif;
     font-size: 14px;
@@ -465,12 +451,10 @@ div.history-item.active svg.lucide.lucide-search {
     height: 100%;
     width: 100%;
 }
-/* 激活的视图 - 聊天视图使用 flex 实现居中 */
 .view.active {
     display: flex;
     flex-direction: column;
 }
-/* 聊天视图容器 - 添加滚动支持，覆盖整个区域 */
 #chat-view {
     display: flex;
     flex-direction: column;
@@ -479,13 +463,10 @@ div.history-item.active svg.lucide.lucide-search {
     overflow: hidden;
     align-items: stretch;
 }
-
-/* 让聊天消息容器自动捕获滚动事件 */
 .chat-container.has-messages {
     overscroll-behavior: contain;
 }
 .input-wrapper {
-    /* 输入框主容器 */
     border-radius: 12px;
     padding: 10px 14px 10px 14px;
     display: flex;
@@ -502,7 +483,6 @@ div.history-item.active svg.lucide.lucide-search {
     margin-bottom: 10px;
 }
 .input-border {
-    /* 彩虹边框动画层 */
     position: absolute;
     inset: -1.5px;
     border-radius: 13.5px;
@@ -633,14 +613,11 @@ div.history-item.active svg.lucide.lucide-search {
     border-color: var(--accent-red);
     transform: scale(1.05);
 }
-
-/* 发送按钮图标大小 - 强制覆盖内联样式 */
 #send-btn svg,
 .send-btn svg.lucide-send {
     width: 15px !important;
     height: 15px !important;
 }
-
 ::-webkit-scrollbar {
     width: 4px;
     height: 4px;
@@ -712,7 +689,6 @@ div.history-item.active svg.lucide.lucide-search {
 #settings-view.active {
     display: flex;
 }
-/* 设置弹窗主容器 */
 .settings-container {
     width: 90%;
     max-width: 800px;
@@ -760,7 +736,6 @@ div.history-item.active svg.lucide.lucide-search {
     width: 12px;
     height: 12px;
 }
-
 .nav-group-content {
     display: flex;
     flex-direction: column;
@@ -779,8 +754,6 @@ div.history-item.active svg.lucide.lucide-search {
 .settings-nav-item.add-btn:hover {
     opacity: 1;
 }
-
-/* 设置内容区域主容器 - 支持滚动 */
 .settings-main {
     flex: 1;
     padding: 16px;
@@ -819,7 +792,6 @@ div.history-item.active svg.lucide.lucide-search {
     color: #f59e0b;
     text-decoration: none;
 }
-/* 警告文字样式 */
 .warning-text {
     font-size: 14px;
     color: #ff6b6b;
@@ -827,18 +799,19 @@ div.history-item.active svg.lucide.lucide-search {
     padding: 4px 0;
     line-height: 1.4;
 }
-
-/* 数据管理按钮容器样式 */
 .data-management-buttons {
     display: flex;
-    gap: 10px;
+    gap: 6px;
+    flex-wrap: wrap;
 }
-
-/* 数据管理按钮统一样式 */
 .data-management-buttons .btn-secondary {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 14px;
     font-weight: 500;
+    padding: 2px 4px;
+    flex: 1;
+    justify-content: center;
+    white-space: nowrap;
 }
 .input-with-actions {
     position: relative;
@@ -874,7 +847,6 @@ input[type="number"] {
     outline: none;
     transition: none;
     width: 200px;
-    /* Ensure vertical centering */
     display: flex;
     align-items: center;
 }
@@ -1126,7 +1098,6 @@ input:checked + .slider:before {
 .spinning {
     animation: spin 1s linear infinite;
 }
-
 .theme-btn {
     flex: 1;
     background: var(--bg-tertiary);
@@ -1144,7 +1115,6 @@ input:checked + .slider:before {
     border-color: var(--accent-color);
     color: var(--text-primary);
 }
-
 .shortcut-item {
     display: flex;
     justify-content: space-between;
@@ -1162,7 +1132,6 @@ kbd {
     font-family: monospace;
     font-size: 14px;
 }
-
 .role-list {
     display: flex;
     flex-direction: column;
@@ -1174,7 +1143,6 @@ kbd {
     border-radius: 6px;
     padding: 4px;
 }
-/* 角色预设条目标题区域 - 压缩下方间距 */
 .role-item-header {
     display: flex;
     justify-content: space-between;
@@ -1185,7 +1153,6 @@ kbd {
     font-weight: 600;
     font-size: 14px;
 }
-
 .role-item-prompt {
     font-size: 14px;
     color: var(--text-secondary);
@@ -1201,7 +1168,6 @@ kbd {
 .settings-content.active {
     display: block;
 }
-/* 紧凑型表单样式：用于添加角色、添加模型等内联表单 */
 .compact-form {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
@@ -1250,7 +1216,6 @@ kbd {
 .form-actions.hidden {
     display: none;
 }
-
 .btn-secondary {
     background: var(--bg-tertiary);
     border: 1px solid var(--border-color);
@@ -1263,7 +1228,6 @@ kbd {
     align-items: center;
     gap: 4px;
 }
-
 .settings-textarea {
     width: 100%;
     background: var(--input-bg);
@@ -1387,10 +1351,10 @@ kbd {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 24px; /* Unobtrusive height */
+    height: 24px;
     min-width: 24px;
     box-sizing: border-box;
-    border: none; /* No border as requested */
+    border: none;
     border-radius: 6px;
 }
 .icon-btn-inline:hover {
@@ -1581,7 +1545,6 @@ kbd {
     flex-direction: column;
     overflow: visible;
 }
-
 .chat-container-inner {
     flex: 1;
     display: flex;
@@ -1611,7 +1574,6 @@ kbd {
     width: 100%;
 }
 .input-container {
-    /* 输入区域外层容器 */
     padding: 10px 20px 5px 20px;
     width: 700px;
     margin: 0 auto;
@@ -1673,7 +1635,6 @@ kbd {
     margin-bottom: 4px;
     clear: both;
 }
-
 .message-bubble {
     padding: 2px 4px;
     border-radius: clamp(2px, 0.4em, 12px);
@@ -1686,17 +1647,12 @@ kbd {
     max-width: 96%;
     display: inline-block;
     text-align: left;
-    /* 为操作按钮留出空间，因为现在按钮在气泡外面 */
     padding-bottom: 4px;
-    margin-bottom: 16px;  /* 给操作按钮留出空间 */
+    margin-bottom: 16px;
 }
-
-/* 在窄屏模式下，稍微增加气泡宽度以更好地利用空间 */
 .chat-container.narrow-mode .message-bubble {
     max-width: 98%;
 }
-
-/* 在宽屏模式下，最大化气泡宽度 */
 .chat-container.wide-mode .message-bubble {
     max-width: 100%;
 }
@@ -1818,10 +1774,8 @@ kbd {
     margin-left: auto;
     text-align: left;
     max-width: 70%;
-    /* 确保短消息不会被拉长，保持内容的自然宽度 */
     width: fit-content;
     min-width: auto;
-    /* 用户消息：垂直紧凑，水平适中 */
     padding: 1px 6px;
 }
 .chat-container.wide-mode .message.user .message-bubble {
@@ -1835,10 +1789,8 @@ kbd {
     color: var(--text-primary);
     margin-right: auto;
     max-width: 100%;
-    /* 确保短消息不会被拉长，保持内容的自然宽度 */
     width: fit-content;
     min-width: auto;
-    /* AI消息：垂直紧凑，左边留更多空间给Markdown序号 */
     padding: 1px 4px 1px 12px;
 }
 .chat-container.wide-mode .message.assistant .message-bubble {
@@ -1925,7 +1877,6 @@ input:checked + .slider:before {
     font-size: 14px;
     color: var(--text-secondary);
 }
-
 .context-limit-dropdown {
     position: absolute;
     bottom: calc(100% + 5px);
@@ -1942,11 +1893,9 @@ input:checked + .slider:before {
     overflow-y: auto;
     overscroll-behavior: contain;
 }
-
 .context-limit-dropdown.active {
     display: flex;
 }
-
 .context-limit-option {
     padding: 1px 2px;
     cursor: pointer;
@@ -1954,16 +1903,12 @@ input:checked + .slider:before {
     color: var(--text-primary);
     border-bottom: 1px solid var(--border-color);
 }
-
 .context-limit-option:hover {
     background: var(--bg-secondary);
 }
-
 .context-limit-option:last-child {
     border-bottom: none;
 }
-
-/* 角色提及下拉菜单样式 */
 .role-mention-dropdown {
     position: absolute;
     bottom: calc(100% + 5px);
@@ -1979,11 +1924,9 @@ input:checked + .slider:before {
     overflow-y: auto;
     min-width: 240px;
 }
-
 .role-mention-dropdown.active {
     display: flex;
 }
-
 .role-mention-item {
     padding: 1px 2px;
     cursor: pointer;
@@ -1994,20 +1937,16 @@ input:checked + .slider:before {
     align-items: center;
     gap: 2px;
 }
-
 .role-mention-item:hover {
     background: var(--bg-secondary);
 }
-
 .role-mention-item:last-child {
     border-bottom: none;
 }
-
 .role-mention-item .role-name {
     font-weight: 600;
     color: var(--accent-color);
 }
-
 .role-mention-item .role-preview {
     font-size: 10px;
     color: var(--text-secondary);
@@ -2016,8 +1955,6 @@ input:checked + .slider:before {
     text-overflow: ellipsis;
     max-width: 180px;
 }
-
-/* Context Control Button with Badge */
 .context-btn {
     position: relative;
     padding: 0;
@@ -2026,7 +1963,6 @@ input:checked + .slider:before {
     align-items: center;
     gap: 0;
 }
-
 .context-btn i,
 .context-btn svg,
 .context-btn [data-lucide] {
@@ -2034,59 +1970,39 @@ input:checked + .slider:before {
     height: 15px !important;
     stroke-width: 2px !important;
 }
-
-/* 修改后的 .context-count-badge */
 .context-count-badge {
     color: var(--accent-color);
-    /* 1. 增加基础字号，使其高度足以填充空间 */
     font-size: 10px;
-    font-weight: 800; /* 加粗，防止拉伸后变虚 */
+    font-weight: 800;
     display: flex;
     align-items: center;
     justify-content: center;
-
-    /* 2. 核心：通过 scale 实现瘦长效果 */
-    /* scaleX(0.7) 让数字变瘦，scaleY(1.3) 让数字拉长 */
     transform: scale(0.7, 1.3);
-    /* 确保拉伸的中心点在左侧，这样不会因为变瘦而离箭头太远 */
     transform-origin: left center;
-
     z-index: 100;
-    min-width: 14px; /* 减小最小宽度，配合瘦身后的数字 */
+    min-width: 14px;
     height: 15px;
     padding: 0;
-
-    /* 3. 精准定位：由于箭头在 x=6 (约 1/4 处)，数字需要向左微调回缩 */
-    /* 原来的 -15px 可能太靠左了，我们调整为 -9px 左右，让它贴近箭头 */
     margin-left: -10px;
-
     line-height: 1;
     white-space: nowrap;
 }
-
-/* 消息内容容器 - 独立于操作按钮容器 */
 .message-content {
     display: block;
     word-wrap: break-word;
     overflow-wrap: break-word;
     word-break: normal;
-    /* 垂直方向上铺满，移除最小高度限制 */
     min-height: auto;
-    /* 确保内容贴近气泡顶部和底部 */
     margin: 0;
     padding: 0;
 }
-
-/* 长消息折叠样式 */
 .message-content.long-message-collapsed {
-    max-height: 60px;
+    max-height: 200px;
     overflow: hidden;
     position: relative;
     mask-image: linear-gradient(180deg, black 70%, transparent 100%);
     -webkit-mask-image: linear-gradient(180deg, black 70%, transparent 100%);
 }
-
-/* 消息操作按钮容器 - 合并到气泡内右下角，但看起来像在外面 */
 .message-actions-row {
     display: flex;
     justify-content: flex-end;
@@ -2102,14 +2018,10 @@ input:checked + .slider:before {
     width: fit-content;
     background: transparent;
 }
-
-/* 气泡悬停时显示操作按钮 */
 .message-bubble:hover .message-actions-row,
 .message:hover .message-actions-row {
     opacity: 1;
 }
-
-/* 代码块复制按钮样式 */
 .message-bubble .code-copy-btn {
     position: absolute !important;
     top: 6px !important;
@@ -2127,37 +2039,30 @@ input:checked + .slider:before {
     transition: all 0.2s ease !important;
     backdrop-filter: blur(4px) !important;
 }
-
 .message-bubble .code-copy-btn:hover {
     background: var(--accent-color) !important;
     color: white !important;
     border-color: var(--accent-color) !important;
 }
-
 .code-copy-btn.copied {
     background: #22C55E !important;
     color: white !important;
     border-color: #22C55E !important;
 }
-
-/* 代码块样式优化 */
 .message-bubble pre {
     position: relative !important;
     padding: 12px 16px !important;
     margin: 8px 0 !important;
     overflow: auto !important;
-    min-height: 42px; /* 确保有足够高度容纳按钮 */
+    min-height: 42px;
 }
-
 .message-bubble pre code {
-    display: block; /* 确保 code 独占一行，不会和绝对定位的按钮发生奇怪的流式交互 */
-    padding-right: 60px; /* 右侧留出空间给按钮，防止代码文字和按钮重叠 */
+    display: block;
+    padding-right: 60px;
     overflow-x: auto;
     background: transparent;
     border: none;
 }
-
-/* 操作按钮样式 */
 .message-action-btn {
     background: transparent;
     border: none;
@@ -2173,11 +2078,9 @@ input:checked + .slider:before {
     height: 18px;
     flex-shrink: 0;
 }
-
 .message-action-btn:hover {
     color: var(--text-primary);
 }
-
 .message-action-btn i,
 .message-action-btn svg,
 .message-action-btn [data-lucide] {
