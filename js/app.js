@@ -3,7 +3,8 @@ document.addEventListener('DOMContentLoaded', () => {
     class MarkdownStreamState {
         preprocessContent(content) {
             if (!content) return content;
-            let inCodeBlock = false, inBold = false;
+            let inCodeBlock = false;
+            const boldStack = [];
             const len = content.length;
             for (let i = 0; i < len; i++) {
                 if (content[i] === '`' && content[i+1] === '`' && content[i+2] === '`') {
@@ -11,12 +12,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     i += 2;
                 }
                 else if (!inCodeBlock && content[i] === '*' && content[i+1] === '*') {
-                    inBold = !inBold;
+                    if (boldStack.length > 0) {
+                        boldStack.pop();
+                    } else {
+                        boldStack.push(i);
+                    }
                     i++;
                 }
             }
             if (inCodeBlock) return content + '\n\n```';
-            if (inBold) return content + '**';
+            if (boldStack.length > 0) return content + '**'.repeat(boldStack.length);
             return content;
         }
     }
@@ -405,12 +410,36 @@ document.addEventListener('DOMContentLoaded', () => {
                     messageDiv.appendChild(bubble);
                 } else {
                     const md = getMarkdownInstance();
+                    let thinkingHtml = '';
+                    if (msg.reasoning_content) {
+                        thinkingHtml = `
+                            <div class="message-thinking">
+                                <div class="message-thinking-header">
+                                    <div class="message-thinking-toggle">
+                                        <i data-lucide="chevron-down"></i>
+                                    </div>
+                                    <span class="message-thinking-title">思考过程</span>
+                                </div>
+                                <div class="message-thinking-content">${md ? md.render(msg.reasoning_content) : msg.reasoning_content}</div>
+                            </div>
+                        `;
+                    }
                     if (md) {
-                        messageDiv.innerHTML = `<div class="message-bubble">${md.render(msg.content)}</div>`;
+                        messageDiv.innerHTML = `${thinkingHtml}<div class="message-bubble">${md.render(msg.content)}</div>`;
                     } else {
-                        messageDiv.innerHTML = `<div class="message-bubble">${msg.content}</div>`;
+                        messageDiv.innerHTML = `${thinkingHtml}<div class="message-bubble">${msg.content}</div>`;
                     }
                     bubble = messageDiv.querySelector('.message-bubble');
+                    const thinkingHeader = messageDiv.querySelector('.message-thinking-header');
+                    if (thinkingHeader) {
+                        thinkingHeader.addEventListener('click', () => {
+                            const thinkingDiv = messageDiv.querySelector('.message-thinking');
+                            if (thinkingDiv) {
+                                thinkingDiv.classList.toggle('collapsed');
+                                lucide.createIcons();
+                            }
+                        });
+                    }
                 }
                 if (msg.role === 'user') {
                     applyLongMessageHandling(bubble, true, msg.content);
@@ -421,6 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 chatMessages.appendChild(messageDiv);
             });
             chatMessages.scrollTop = chatMessages.scrollHeight;
+            lucide.createIcons();
         } else {
             if (chatView) chatView.classList.remove('has-messages');
             if (chatContainer) chatContainer.classList.remove('has-messages');
@@ -1050,8 +1080,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const chatMessages = document.getElementById('chat-messages');
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message assistant';
-        messageDiv.innerHTML = `<div class="message-bubble">|</div>`;
+        messageDiv.innerHTML = `
+            <div class="message-thinking">
+                <div class="message-thinking-header">
+                    <div class="message-thinking-toggle">
+                        <i data-lucide="chevron-down"></i>
+                    </div>
+                    <span class="message-thinking-title">思考过程</span>
+                </div>
+                <div class="message-thinking-content"></div>
+            </div>
+            <div class="message-bubble">|</div>
+        `;
+        const thinkingHeader = messageDiv.querySelector('.message-thinking-header');
+        if (thinkingHeader) {
+            thinkingHeader.addEventListener('click', () => {
+                const thinkingDiv = messageDiv.querySelector('.message-thinking');
+                if (thinkingDiv) {
+                    thinkingDiv.classList.toggle('collapsed');
+                    lucide.createIcons();
+                }
+            });
+        }
         chatMessages.appendChild(messageDiv);
+        lucide.createIcons();
         const shouldScroll = chatMessages.scrollHeight - chatMessages.scrollTop <= chatMessages.clientHeight + 10;
         if (shouldScroll) {
             chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -1066,29 +1118,60 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return messageDiv;
     }
-    function updateAIMessageContent(messageElement, content) {
+    function updateAIMessageContent(messageElement, content, thinking = '') {
         const bubble = messageElement.querySelector('.message-bubble');
+        const thinkingDiv = messageElement.querySelector('.message-thinking');
+        const thinkingContent = thinkingDiv?.querySelector('.message-thinking-content');
         const md = getMarkdownInstance();
         const processedContent = markdownState.preprocessContent(content);
+        if (thinkingDiv && thinkingContent) {
+            if (thinking) {
+                thinkingDiv.style.display = 'block';
+                const processedThinking = markdownState.preprocessContent(thinking);
+                if (md) {
+                    thinkingContent.innerHTML = md.render(processedThinking);
+                } else {
+                    thinkingContent.textContent = processedThinking;
+                }
+            } else if (thinkingContent.innerHTML.trim() === '') {
+                thinkingDiv.style.display = 'none';
+            }
+        }
         if (bubble && md) {
             bubble.innerHTML = `${md.render(processedContent)}<span class="cursor"></span>`;
         } else if (bubble) {
             bubble.textContent = processedContent + '|';
         }
     }
-    function finalizeAIMessage(messageElement, content) {
+    function finalizeAIMessage(messageElement, content, thinking = '') {
         const bubble = messageElement.querySelector('.message-bubble');
+        const thinkingDiv = messageElement.querySelector('.message-thinking');
+        const thinkingContent = thinkingDiv?.querySelector('.message-thinking-content');
         const md = getMarkdownInstance();
         const fixedContent = markdownState.preprocessContent(content);
+        const fixedThinking = markdownState.preprocessContent(thinking);
+        if (thinkingDiv && thinkingContent) {
+            if (thinking) {
+                thinkingDiv.style.display = 'block';
+                if (md) {
+                    thinkingContent.innerHTML = md.render(fixedThinking);
+                } else {
+                    thinkingContent.textContent = fixedThinking;
+                }
+            } else {
+                thinkingDiv.style.display = 'none';
+            }
+        }
         if (bubble && content && md) {
             bubble.innerHTML = md.render(fixedContent);
             addAssistantMessageActions(bubble, fixedContent);
             addCodeCopyButtons(bubble);
+            lucide.createIcons();
             if (activeChatId) {
                 const chat = configData.history.find(c => c.id === activeChatId);
                 if (chat) {
                     if (!chat.messages) chat.messages = [];
-                    chat.messages.push({ role: 'assistant', content });
+                    chat.messages.push({ role: 'assistant', content, reasoning_content: thinking || undefined });
                     saveToStorage();
                 }
             }
@@ -1203,6 +1286,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const aiMessageElement = addAIMessageStream();
         let fullContent = '';
+        let thinkingContent = '';
         try {
             const controller = new AbortController();
             const combinedSignal = new AbortController();
@@ -1261,9 +1345,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                     fullContent += delta.delta.content;
                                     const now = Date.now();
                                     if (now - lastRenderTime >= RENDER_INTERVAL) {
-                                        updateAIMessageContent(aiMessageElement, fullContent);
+                                        updateAIMessageContent(aiMessageElement, fullContent, thinkingContent);
                                         lastRenderTime = now;
                                     }
+                                }
+                                const reasoningContent = delta.delta?.reasoning_content || delta.delta?.reasoning || delta.reasoning_content || delta.reasoning || '';
+                                if (reasoningContent) {
+                                    console.log('[Thinking] 收到推理内容:', reasoningContent.substring(0, 100) + '...');
+                                    thinkingContent += reasoningContent;
+                                    updateAIMessageContent(aiMessageElement, fullContent, thinkingContent);
+                                }
+                                if (parsed._debug && console.log) {
+                                    console.log('[Debug] SSE数据:', JSON.stringify(parsed, null, 2).substring(0, 500));
                                 }
                             }
                         } catch (e) {
@@ -1272,13 +1365,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
-            finalizeAIMessage(aiMessageElement, fullContent);
+            finalizeAIMessage(aiMessageElement, fullContent, thinkingContent);
             reader.releaseLock();
             return fullContent;
         } catch (error) {
             if (error.name === 'AbortError') {
                 if (fullContent) {
-                    finalizeAIMessage(aiMessageElement, fullContent);
+                    finalizeAIMessage(aiMessageElement, fullContent, thinkingContent);
                     return fullContent;
                 }
                 if (aiMessageElement && aiMessageElement.parentNode) {
