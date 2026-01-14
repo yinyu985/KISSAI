@@ -4,14 +4,21 @@ document.addEventListener('DOMContentLoaded', () => {
         preprocessContent(content) {
             if (!content) return content;
             let inCodeBlock = false;
+            let inInlineCode = false;
             const boldStack = [];
             const len = content.length;
             for (let i = 0; i < len; i++) {
-                if (content[i] === '`' && content[i+1] === '`' && content[i+2] === '`') {
+                const c = content[i];
+                const cNext = content[i + 1];
+                const cNext2 = content[i + 2];
+                if (c === '`' && cNext === '`' && cNext2 === '`') {
                     inCodeBlock = !inCodeBlock;
                     i += 2;
                 }
-                else if (!inCodeBlock && content[i] === '*' && content[i+1] === '*') {
+                else if (!inCodeBlock && c === '`' && cNext !== '`') {
+                    inInlineCode = !inInlineCode;
+                }
+                else if (!inCodeBlock && !inInlineCode && c === '*' && cNext === '*') {
                     if (boldStack.length > 0) {
                         boldStack.pop();
                     } else {
@@ -20,8 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     i++;
                 }
             }
-            if (inCodeBlock) return content + '\n\n```';
-            if (boldStack.length > 0) return content + '**'.repeat(boldStack.length);
+            if (inCodeBlock) content += '\n\n```';
+            if (inInlineCode) content += '`';
+            if (boldStack.length > 0) content += '**'.repeat(boldStack.length);
             return content;
         }
     }
