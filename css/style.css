@@ -639,9 +639,6 @@ div.history-item.active svg.lucide.lucide-search {
 ::-webkit-scrollbar-thumb:active {
     background-image: linear-gradient(var(--text-secondary), var(--text-secondary));
 }
-::-webkit-scrollbar-thumb:hover {
-    background: var(--text-secondary);
-}
 .dropdown-section {
     padding: 1px 0;
 }
@@ -1852,7 +1849,7 @@ kbd {
     text-align: left;
 }
 .message-thinking {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(72, 70, 70, 0.614);
     border-left: 3px solid var(--accent-color);
     margin: 4px 0 8px 0;
     border-radius: 8px;
@@ -1862,7 +1859,7 @@ kbd {
     overflow: hidden;
 }
 .chat-container.narrow-mode .message-thinking {
-    max-width: 98%;
+    max-width: 100%;
 }
 .chat-container.wide-mode .message-thinking {
     max-width: 100%;
