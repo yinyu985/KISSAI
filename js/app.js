@@ -1,35 +1,28 @@
 document.addEventListener('DOMContentLoaded', () => {
     let globalMd = null;
     class MarkdownStreamState {
-        preprocessContent(content) {
+    preprocessContent(content) {
             if (!content) return content;
             let inCodeBlock = false;
-            let inInlineCode = false;
-            const boldStack = [];
             const len = content.length;
             for (let i = 0; i < len; i++) {
-                const c = content[i];
-                const cNext = content[i + 1];
-                const cNext2 = content[i + 2];
-                if (c === '`' && cNext === '`' && cNext2 === '`') {
-                    inCodeBlock = !inCodeBlock;
-                    i += 2;
-                }
-                else if (!inCodeBlock && c === '`' && cNext !== '`') {
-                    inInlineCode = !inInlineCode;
-                }
-                else if (!inCodeBlock && !inInlineCode && c === '*' && cNext === '*') {
-                    if (boldStack.length > 0) {
-                        boldStack.pop();
-                    } else {
-                        boldStack.push(i);
-                    }
+                if (content[i] === '\\' && i + 1 < len) {
                     i++;
+                    continue;
+                }
+                if (content[i] === '`') {
+                    let runStart = i;
+                    while (i + 1 < len && content[i + 1] === '`') {
+                        i++;
+                    }
+                    const runLength = i - runStart + 1;
+                    const isStartOfLine = (runStart === 0 || content[runStart - 1] === '\n');
+                    if (isStartOfLine && runLength >= 3) {
+                        inCodeBlock = !inCodeBlock;
+                    }
                 }
             }
-            if (inCodeBlock) content += '\n\n```';
-            if (inInlineCode) content += '`';
-            if (boldStack.length > 0) content += '**'.repeat(boldStack.length);
+            if (inCodeBlock) return content + '\n\n```';
             return content;
         }
     }
@@ -171,17 +164,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     let configData = JSON.parse(localStorage.getItem('kissai_config')) || defaultData;
         window.configData = configData;
-
-        // Set theme immediately to prevent flash (keep loading class)
         const themeClass = configData.general.theme === 'light' ? 'light-mode' : 'dark-mode';
         document.body.className = `loading ${themeClass}`;
-
-        // Ensure language is set before calling t()
         if (configData.general.language === undefined) {
             configData.general.language = defaultData.general.language;
         }
-
-        // Set default systemPrompt based on language if it's a default value
         if (configData.general.systemPrompt && configData.general.systemPrompt.trim()) {
             const isDefaultPrompt = Object.values(translations).some(lang =>
                 lang['systemPrompt.default'] === configData.general.systemPrompt
@@ -190,7 +177,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 configData.general.systemPrompt = t('systemPrompt.default');
             }
         } else {
-            // No systemPrompt set or empty, use default for current language
             configData.general.systemPrompt = t('systemPrompt.default');
         }
     function mergeConfig() {
@@ -871,8 +857,6 @@ document.addEventListener('DOMContentLoaded', () => {
             currentLanguageSpan.textContent = opt.textContent;
             languageOptions.querySelectorAll('.select-option').forEach(o => o.classList.remove('selected'));
             opt.classList.add('selected');
-
-            // Update systemPrompt if it's a default systemPrompt (for any language)
             const currentPrompt = configData.general.systemPrompt;
             const zhDefault = translations.zh['systemPrompt.default'];
             const enDefault = translations.en['systemPrompt.default'];
@@ -881,25 +865,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isDefaultPrompt) {
                 const newPrompt = t('systemPrompt.default');
                 configData.general.systemPrompt = newPrompt;
-                // Update the textarea value immediately so saveToStorage() reads the correct value
                 const promptTextarea = document.getElementById('global-system-prompt');
                 if (promptTextarea) {
                     promptTextarea.value = newPrompt;
                 }
             }
-
             saveToStorage();
-            // Close dropdown
             languageOptions.classList.remove('active');
-
-            // Update all text
             updateAllText();
-            // Re-render dynamic content that depends on language
             renderHistory();
             renderModelDropdown();
             renderShortcuts();
-
-            // Re-render general settings if settings view is open
             if (settingsView.classList.contains('active')) {
                 renderGeneralSettings();
             }
@@ -1483,7 +1459,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const success = document.execCommand('copy');
             document.body.removeChild(textarea);
             if (success) {
-                // Show visual feedback
                 const span = exportClipboardBtn.querySelector('span');
                 const originalText = span.textContent;
                 exportClipboardBtn.classList.add('copied');
@@ -2479,9 +2454,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('chat-view')?.addEventListener('wheel', e =>
         !e.target.closest('#chat-messages') && document.getElementById('chat-messages')?.scrollBy(0, e.deltaY)
     );
-    // Initialize i18n on page load
     updateAllText();
-    // Remove loading state to show the page (keep theme class)
     document.body.classList.remove('loading');
     document.body.classList.add('loaded');
 });
