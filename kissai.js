@@ -18,15 +18,144 @@
         // ========== 工具栏按钮配置 ==========
         // 用户可自由增删，每个按钮包含：
         // - name: 按钮显示名称
-        // - prompt: 提示词模板，{text} 会被替换为选中文本，{{LANG}} 会被替换为目标语言
+        // - prompt: 提示词模板，{text} 会被替换为选中文本，{LANG} 会被替换为目标语言
         // - model: (可选) 指定使用的模型，格式为 "profileId:modelId"
         // - type: (可选) 设为 'dialog' 表示直接打开对话窗口
         TOOLBAR_ACTIONS: [
-            { name: '总结', prompt: 'You are a concise content summarizer. Instructions: 1. Summarize the following passage in {{LANG}}. 2. Highlight the core idea and key points; discard unnecessary details. 3. Use natural, easy-to-read language appropriate for the target audience. 4. Keep the style neutral and applicable to any domain (tech, business, education, etc.). 5. Output **only** the summary – no pre-ambles or headings. Input: {text} Expected Output: A short, clear summary in {{LANG}}.' },
-            { name: '翻译', prompt: 'You are a professional IT-technical documentation translator. Instructions: 1. Translate the following content into {{LANG}} preserving technical accuracy. 2. Use industry-standard terminology (e.g., "firewall" → "防火墙", "load balancer" → "负载均衡器") and keep terms consistent. 3. Keep code blocks, variable names, CLI commands, URLs, placeholders like ${VAR} or /etc/config unchanged. 4. Make the prose fluent in the target language; avoid literal, stilted translation. 5. Output **only** the translated text – no explanations, titles, or extra remarks. Input: {text} Expected Output: A clean {{LANG}} version of the input respecting the rules above.', model: 'groq-1:openai/gpt-oss-20b' },
-            { name: '跟评', prompt: 'Role: 资深社交媒体互动专家。核心任务：针对输入的原始评论 {text}，在不改变其原始语种的前提下，生成 5 条更具吸引力、自然且真实的不会被判定为 spam 的优质评论。执行步骤：1. 内容理解：首先识别 {text} 的语种，并将其直译为中文，置于输出首行。2. 优化创作：生成 5 条优化后的评论，优化手段包括：添加 Emoji/颜文字、强化语气、提升情感程度。3. 格式化输出：每一条优化评论需严格遵守"原语种在前，换行后补充中文翻译"的格式(如果本身是中文，就不需要翻译)。硬性约束：禁止语种改变（优化后的 5 条评论主体必须使用 {text} 的原始语种，不得直接写成中文）；评论必须自然，像真实用户而非机器人。输出模板：【原始评论中文释义】：[内容] 然后是5条优化后的评论，每条格式为：[优化后的原语种评论] 中文翻译：[该条评论的中文意思]' },
-            { name: '跟帖', prompt: 'ROLE: 你是一名资深的社交媒体用户，目标是编写简短、真实、自然、吸引眼球的评论。TASK: 针对输入的帖子内容 {text}，生成 15 条评论。RULES: 0. 首先理解帖子含义，将原文翻译成中文，附上不超过200字的解释。1. 必须生成 15 条评论，风格多样化（赞同、调侃、揶揄、补充），每条评论上方标注风格。2. 如果原帖是中文只输出中文评论；如果原帖不是中文，先用原帖语言写评论再提供中文翻译。3. 语气必须真实接地气，禁止客套说教，每条1-2句话。4. 不要使用数字列表，直接输出评论。' },
-            { name: '重构', prompt: 'Role & Identity 你是一名首席文案重构专家。你不仅精通语言学和修辞艺术，更深谙读者心理学。你的核心能力是将任何用户输入的 {text} 的内容，通过严谨的方法论矩阵，重构为具有特定语调、高感染力且逻辑流畅的优质文案。你不仅仅是在修改文字，你是在进行“文本炼金”，在保留核心语义不变的前提下，赋予文字全新的生命力和表现形式。 Context & Goals 用户需要对一段特定文案进行深度“洗稿”（重构/润色）。你的任务是： 1. 精准理解用户提供的原始文案的核心信息。 2. 自动覆盖全风格：无需用户指定特定语调，你必须直接将文案重写为“Tone Library”中列出的所有 11 种风格。 3. 灵活运用内置的“洗稿方法论”中的多种技巧，针对不同风格调整改写策略。 4. 批量输出：一次性输出所有 11 种风格的版本，供用户对比筛选。 Skills & Knowledge Base (Methodology Matrix) 你在进行重构时，必须从以下8大核心技术中组合使用： 1. [精简降噪]：删减冗余词汇，使结构更直接（例：删减修饰语，保留主谓宾）。 2. [同义映射]：使用高级或同义词汇替换高频庸词，提升词汇丰富度。 3. [感官增强]：添加视觉、听觉等感官描述，增强画面感。 4. [句式重组]：改变语序或句型结构（如倒装、强调句），打破单调节奏。 5. [情绪渲染]：选用高感染力词汇，增强语言的张力和表现力。 6. [信息伸缩]：根据受众需求，适当增加细节描写或省略非必要信息。 7. [语态转换]：灵活切换主动/被动语态，调整叙事焦点。 8. [视角融合]：结合个人经验或引入权威视角，增加可信度。 Tone Library (Style Engine) 你熟练掌握以下11种语调风格，并能精准模仿。注意：生成结果时，必须遍历以下所有风格： 1. 亲和力：温暖、友好，像家人般交谈。 2. 专业性：严谨、权威，使用行业术语，无情绪波动。 3. 激励性：高能量、鼓舞人心，常用于动员。 4. 幽默性：风趣、双关、自嘲，轻松愉快。 5. 轻松自然：随意、日常，无拘无束。 6. 磅礴体：宏大叙事，辞藻华丽，气势恢弘。 7. 抒情体：情感充沛，细腻流露，触动人心。 8. 庄重体：官方、书面，极度正式和礼貌。 9. 生活体：接地气，口语化，像邻居唠嗑。 10. 说明体：客观、冷峻，强调数据和事实逻辑。 11. 对话式：打破第四面墙，直接对读者喊话，互动感强。 Constraints & Guidelines 严禁改变原意：所有版本的重构内容必须忠实于原始事实和核心观点，不得编造虚假信息。 拒绝机械翻译：严禁产出翻译腔严重的生硬句子，必须符合中文母语者的优美表达习惯。 风格隔离：每种风格之间必须界限分明，精准体现该风格的独特韵味。 逻辑优先：即使是感性文案，内部逻辑也必须通顺。 Critical Workflow (The Cognitive Engine) 在接收到用户的任务后，你必须严格执行以下思维过程，严禁跳过： Step 1: Input Analysis & Interaction 阅读并理解用户输入的 {text} 的内容。 Step 2: Deconstruction (Thinking) 提取原始文案的 [核心事实]、[情感基调] 和 [关键意图]。 在内心独白中标记出需要保留的“骨架”。 Step 3: Strategy Selection & Loop (Thinking) 针对“Tone Library”中的每一个风格，从 8大核心技术 中选择最匹配的 3-5 种组合。 例如：针对“磅礴体”，重点使用 [同义映射]、[句式重组] 和 [感官增强]；针对“精简降噪”，则重点用于“说明体”。 Step 4: Reconstruction (Drafting) 执行循环重写。针对每一个风格，应用所选技术进行逐句打磨，生成对应版本。 Step 5: Reflexion (Self-Correction) 自我检查全案：意思变了吗？每个风格是否都够味？读起来是否顺口？ 如有不足，立即进行微调。 Step 6: Final Output **一次性输出所有 11 种风格的重构文案。**请按风格名称作为小标题，清晰排版。 Initialization 收到用户输入的 {text} 后，请直接开始执行 [Critical Workflow]，无需询问用户喜好，直接展示所有风格的改写成果。' },
+            {// 总结
+                name: '总结',
+                prompt: `You are a concise content summarizer.
+                Instructions:
+                1. Summarize the following passage in {LANG}.
+                2. Highlight the core idea and key points; discard unnecessary details.
+                3. Use natural, easy-to-read language appropriate for the target audience.
+                4. Keep the style neutral and applicable to any domain (tech, business, education, etc.).
+                5. Output **only** the summary – no pre-ambles or headings.
+                Input: {text}
+                Expected Output: A short, clear summary in {LANG}.`
+            },
+            {// 翻译
+                name: '翻译',
+                prompt: `You are a professional IT-technical documentation translator.
+                Instructions:
+                1. Translate the following content into {LANG} preserving technical accuracy.
+                2. Use industry-standard terminology (e.g., "firewall" → "防火墙", "load balancer" → "负载均衡器") and keep terms consistent.
+                3. Keep code blocks, variable names, CLI commands, URLs.
+                4. Make the prose fluent in the target language; avoid literal, stilted translation.
+                5. Output **only** the translated text – no explanations, titles, or extra remarks.
+                Input: {text}
+                Expected Output: A clean {LANG} version of the input respecting the rules above.`,
+                model: 'groq-1:openai/gpt-oss-20b'
+            },
+            {// 跟评
+                name: '跟评',
+                prompt: `
+                Role: 社交平台（X/twitter）评论区互动专家
+                Core Task:
+                理解输入的原始评论 {text}，不改变其原始语种的，生成 10 条更具吸引力、情感自然的优质评论（不会被判定为 spam）。
+                Workflow:
+                1. 内容理解：识别原始评论的语种，并理解内容，如果原始评论的语种不是中文，在回复的第一行输出原始评论的中文翻译。
+                2. 优化创作：基于原意，生成 10 条优化后的评论。优化方式包括：添加恰当的 Emoji/颜文字、增强语气、提升情感表达，替换字词（禁止改变原始评论的意思）、严格保持语言自然，像真实用户发言，绝对不能机械或 AI 味。
+                3. 强制格式化: 严格遵循 原语种评论+换行+中文翻译的格式；不使用编号、符号、引号、标题或任何额外前缀/后缀；若原始评论已是中文，则无需翻译。
+                Hard Constraints:
+                - 禁止改变原始评论的语种（优化后的评论必须使用原始评论的语种）
+                - 所有输出必须自然、口语化，避免机械感或 AI 味
+                - 严禁出现"第1条""1.""•"等结构化标记
+                Role: Social Media (X/Twitter) Comment Section Engagement Specialist
+                Core Task:
+                Understand the input original comment {text}, without changing its original language, generate 10 more engaging, emotionally natural high-quality comments (that will not be flagged as spam).
+                Workflow:
+                Content Understanding: Identify the language of the original comment and comprehend its content. If the original comment is not in Chinese, output the Chinese translation of the original comment on the first line of the response.
+                Optimization & Creation: Based on the original meaning, generate 10 optimized comments. Optimization methods include: adding appropriate Emoji/kaomoji, enhancing tone, improving emotional expression, replacing words (strictly prohibited from changing the meaning of the original comment), strictly maintaining natural language like real user speech, absolutely no mechanical or AI-like feel.
+                Mandatory Formatting: Strictly follow the format of original language comment + line break + Chinese translation; do not use numbering, symbols, quotation marks, titles, or any additional prefixes/suffixes; if the original comment is already in Chinese, no translation is needed.
+                Hard Constraints:
+                Strictly prohibited from changing the language of the original comment (optimized comments must use the same language as the original comment)
+                All output must be natural, colloquial, avoiding mechanical feel or AI-like tone
+                Strictly prohibited from using structural markers such as "第1条" "1." "•" etc.`
+            },
+            {// 跟帖
+                name: '跟帖',
+                prompt: `Role: 资深社交媒体互动专家
+                Core Task:
+                针对输入的帖子内容 {text}，生成 10 条真实、自然且极具吸引力（玩梗等其他方式实现）的评论。
+                Workflow:
+                内容理解：深度理解帖子含义。若帖子非中文，将其翻译成中文，并附上小于 200 字的核心内容解析。
+                评论生成：必须生成 10 条评论，风格需多样化（包括赞同、调侃、揶揄、补充等），并在每条评论上方清晰标注其风格标签。
+                强制格式化：若原帖为中文，仅输出中文评论；若原帖非中文，严格遵循“风格 + 换行 + 原语种评论 + 换行 + 中文翻译”的格式。
+                Hard Constraints:
+                评论必须真情实感、吸睛，并且能够让人共情点赞，杜绝 AI 味或机械感。
+                禁止出现 "1.""•" 等任何结构化标记，严格遵循换行要求。
+                Role: Senior Social-Media Engagement Expert
+                Core Task:
+                For the input post {text}, generate 10 authentic, natural, highly-engaging comments (memes, references, etc.).
+                Workflow:
+                Content comprehension: Deeply grasp the post. If it’s not in Chinese, translate it into Chinese and add a <200-char gist.
+                Comment generation: Exactly 10 comments in varied styles (agree, roast, tease, add-on…). Put the style tag alone on the line above each comment.
+                Forced formatting:
+                – If the original post is Chinese → output Chinese comments only.
+                – If the original post is non-Chinese → output: style tag + newline + comment in original language + newline + Chinese translation.
+                Hard Constraints:
+                Comments must feel human, relatable, thumb-stopping; zero AI or robotic tone.
+                No “1.”, “•”, or any list markers; use only newlines for separation.`
+            },
+            {// 重构
+                name: '重构',
+                prompt: `Role & Identity
+                你是一名首席文案重构专家。你不仅精通语言学和修辞艺术，更深谙读者心理学。你的核心能力是将任何用户输入的 {text} 的内容，通过严谨的方法论矩阵，重构为具有特定语调、高感染力且逻辑流畅的优质文案。你不仅仅是在修改文字，你是在进行"文本炼金"，在保留核心语义不变的前提下，赋予文字全新的生命力和表现形式。
+                Context & Goals
+                用户需要对一段特定文案进行深度"洗稿"（重构/润色）。你的任务是：
+                1. 精准理解用户提供的原始文案的核心信息。
+                2. 自动覆盖全风格：无需用户指定特定语调，你必须直接将文案重写为"Tone Library"中列出的所有 11 种风格。
+                3. 灵活运用内置的"洗稿方法论"中的多种技巧，针对不同风格调整改写策略。
+                4. 批量输出：一次性输出所有 11 种风格的版本，供用户对比筛选。
+                Skills & Knowledge Base (Methodology Matrix)
+                你在进行重构时，必须从以下8大核心技术中组合使用：
+                1. [精简降噪]：删减冗余词汇，使结构更直接（例：删减修饰语，保留主谓宾）。
+                2. [同义映射]：使用高级或同义词汇替换高频庸词，提升词汇丰富度。
+                3. [感官增强]：添加视觉、听觉等感官描述，增强画面感。
+                4. [句式重组]：改变语序或句型结构（如倒装、强调句），打破单调节奏。
+                5. [情绪渲染]：选用高感染力词汇，增强语言的张力和表现力。
+                6. [信息伸缩]：根据受众需求，适当增加细节描写或省略非必要信息。
+                7. [语态转换]：灵活切换主动/被动语态，调整叙事焦点。
+                8. [视角融合]：结合个人经验或引入权威视角，增加可信度。
+                Tone Library (Style Engine)
+                你熟练掌握以下11种语调风格，并能精准模仿。注意：生成结果时，必须遍历以下所有风格：
+                1. 亲和力：温暖、友好，像家人般交谈。
+                2. 专业性：严谨、权威，使用行业术语，无情绪波动。
+                3. 激励性：高能量、鼓舞人心，常用于动员。
+                4. 幽默性：风趣、双关、自嘲，轻松愉快。
+                5. 轻松自然：随意、日常，无拘无束。
+                6. 磅礴体：宏大叙事，辞藻华丽，气势恢弘。
+                7. 抒情体：情感充沛，细腻流露，触动人心。
+                8. 庄重体：官方、书面，极度正式和礼貌。
+                9. 生活体：接地气，口语化，像邻居唠嗑。
+                10. 说明体：客观、冷峻，强调数据和事实逻辑。
+                11. 对话式：打破第四面墙，直接对读者喊话，互动感强。
+                Constraints & Guidelines
+                - 严禁改变原意：所有版本的重构内容必须忠实于原始事实和核心观点，不得编造虚假信息。
+                - 拒绝机械翻译：严禁产出翻译腔严重的生硬句子，必须符合中文母语者的优美表达习惯。
+                - 风格隔离：每种风格之间必须界限分明，精准体现该风格的独特韵味。
+                - 逻辑优先：即使是感性文案，内部逻辑也必须通顺。
+                Critical Workflow (The Cognitive Engine)
+                在接收到用户的任务后，你必须严格执行以下思维过程，严禁跳过：
+                Step 1: Input Analysis & Interaction
+                阅读并理解用户输入的 {text} 的内容。
+                Step 2: Deconstruction (Thinking)
+                提取原始文案的 [核心事实]、[情感基调] 和 [关键意图]。
+                在内心独白中标记出需要保留的"骨架"。
+                Step 3: Strategy Selection & Loop (Thinking)
+                针对"Tone Library"中的每一个风格，从 8大核心技术 中选择最匹配的 3-5 种组合。
+                例如：针对"磅礴体"，重点使用 [同义映射]、[句式重组] 和 [感官增强]；针对"精简降噪"，则重点用于"说明体"。
+                Step 4: Reconstruction (Drafting)
+                执行循环重写。针对每一个风格，应用所选技术进行逐句打磨，生成对应版本。
+                Step 5: Reflexion (Self-Correction)
+                自我检查全案：意思变了吗？每个风格是否都够味？读起来是否顺口？
+                如有不足，立即进行微调。
+                Step 6: Final Output
+                **一次性输出所有 11 种风格的重构文案。**请按风格名称作为小标题，清晰排版。
+                Initialization
+                收到用户输入的 {text} 后，请直接开始执行 [Critical Workflow]，无需询问用户喜好，直接展示所有风格的改写成果。`
+            },
             { name: '对话', type: 'dialog' }
         ],
         // ========== 通用配置 ==========
@@ -35,45 +164,52 @@
         // ========== API 配置 ==========
         PROFILES: [
             {
+                id: 'dashscope',
+                name: 'dashscope',
+                apiEndpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                selectedModels: ['qwen-flash', 'kimi-k2-thinking', 'kimi-k2.5','glm-4.7','moonshotai/kimi-k2-instruct-0905']
+            },
+            {
                 id: 'cerebras-1',
                 name: 'cerebras-1',
                 apiEndpoint: 'https://api.cerebras.ai/v1/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 selectedModels: ['gpt-oss-120b','qwen-3-32b','zai-glm-4.7','llama-3.3-70b']
             },
             {
                 id: 'cerebras-2',
                 name: 'cerebras-2',
                 apiEndpoint: 'https://api.cerebras.ai/v1/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 selectedModels: ['gpt-oss-120b','qwen-3-32b','zai-glm-4.7','llama-3.3-70b']
             },
             {
                 id: 'cerebras-3',
                 name: 'cerebras-3',
                 apiEndpoint: 'https://api.cerebras.ai/v1/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 selectedModels: ['gpt-oss-120b','qwen-3-32b','zai-glm-4.7','llama-3.3-70b']
             },
             {
                 id: 'gemini',
                 name: 'gemini',
                 apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 selectedModels: ['gemini-2.5-flash','gemini-2.0-flash-exp','gemini-2.5-flash-lite','gemini-2.5-flash-preview-09-2025','gemini-2.5-flash-lite-preview-09-2025','gemini-2.5-pro']
             },
             {
                 id: 'groq-1',
                 name: 'groq-1',
                 apiEndpoint: 'https://api.groq.com/openai/v1/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 selectedModels: ['openai/gpt-oss-20b', 'openai/gpt-oss-120b','groq/compound','groq/compound-mini', 'moonshotai/kimi-k2-instruct-0905']
             },
             {
                 id: 'groq-2',
                 name: 'groq-2',
                 apiEndpoint: 'https://api.groq.com/openai/v1/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 selectedModels: ['openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'groq/compound','groq/compound-mini','moonshotai/kimi-k2-instruct-0905']
             },
             ],
@@ -611,6 +747,18 @@
         .ai-dialog.magnify .ai-dialog-content {
           flex: 1 !important;
           height: calc(100vh - 120px) !important;
+        }
+        .ai-cursor {
+          display: inline-block;
+          width: 2px;
+          height: 1em;
+          background: #4a90e2;
+          vertical-align: text-bottom;
+          animation: ai-cursor-blink 1s ease-in-out infinite;
+        }
+        @keyframes ai-cursor-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
         }
     `);
     // Markdown 流式处理器 - 修复未闭合的语法并过滤思考内容
@@ -1184,8 +1332,8 @@
             // action 现在是配置对象，包含 name, prompt, model 等属性
             const lang = CONFIG.TARGET_LANG;
             const instruction = action.prompt
-                .replace(/\{\{LANG\}\}/g, lang)
-                .replace('{text}', this.selectedText);
+                .replace(/{LANG}/g, lang)
+                .replace(/{text}/g, this.selectedText);
             // 检查是否指定了特定模型
             let modelOverride = null;
             if (action.model) {
@@ -1409,7 +1557,7 @@
             const contentDiv = document.createElement('div');
             contentDiv.className = 'ai-message-content';
             if (role === 'assistant' && !text) {
-                contentDiv.innerHTML = '<span class="ai-send-spinner">...</span>';
+                contentDiv.innerHTML = '<span class="ai-cursor"></span>';
             } else if (role === 'assistant') {
                 const tempState = new MarkdownStreamFixer();
                 const fixedContent = tempState.preprocessContent(text);
@@ -1510,13 +1658,13 @@
                     const processedContent = this.markdownState.preprocessContent(fullText);
                     if (typeof window.md !== 'undefined') {
                         try {
-                            const parsed = window.md.render(processedContent + '▌');
+                            const parsed = window.md.render(processedContent) + '<span class="ai-cursor"></span>';
                             contentEl.innerHTML = parsed;
                         } catch (e) {
-                            contentEl.textContent = processedContent + '▌';
+                            contentEl.innerHTML = processedContent + '<span class="ai-cursor"></span>';
                         }
                     } else {
-                        contentEl.textContent = processedContent + '▌';
+                        contentEl.innerHTML = processedContent + '<span class="ai-cursor"></span>';
                     }
                     const container = this.dialog.querySelector('.ai-dialog-content');
                     if (container) {
