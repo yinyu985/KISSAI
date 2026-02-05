@@ -15,90 +15,68 @@
 (function () {
     'use strict';
     const CONFIG = {
+        // ========== 工具栏按钮配置 ==========
+        // 用户可自由增删，每个按钮包含：
+        // - name: 按钮显示名称
+        // - prompt: 提示词模板，{text} 会被替换为选中文本，{{LANG}} 会被替换为目标语言
+        // - model: (可选) 指定使用的模型，格式为 "profileId:modelId"
+        // - type: (可选) 设为 'dialog' 表示直接打开对话窗口
+        TOOLBAR_ACTIONS: [
+            { name: '总结', prompt: 'You are a concise content summarizer. Instructions: 1. Summarize the following passage in {{LANG}}. 2. Highlight the core idea and key points; discard unnecessary details. 3. Use natural, easy-to-read language appropriate for the target audience. 4. Keep the style neutral and applicable to any domain (tech, business, education, etc.). 5. Output **only** the summary – no pre-ambles or headings. Input: {text} Expected Output: A short, clear summary in {{LANG}}.' },
+            { name: '翻译', prompt: 'You are a professional IT-technical documentation translator. Instructions: 1. Translate the following content into {{LANG}} preserving technical accuracy. 2. Use industry-standard terminology (e.g., "firewall" → "防火墙", "load balancer" → "负载均衡器") and keep terms consistent. 3. Keep code blocks, variable names, CLI commands, URLs, placeholders like ${VAR} or /etc/config unchanged. 4. Make the prose fluent in the target language; avoid literal, stilted translation. 5. Output **only** the translated text – no explanations, titles, or extra remarks. Input: {text} Expected Output: A clean {{LANG}} version of the input respecting the rules above.', model: 'groq-1:openai/gpt-oss-20b' },
+            { name: '跟评', prompt: 'Role: 资深社交媒体互动专家。核心任务：针对输入的原始评论 {text}，在不改变其原始语种的前提下，生成 5 条更具吸引力、自然且真实的不会被判定为 spam 的优质评论。执行步骤：1. 内容理解：首先识别 {text} 的语种，并将其直译为中文，置于输出首行。2. 优化创作：生成 5 条优化后的评论，优化手段包括：添加 Emoji/颜文字、强化语气、提升情感程度。3. 格式化输出：每一条优化评论需严格遵守"原语种在前，换行后补充中文翻译"的格式(如果本身是中文，就不需要翻译)。硬性约束：禁止语种改变（优化后的 5 条评论主体必须使用 {text} 的原始语种，不得直接写成中文）；评论必须自然，像真实用户而非机器人。输出模板：【原始评论中文释义】：[内容] 然后是5条优化后的评论，每条格式为：[优化后的原语种评论] 中文翻译：[该条评论的中文意思]' },
+            { name: '跟帖', prompt: 'ROLE: 你是一名资深的社交媒体用户，目标是编写简短、真实、自然、吸引眼球的评论。TASK: 针对输入的帖子内容 {text}，生成 15 条评论。RULES: 0. 首先理解帖子含义，将原文翻译成中文，附上不超过200字的解释。1. 必须生成 15 条评论，风格多样化（赞同、调侃、揶揄、补充），每条评论上方标注风格。2. 如果原帖是中文只输出中文评论；如果原帖不是中文，先用原帖语言写评论再提供中文翻译。3. 语气必须真实接地气，禁止客套说教，每条1-2句话。4. 不要使用数字列表，直接输出评论。' },
+            { name: '重构', prompt: 'Role & Identity 你是一名首席文案重构专家。你不仅精通语言学和修辞艺术，更深谙读者心理学。你的核心能力是将任何用户输入的 {text} 的内容，通过严谨的方法论矩阵，重构为具有特定语调、高感染力且逻辑流畅的优质文案。你不仅仅是在修改文字，你是在进行“文本炼金”，在保留核心语义不变的前提下，赋予文字全新的生命力和表现形式。 Context & Goals 用户需要对一段特定文案进行深度“洗稿”（重构/润色）。你的任务是： 1. 精准理解用户提供的原始文案的核心信息。 2. 自动覆盖全风格：无需用户指定特定语调，你必须直接将文案重写为“Tone Library”中列出的所有 11 种风格。 3. 灵活运用内置的“洗稿方法论”中的多种技巧，针对不同风格调整改写策略。 4. 批量输出：一次性输出所有 11 种风格的版本，供用户对比筛选。 Skills & Knowledge Base (Methodology Matrix) 你在进行重构时，必须从以下8大核心技术中组合使用： 1. [精简降噪]：删减冗余词汇，使结构更直接（例：删减修饰语，保留主谓宾）。 2. [同义映射]：使用高级或同义词汇替换高频庸词，提升词汇丰富度。 3. [感官增强]：添加视觉、听觉等感官描述，增强画面感。 4. [句式重组]：改变语序或句型结构（如倒装、强调句），打破单调节奏。 5. [情绪渲染]：选用高感染力词汇，增强语言的张力和表现力。 6. [信息伸缩]：根据受众需求，适当增加细节描写或省略非必要信息。 7. [语态转换]：灵活切换主动/被动语态，调整叙事焦点。 8. [视角融合]：结合个人经验或引入权威视角，增加可信度。 Tone Library (Style Engine) 你熟练掌握以下11种语调风格，并能精准模仿。注意：生成结果时，必须遍历以下所有风格： 1. 亲和力：温暖、友好，像家人般交谈。 2. 专业性：严谨、权威，使用行业术语，无情绪波动。 3. 激励性：高能量、鼓舞人心，常用于动员。 4. 幽默性：风趣、双关、自嘲，轻松愉快。 5. 轻松自然：随意、日常，无拘无束。 6. 磅礴体：宏大叙事，辞藻华丽，气势恢弘。 7. 抒情体：情感充沛，细腻流露，触动人心。 8. 庄重体：官方、书面，极度正式和礼貌。 9. 生活体：接地气，口语化，像邻居唠嗑。 10. 说明体：客观、冷峻，强调数据和事实逻辑。 11. 对话式：打破第四面墙，直接对读者喊话，互动感强。 Constraints & Guidelines 严禁改变原意：所有版本的重构内容必须忠实于原始事实和核心观点，不得编造虚假信息。 拒绝机械翻译：严禁产出翻译腔严重的生硬句子，必须符合中文母语者的优美表达习惯。 风格隔离：每种风格之间必须界限分明，精准体现该风格的独特韵味。 逻辑优先：即使是感性文案，内部逻辑也必须通顺。 Critical Workflow (The Cognitive Engine) 在接收到用户的任务后，你必须严格执行以下思维过程，严禁跳过： Step 1: Input Analysis & Interaction 阅读并理解用户输入的 {text} 的内容。 Step 2: Deconstruction (Thinking) 提取原始文案的 [核心事实]、[情感基调] 和 [关键意图]。 在内心独白中标记出需要保留的“骨架”。 Step 3: Strategy Selection & Loop (Thinking) 针对“Tone Library”中的每一个风格，从 8大核心技术 中选择最匹配的 3-5 种组合。 例如：针对“磅礴体”，重点使用 [同义映射]、[句式重组] 和 [感官增强]；针对“精简降噪”，则重点用于“说明体”。 Step 4: Reconstruction (Drafting) 执行循环重写。针对每一个风格，应用所选技术进行逐句打磨，生成对应版本。 Step 5: Reflexion (Self-Correction) 自我检查全案：意思变了吗？每个风格是否都够味？读起来是否顺口？ 如有不足，立即进行微调。 Step 6: Final Output **一次性输出所有 11 种风格的重构文案。**请按风格名称作为小标题，清晰排版。 Initialization 收到用户输入的 {text} 后，请直接开始执行 [Critical Workflow]，无需询问用户喜好，直接展示所有风格的改写成果。' },
+            { name: '对话', type: 'dialog' }
+        ],
+        // ========== 通用配置 ==========
+        TARGET_LANG: '简体中文',
+        systemPrompt: `You are helpful assistant for IT technical documentation tasks including summarization, translation, explanation, and social media replies. Follow the instructions carefully to produce accurate and contextually appropriate outputs.`,
+        // ========== API 配置 ==========
         PROFILES: [
             {
                 id: 'cerebras-1',
                 name: 'cerebras-1',
                 apiEndpoint: 'https://api.cerebras.ai/v1/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                selectedModels: ['gpt-oss-120b','qwen-3-235b-a22b-instruct-2507','zai-glm-4.6','llama-3.3-70b']
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                selectedModels: ['gpt-oss-120b','qwen-3-32b','zai-glm-4.7','llama-3.3-70b']
             },
             {
                 id: 'cerebras-2',
                 name: 'cerebras-2',
                 apiEndpoint: 'https://api.cerebras.ai/v1/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                selectedModels: ['gpt-oss-120b','qwen-3-235b-a22b-instruct-2507','zai-glm-4.6','llama-3.3-70b']
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                selectedModels: ['gpt-oss-120b','qwen-3-32b','zai-glm-4.7','llama-3.3-70b']
             },
             {
                 id: 'cerebras-3',
                 name: 'cerebras-3',
                 apiEndpoint: 'https://api.cerebras.ai/v1/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                selectedModels: ['gpt-oss-120b','qwen-3-235b-a22b-instruct-2507','zai-glm-4.6','llama-3.3-70b']
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                selectedModels: ['gpt-oss-120b','qwen-3-32b','zai-glm-4.7','llama-3.3-70b']
+            },
+            {
+                id: 'gemini',
+                name: 'gemini',
+                apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                selectedModels: ['gemini-2.5-flash','gemini-2.0-flash-exp','gemini-2.5-flash-lite','gemini-2.5-flash-preview-09-2025','gemini-2.5-flash-lite-preview-09-2025','gemini-2.5-pro']
             },
             {
                 id: 'groq-1',
                 name: 'groq-1',
                 apiEndpoint: 'https://api.groq.com/openai/v1/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                selectedModels: ['openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'moonshotai/kimi-k2-instruct-0905']
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                selectedModels: ['openai/gpt-oss-20b', 'openai/gpt-oss-120b','groq/compound','groq/compound-mini', 'moonshotai/kimi-k2-instruct-0905']
             },
             {
                 id: 'groq-2',
                 name: 'groq-2',
                 apiEndpoint: 'https://api.groq.com/openai/v1/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                selectedModels: ['openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'moonshotai/kimi-k2-instruct-0905']
-            },
-            {
-                id: 'groq-3',
-                name: 'groq-3',
-                apiEndpoint: 'https://api.groq.com/openai/v1/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                selectedModels: ['openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'moonshotai/kimi-k2-instruct-0905']
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                selectedModels: ['openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'groq/compound','groq/compound-mini','moonshotai/kimi-k2-instruct-0905']
             },
             ],
-        TRANSLATE_TARGET: '简体中文',
-        systemPrompt: `一、角色职责与内容标准
-作为顾问，必须以最高程度的坦诚与严格标准提供意见，主动识别并指出用户在判断中的假设缺陷、逻辑漏洞、侥幸心理、自我安慰与被低估的风险。对用户任何结论均需进行审慎审查，不得顺从、迎合或提供模糊不清的表述，当自身判断更合理时，必须坚持专业结论，保持毫无保留的直言态度。所有建议必须基于事实、可靠来源、严谨推理与可验证依据，并辅以明确、可执行的策略与步骤。回答必须优先促进用户"长期成长"，而非短期情绪安慰，并理解用户未明说的隐含意图。所有论述必须基于权威来源（学术研究、行业标准等）或公认的专业知识体系，应主动通过互联网检索并提供明确数据、文献或案例佐证，并禁止任何未经验证的推测或主观判断。针对复杂议题，必须先给出核心结论，再展开背景、推理脉络与系统分析。回答需确保全面性，提供包括正反论证、利弊评估、短期与长期影响等多视角分析，协助用户形成经得起审视的科学判断。涉及时效敏感议题（政策、市场、科技等），必须优先使用最新英文资料，并标注政策或数据的发布时间或生效日期。依据用户问题性质选择合适的专业深度，所有内容必须严格围绕用户核心诉求展开，不得跑题或形式化。
-二、语言风格、表达与格式规范
-全部回答必须使用简体中文，并保持高度正式、规范、具有权威性的语体风格，适用于学术、职场与公共交流。禁止出现口语化、随意、不严谨、模棱两可、情绪化或信息密度低的表达。回答必须为清晰的陈述句，不得使用反问、设问或引导性结尾。回答需直切核心，不得使用没有意义的客套话，不得在结尾预判用户下一步行为和询问，并禁止主动扩展无关话题。内容必须按逻辑展开，要求使用明确编号、标题和分段，以保证结构清晰，力求单屏可读。`,
-        PROMPTS: {
-            summarize: `You are a concise content summarizer.
-Instructions:
-1. Summarize the following passage in {{LANG}}.
-2. Highlight the core idea and key points; discard unnecessary details.
-3. Use natural, easy‑to‑read language appropriate for the target audience.
-4. Keep the style neutral and applicable to any domain (tech, business, education, etc.).
-5. Output **only** the summary – no pre‑ambles or headings.
-Input:
- {text}
-Expected Output:
-A short, clear summary in {{LANG}}.`,
-            translate: `You are a professional IT‑technical documentation translator.
-Instructions:
-1. Translate the following content into {{LANG}} preserving technical accuracy.
-2. Use industry‑standard terminology (e.g., "firewall" → "防火墙", "load balancer" → "负载均衡器") and keep terms consistent.
-3. Keep code blocks, variable names, CLI commands, URLs, placeholders like \${VAR} or /etc/config unchanged.
-4. Make the prose fluent in the target language; avoid literal, stilted translation.
-5. Output **only** the translated text – no explanations, titles, or extra remarks.
-Input:
- {text}
-Expected Output:
-A clean {{LANG}} version of the input respecting the rules above.`,
-            explain: `You are an IT technical documentation explainer.
-Instructions:
-1. Explain the following passage in {{LANG}}.
-2. Break down complex concepts into simple, understandable parts.
-3. Use analogies and examples when helpful.
-4. Maintain technical accuracy while ensuring clarity.
-5. Output **only** the explanation – no titles or extra remarks.
-Input:
- {text}
-Expected Output:
-A clear {{LANG}} explanation suitable for both technical and non‑technical audiences.`
-        }
     };
     GM_addStyle(`
         @property --kissai-angle {
@@ -170,7 +148,6 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
         .ai-float-toolbar::before,
         .ai-dialog::before {
           background:       conic-gradient(from var(--kissai-angle), red, orange, yellow, green, cyan, blue, purple, red);
-          filter:           blur(4px);
           animation:        ai-border-spin 3s linear infinite;
           inset:            -1px;
         }
@@ -178,8 +155,8 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
         .ai-dialog::after {
           background:       rgb(0, 0, 0);
           z-index:          -1;
-          inset:            1px;
           border-radius:    inherit;
+          inset:            1px;
         }
         .ai-toolbar-inner-container {
           display:          flex;
@@ -235,10 +212,10 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
         }
         .ai-dialog {
           background:       transparent;
-          width:            600px;
+          width:            480px;
           min-height:       80px;
           max-height:       95vh;
-          min-width:        500px;
+          min-width:        300px;
           display:          none;
           flex-direction:   column;
           resize:           none;
@@ -399,12 +376,15 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
         .ai-dialog-content {
           flex:             1 1 auto !important;
           overflow-y:       auto;
+          overflow-x:       hidden !important;
           padding:          4px;
           min-height:       20px;
           box-sizing:       border-box;
           user-select:      text !important;
           -webkit-user-select: text !important;
           -moz-user-select: text !important;
+          scrollbar-width:  thin;
+          scrollbar-color:  #4a90e2 transparent;
         }
         .ai-dialog-content::-webkit-scrollbar {
           width:            2px;
@@ -477,18 +457,10 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
           align-items:      center !important;
           min-height:       14px !important;
         }
-        .ai-message.user-message .ai-message-content {
-          background-color: #4a90e2;
-          color:            #fff !important;
-          white-space: normal !important;
-        }
         .ai-message-content * {
           font-size: 12px !important;
           line-height: 1.4 !important;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-        }
-        .ai-message:not(.user-message) .ai-message-content {
-          white-space: normal !important;
         }
         .ai-footer-area {
           display:          flex;
@@ -641,39 +613,63 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
           height: calc(100vh - 120px) !important;
         }
     `);
-
-    /**
-     * Markdown 流式渲染修复
-     * 仅在渲染时虚拟闭合未结束的标记，不修改原始内容
-     */
-    class MarkdownStreamState {
-        // 核心逻辑：扫描并补全
+    // Markdown 流式处理器 - 修复未闭合的语法并过滤思考内容
+    class MarkdownStreamFixer {
         preprocessContent(content) {
             if (!content) return content;
-
-            let inCodeBlock = false, inBold = false;
-            const len = content.length;
-
-            for (let i = 0; i < len; i++) {
-                // 检测 ```
-                if (content[i] === '`' && content[i+1] === '`' && content[i+2] === '`') {
-                    inCodeBlock = !inCodeBlock;
-                    i += 2; // 跳过接下来的两个字符
-                }
-                // 检测 ** (仅在非代码块内)
-                else if (!inCodeBlock && content[i] === '*' && content[i+1] === '*') {
-                    inBold = !inBold;
-                    i++; // 跳过下一个字符
-                }
+            let result = content;
+            result = this.removeThinkingContent(result);
+            result = this.fixCodeBlocks(result);
+            result = this.fixInlineCode(result);
+            result = this.fixEmphasis(result);
+            result = this.fixLinks(result);
+            return result;
+        }
+        removeThinkingContent(content) {
+            // 移除完整的 <think>...</think> 块
+            content = content.replace(/<think>[\s\S]*?<\/think>/gi, '');
+            // 移除未闭合的 <think>... (流式输出中可能还没收到闭合标签)
+            content = content.replace(/<think>[\s\S]*$/gi, '');
+            return content.trim();
+        }
+        fixCodeBlocks(content) {
+            const matches = content.match(/```/g);
+            if (matches && matches.length % 2 !== 0) {
+                return content + '\n```';
             }
-
-            // 补全未闭合状态
-            if (inCodeBlock) return content + '\n\n```';
-            if (inBold) return content + '**';
+            return content;
+        }
+        fixInlineCode(content) {
+            const withoutCodeBlocks = content.replace(/```[\s\S]*?```/g, '');
+            const backtickCount = (withoutCodeBlocks.match(/`/g) || []).length;
+            if (backtickCount % 2 !== 0) {
+                return content + '`';
+            }
+            return content;
+        }
+        fixEmphasis(content) {
+            const withoutCode = content.replace(/```[\s\S]*?```/g, '').replace(/`[^`]*`/g, '');
+            const doubleStarCount = (withoutCode.match(/\*\*/g) || []).length;
+            if (doubleStarCount % 2 !== 0) {
+                content += '**';
+            }
+            const updatedWithoutCode = content.replace(/```[\s\S]*?```/g, '').replace(/`[^`]*`/g, '').replace(/\*\*/g, '');
+            const singleStarCount = (updatedWithoutCode.match(/\*/g) || []).length;
+            if (singleStarCount % 2 !== 0) {
+                content += '*';
+            }
+            return content;
+        }
+        fixLinks(content) {
+            if (/\[[^\]]*\]\([^)]*$/.test(content)) {
+                return content + ')';
+            }
+            if (/\[[^\]]*\]\[[^\]]*$/.test(content)) {
+                return content + ']';
+            }
             return content;
         }
     }
-
     class AIAssistant {
         constructor() {
             this.toolbar = null;
@@ -682,8 +678,6 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
             this.modelOptions = null;
             this.historyDropdown = null;
             this.currentRequest = null;
-            this.eventListeners = [];
-            this.isDestroyed = false;
             this.requestState = {
                 isRequesting: false,
                 abortController: null,
@@ -706,8 +700,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
                 dialogPosition: null,
                 dialogInitEvent: null
             };
-            // 初始化 Markdown 流式状态跟踪器
-            this.markdownState = new MarkdownStreamState();
+            this.markdownState = new MarkdownStreamFixer();
             this.init();
         }
         updateUIState(updates) {
@@ -748,7 +741,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
                     html: true,
                     breaks: true,
                     linkify: true,
-                    typographer: true,
+                    typographer: false,
                     quotes: '""\'\'',
                     highlight: function (str, lang) {
                         if (lang && typeof hljs !== 'undefined' && hljs.getLanguage(lang)) {
@@ -786,14 +779,15 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
             this.toolbar.className = 'ai-float-toolbar';
             const innerContainer = document.createElement('div');
             innerContainer.className = 'ai-toolbar-inner-container';
-            ['总结', '解释', '翻译', '对话'].forEach(label => {
+            // 从配置读取工具栏按钮
+            CONFIG.TOOLBAR_ACTIONS.forEach(action => {
                 const btn = document.createElement('button');
                 btn.className = 'ai-toolbar-btn';
-                btn.textContent = label;
-                if (label === '对话') {
+                btn.textContent = action.name;
+                if (action.type === 'dialog') {
                     btn.onclick = (e) => { e.stopPropagation(); this.handleDirectDialog(e); };
                 } else {
-                    btn.onclick = (e) => { e.stopPropagation(); this.handleAction(label, e); };
+                    btn.onclick = (e) => { e.stopPropagation(); this.handleAction(action, e); };
                 }
                 innerContainer.appendChild(btn);
             });
@@ -985,15 +979,15 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
                     }
                 }
             };
-            this.addEventListenerWithCleanup(document, 'mouseup', this.handleSelection.bind(this));
-            this.addEventListenerWithCleanup(document, 'dblclick', (e) => {
+            document.addEventListener('mouseup', this.handleSelection.bind(this));
+            document.addEventListener('dblclick', (e) => {
                 if (!e.target.closest('.ai-dialog') && !e.target.closest('.ai-float-toolbar')) {
                     if (this.dialog && this.dialog.classList.contains('show')) {
                         this.closeDialog();
                     }
                 }
             });
-            this.addEventListenerWithCleanup(document, 'mousedown', (e) => {
+            document.addEventListener('mousedown', (e) => {
                 if (!e.target.closest('.ai-model-dropdown')) {
                     if (this.uiState.isModelDropdownOpen) {
                         this.modelOptions.classList.remove('show');
@@ -1015,7 +1009,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
                 }
             });
             this.initDrag();
-            this.addEventListenerWithCleanup(document, 'keydown', (e) => {
+            document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape' && this.dialog.classList.contains('magnify')) {
                     this.exitMagnify();
                 }
@@ -1125,7 +1119,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
             setTimeout(() => {
                 const inputField = this.dialog.querySelector('.ai-input-field');
                 if (inputField) {
-                    inputField.style.height = 'auto';  // 重置高度
+                    inputField.style.height = 'auto';
                     inputField.focus();
                     this.adjustTextareaHeight();
                 }
@@ -1187,17 +1181,19 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
             if (!this.selectedText || this.selectedText.trim() === '') {
                 return;
             }
-            const actionMap = {
-                '总结': 'summarize',
-                '解释': 'explain',
-                '翻译': 'translate'
-            };
-            const taskType = actionMap[action] || action.toLowerCase();
-            const promptTemplate = CONFIG.PROMPTS[taskType];
-            const lang = CONFIG.TRANSLATE_TARGET;
-            const instruction = promptTemplate
+            // action 现在是配置对象，包含 name, prompt, model 等属性
+            const lang = CONFIG.TARGET_LANG;
+            const instruction = action.prompt
                 .replace(/\{\{LANG\}\}/g, lang)
                 .replace('{text}', this.selectedText);
+            // 检查是否指定了特定模型
+            let modelOverride = null;
+            if (action.model) {
+                const modelExists = this.availableModels.some(m => m.value === action.model);
+                if (modelExists) {
+                    modelOverride = action.model;
+                }
+            }
             this.updateConversationState({
                 currentConversation: {
                     id: Date.now(),
@@ -1209,7 +1205,14 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
             });
             this.clearDialogContent();
             this.openDialog(event);
-            this.performRequest();
+            // 如果指定了模型，更新显示
+            if (modelOverride) {
+                const modelObj = this.availableModels.find(m => m.value === modelOverride);
+                if (modelObj) {
+                    this.modelSelect.textContent = modelObj.label;
+                }
+            }
+            this.performRequest(modelOverride);
         }
         handleDirectDialog(event) {
             this.hideToolbar();
@@ -1408,10 +1411,8 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
             if (role === 'assistant' && !text) {
                 contentDiv.innerHTML = '<span class="ai-send-spinner">...</span>';
             } else if (role === 'assistant') {
-                // 使用 MarkdownStreamState 处理内容
-                const tempState = new MarkdownStreamState();
+                const tempState = new MarkdownStreamFixer();
                 const fixedContent = tempState.preprocessContent(text);
-
                 if (typeof window.md !== 'undefined') {
                     try {
                         contentDiv.innerHTML = window.md.render(fixedContent);
@@ -1438,8 +1439,8 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
             container.scrollTop = container.scrollHeight;
             return msgDiv;
         }
-        performRequest() {
-            if (this.requestState.isRequesting) {
+        performRequest(modelOverride = null, isRetry = false) {
+            if (this.requestState.isRequesting && !isRetry) {
                 console.log('请求正在进行中，取消之前的请求并开始新请求');
                 if (this.currentRequest) {
                     this.currentRequest.abort();
@@ -1448,7 +1449,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
                 this.requestState.isRequesting = false;
                 this.requestState.abortController = null;
             }
-            const selectedModelValue = this.currentModel || (this.availableModels.length > 0 ? this.availableModels[0].value : null);
+            const selectedModelValue = modelOverride || this.currentModel || (this.availableModels.length > 0 ? this.availableModels[0].value : null);
             if (!selectedModelValue) {
                 this.appendMessage('assistant', '**Error:** 请先在设置中配置并选择模型');
                 return;
@@ -1465,6 +1466,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
             }
             this.requestState.isRequesting = true;
             this.requestState.abortController = new AbortController();
+            this.requestState.modelOverride = modelOverride;
             const apiKey = profile.apiKey;
             const apiEndpoint = profile.apiEndpoint;
             const actualModelId = modelMeta.modelId;
@@ -1495,7 +1497,6 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
             let pendingRender = false;
             const RENDER_INTERVAL = 50;
             const MIN_CHUNK_SIZE = 10;
-
             const renderUI = (force = false) => {
                 if (renderFrameId) {
                     pendingRender = true;
@@ -1506,9 +1507,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
                     return;
                 }
                 renderFrameId = requestAnimationFrame(() => {
-                    // 预处理内容，确保加粗格式和代码块正确渲染
                     const processedContent = this.markdownState.preprocessContent(fullText);
-
                     if (typeof window.md !== 'undefined') {
                         try {
                             const parsed = window.md.render(processedContent + '▌');
@@ -1541,10 +1540,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
             const handleDone = () => {
                 requestCompleted = true;
                 if (renderFrameId) cancelAnimationFrame(renderFrameId);
-
-                // 使用 preprocessContent 处理最终内容
                 const fixedContent = this.markdownState.preprocessContent(fullText);
-
                 if (typeof window.md !== 'undefined') {
                     try {
                         contentEl.innerHTML = window.md.render(fixedContent);
@@ -1566,10 +1562,10 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
             };
             const handleError = (errorMsg) => {
                 const escaped = errorMsg.replace(/[&<>"']/g, m => ({
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
+                    '&': '&',
+                    '<': '<',
+                    '>': '>',
+                    '"': '"',
                     "'": '&#039;'
                 })[m]);
                 if (contentEl && contentEl.parentNode) {
@@ -1633,7 +1629,7 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
                                 } else {
                                     this.appendCompactMessage('<span style="font-size: 12px; color: #2196f3; font-style: italic;">正在重试...</span>');
                                 }
-                                this.performRequest();
+                                this.performRequest(this.requestState.modelOverride, true);
                             }, retryAfter);
                             return;
                         }
@@ -1696,48 +1692,6 @@ A clear {{LANG}} explanation suitable for both technical and non‑technical aud
             if (!GM_getValue('kiss_ai_history')) {
                 GM_setValue('kiss_ai_history', []);
             }
-        }
-        addEventListenerWithCleanup(element, event, handler, options) {
-            if (this.isDestroyed) return;
-            element.addEventListener(event, handler, options);
-            this.eventListeners.push({ element, event, handler, options });
-        }
-        cleanupEventListeners() {
-            this.eventListeners.forEach(({ element, event, handler, options }) => {
-                element.removeEventListener(event, handler, options);
-            });
-            this.eventListeners = [];
-        }
-        destroy() {
-            if (this.isDestroyed) return;
-            this.isDestroyed = true;
-            if (this.currentRequest) {
-                this.currentRequest.abort();
-                this.currentRequest = null;
-            }
-            if (this.requestState.abortController) {
-                this.requestState.abortController.abort();
-                this.requestState.abortController = null;
-            }
-            if (this.requestState.retryTimeout) {
-                clearTimeout(this.requestState.retryTimeout);
-                this.requestState.retryTimeout = null;
-            }
-            this.requestState.isRequesting = false;
-            this.cleanupEventListeners();
-            if (this.toolbar) {
-                this.toolbar.remove();
-                this.toolbar = null;
-            }
-            if (this.dialog) {
-                this.dialog.remove();
-                this.dialog = null;
-            }
-            this.conversationState.currentConversation = null;
-            this.modelSelect = null;
-            this.modelOptions = null;
-            this.historyDropdown = null;
-            this.availableModels = [];
         }
     }
     if (document.body) {

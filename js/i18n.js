@@ -9,6 +9,9 @@ const translations = {
         'app.title': 'KISSAI Web',
         'app.description': 'KISSAI 是一个现代、极简且高质感的 AI 聊天交互平台，支持多种模型提供商。',
 
+        // Thinking process
+        'thinking.title': '思考过程',
+
         // Sidebar
         'sidebar.search.placeholder': '搜索对话',
         'sidebar.newChat': '新建对话',
@@ -114,14 +117,6 @@ const translations = {
         'model.noProviders': '没有配置任何模型提供商',
         'model.noEnabled': '没有启用任何模型',
 
-        // Shortcuts
-        'shortcuts.newChat': '新建对话',
-        'shortcuts.sidebar': '侧边栏',
-        'shortcuts.send': '发送',
-        'shortcuts.newLine': '换行',
-        'shortcuts.search': '搜索',
-        'shortcuts.settings': '设置',
-
         // System prompts (default values)
         'systemPrompt.default': '你是一个专业的AI助手',
 
@@ -139,6 +134,9 @@ const translations = {
         // App metadata
         'app.title': 'KISSAI Web',
         'app.description': 'KISSAI is a modern, minimalist, and high-quality AI chat platform supporting multiple model providers.',
+
+        // Thinking process
+        'thinking.title': 'Thinking Process',
 
         // Sidebar
         'sidebar.search.placeholder': 'Search conversations',
@@ -245,14 +243,6 @@ const translations = {
         'model.noProviders': 'No model providers configured',
         'model.noEnabled': 'No models enabled',
 
-        // Shortcuts
-        'shortcuts.newChat': 'New Chat',
-        'shortcuts.sidebar': 'Sidebar',
-        'shortcuts.send': 'Send',
-        'shortcuts.newLine': 'New Line',
-        'shortcuts.search': 'Search',
-        'shortcuts.settings': 'Settings',
-
         // System prompts (default values)
         'systemPrompt.default': 'You are a professional AI assistant.',
 
@@ -285,7 +275,33 @@ function t(key, params = {}) {
         }
     });
 
+    // Development mode warning for missing keys
+    if (text === key && typeof console !== 'undefined') {
+        console.warn(`[i18n] Missing translation key: "${key}" for language: "${lang}"`);
+    }
+
     return text;
+}
+
+/**
+ * Detect browser language and return supported language code
+ * @returns {string} Language code ('zh' or 'en')
+ */
+function detectBrowserLanguage() {
+    const browserLang = navigator.language || navigator.userLanguage || 'en';
+    const langCode = browserLang.toLowerCase().split('-')[0];
+
+    // Check if the language is supported
+    if (translations[langCode]) {
+        return langCode;
+    }
+
+    // Default to English for unsupported languages, Chinese for Chinese variants
+    if (browserLang.toLowerCase().startsWith('zh')) {
+        return 'zh';
+    }
+
+    return 'en';
 }
 
 /**
@@ -333,10 +349,11 @@ function updateAllText() {
 
 // Export functions for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { t, updateAllText, translations };
+    module.exports = { t, updateAllText, translations, detectBrowserLanguage };
 }
 
 // Expose to window for use in app.js
 window.translations = translations;
 window.t = t;
 window.updateAllText = updateAllText;
+window.detectBrowserLanguage = detectBrowserLanguage;

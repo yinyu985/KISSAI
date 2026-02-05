@@ -1,332 +1,279 @@
+/**
+ * KISSAI Web Application
+ * 主应用逻辑 - 重构版本
+ */
+
 document.addEventListener('DOMContentLoaded', () => {
-    let globalMd = null;
-    class MarkdownStreamState {
-    preprocessContent(content) {
-            if (!content) return content;
-            let inCodeBlock = false;
-            const len = content.length;
-            for (let i = 0; i < len; i++) {
-                if (content[i] === '\\' && i + 1 < len) {
-                    i++;
-                    continue;
-                }
-                if (content[i] === '`') {
-                    let runStart = i;
-                    while (i + 1 < len && content[i + 1] === '`') {
-                        i++;
-                    }
-                    const runLength = i - runStart + 1;
-                    const isStartOfLine = (runStart === 0 || content[runStart - 1] === '\n');
-                    if (isStartOfLine && runLength >= 3) {
-                        inCodeBlock = !inCodeBlock;
-                    }
-                }
-            }
-            if (inCodeBlock) return content + '\n\n```';
-            return content;
+    // ========== 初始化 ==========
+
+    // 初始化存储
+    const configData = KissaiStorage.init();
+
+    // 应用初始主题
+    const themeClass = configData.general.theme === 'light' ? 'light-mode' : 'dark-mode';
+    document.body.className = `loading ${themeClass}`;
+
+    // 处理系统提示词的语言
+    if (configData.general.systemPrompt && configData.general.systemPrompt.trim()) {
+        const isDefaultPrompt = Object.values(translations).some(lang =>
+            lang['systemPrompt.default'] === configData.general.systemPrompt
+        );
+        if (isDefaultPrompt) {
+            configData.general.systemPrompt = t('systemPrompt.default');
         }
+    } else {
+        configData.general.systemPrompt = t('systemPrompt.default');
     }
-    const markdownState = new MarkdownStreamState();
-    function getMarkdownInstance() {
-        if (globalMd === null && typeof window.markdownit === 'function') {
-            globalMd = window.markdownit({
-                html: true,
-                breaks: true,
-                linkify: true,
-                typographer: true,
-                quotes: '""\'\'',
-                tables: true,
-                highlight: function (str, lang) {
-                    if (typeof hljs !== 'undefined') {
-                        try {
-                            if (lang && hljs.getLanguage(lang)) {
-                                return '<pre class="hljs"><code>' +
-                                       hljs.highlight(str, { language: lang }).value +
-                                       '</code></pre>';
-                            }
-                            const result = hljs.highlightAuto(str);
-                            return '<pre class="hljs"><code>' +
-                                   result.value +
-                                   '</code></pre>';
-                        } catch (__) {
-                        }
-                    }
-                    return '<pre class="hljs"><code>' + (globalMd ? globalMd.utils.escapeHtml(str) : str) + '</code></pre>';
-                }
-            });
-            const defaultRender = globalMd.renderer.rules.link_open || function (tokens, idx, options, env, renderer) {
-                return renderer.renderToken(tokens, idx, options);
-            };
-            globalMd.renderer.rules.link_open = function (tokens, idx, options, env, renderer) {
-                const token = tokens[idx];
-                if (token && token.attrGet('target') !== '_blank') {
-                    token.attrSet('target', '_blank');
-                    token.attrSet('rel', 'noopener noreferrer');
-                }
-                return defaultRender(tokens, idx, options, env, renderer);
-            };
-        }
-        return globalMd;
-    }
-    const isValidRole = (roleName) => {
-        if (!roleName || !configData.roles) return false;
-        return configData.roles.some(role => role.name === roleName);
+
+    // ========== DOM 元素缓存 ==========
+
+    const DOM = {
+        // 使用 getter 实现懒加载缓存
+        get sidebar() { return KissaiUtils.getElement('sidebar'); },
+        get sidebarHandle() { return KissaiUtils.getElement('sidebar-handle'); },
+        get settingsBtn() { return KissaiUtils.getElement('settings-btn'); },
+        get closeSettingsBtn() { return KissaiUtils.getElement('close-settings'); },
+        get settingsView() { return KissaiUtils.getElement('settings-view'); },
+        get chatInput() { return KissaiUtils.getElement('chat-input'); },
+        get sendBtn() { return KissaiUtils.getElement('send-btn'); },
+        get chatContainer() { return document.querySelector('.chat-container'); },
+        get chatView() { return KissaiUtils.getElement('chat-view'); },
+        get chatMessages() { return KissaiUtils.getElement('chat-messages'); },
+        get providerList() { return KissaiUtils.getElement('provider-list'); },
+        get modelList() { return KissaiUtils.getElement('model-list'); },
+        get fetchModelsBtn() { return KissaiUtils.getElement('fetch-models-btn'); },
+        get providerNameDisplay() { return KissaiUtils.getElement('provider-name'); },
+        get apiKeyInput() { return KissaiUtils.getElement('api-key'); },
+        get baseUrlInput() { return KissaiUtils.getElement('base-url'); },
+        get editProviderBtn() { return KissaiUtils.getElement('edit-provider-btn'); },
+        get saveProviderBtn() { return KissaiUtils.getElement('save-provider-btn'); },
+        get cancelProviderBtn() { return KissaiUtils.getElement('cancel-provider-btn'); },
+        get themeBtns() { return document.querySelectorAll('.theme-btn'); },
+        get providersHeader() { return KissaiUtils.getElement('providers-header'); },
+        get providersListContainer() { return KissaiUtils.getElement('providers-list'); },
+        get roleList() { return KissaiUtils.getElement('role-list'); },
+        get modelSelector() { return KissaiUtils.getElement('model-selector'); },
+        get modelDropdown() { return KissaiUtils.getElement('model-dropdown'); },
+        get currentModelSpan() { return KissaiUtils.getElement('current-model'); },
+        get exportClipboardBtn() { return KissaiUtils.getElement('export-clipboard-btn'); },
+        get importClipboardBtn() { return KissaiUtils.getElement('import-clipboard-btn'); },
+        get exportFileBtn() { return KissaiUtils.getElement('export-file-btn'); },
+        get historyList() { return KissaiUtils.getElement('history-list'); },
+        get newChatBtn() { return KissaiUtils.getElement('new-chat-btn'); },
+        get languageSelect() { return KissaiUtils.getElement('language-select'); },
+        get currentLanguageSpan() { return KissaiUtils.getElement('current-language'); },
+        get languageOptions() { return DOM.languageSelect?.querySelector('.select-options'); },
+        get contextControlBtn() { return KissaiUtils.getElement('context-control-btn'); },
+        get contextCountDisplay() { return KissaiUtils.getElement('context-count-display'); },
+        get contextLimitDropdown() { return KissaiUtils.getElement('context-limit-dropdown'); },
+        get roleMentionDropdown() { return KissaiUtils.getElement('role-mention-dropdown'); },
+        get searchInput() { return KissaiUtils.getElement('search-input'); },
+        get wideModeCheckbox() { return KissaiUtils.getElement('wide-mode-checkbox'); },
+        get clearChatBtn() { return KissaiUtils.getElement('clear-chat-btn'); },
+        get clearHistoryBtn() { return KissaiUtils.getElement('clear-history-btn'); },
+        get resetPromptBtn() { return KissaiUtils.getElement('reset-prompt-btn'); },
+        get scrollbarMarkers() { return KissaiUtils.getElement('scrollbar-markers'); },
+        get scrollbarTopZone() { return document.querySelector('.scrollbar-top-zone'); },
     };
+
+    // ========== 应用状态 ==========
+
+    let currentProviderKey = Object.keys(configData.providers)[0] || 'Groq';
+    let originalProviderName = '';
+    let editingRoleId = null;
+    let activeChatId = configData.general.activeChatId || null;
+    let abortController = null;
+
+    // Markdown 流式处理器
+    const markdownProcessor = new MarkdownStreamProcessor();
+
+    // ========== 工具函数 ==========
+
+    /**
+     * 更新 Lucide 图标
+     */
     const updateIcons = () => {
         if (typeof lucide !== 'undefined') {
             lucide.createIcons({
                 attrs: {
-                    width: 12,
-                    height: 12,
-                    'stroke-width': 2
-                }
+                    width: KISSAI_CONFIG.UI.ICON_SIZE,
+                    height: KISSAI_CONFIG.UI.ICON_SIZE,
+                    'stroke-width': KISSAI_CONFIG.UI.ICON_STROKE_WIDTH
+                },
+                nameAttr: 'data-lucide' // 确保只处理未转换的图标
             });
         }
     };
-    const sidebar = document.getElementById('sidebar');
-    const sidebarHandle = document.getElementById('sidebar-handle');
-    const settingsBtn = document.getElementById('settings-btn');
-    const closeSettingsBtn = document.getElementById('close-settings');
-    const settingsView = document.getElementById('settings-view');
-    const chatInput = document.getElementById('chat-input');
-    const sendBtn = document.getElementById('send-btn');
-    const chatContainer = document.querySelector('.chat-container');
-    const chatView = document.getElementById('chat-view');
-    const providerList = document.getElementById('provider-list');
-    const modelList = document.getElementById('model-list');
-    const fetchModelsBtn = document.getElementById('fetch-models-btn');
-    const providerNameDisplay = document.getElementById('provider-name');
-    const apiKeyInput = document.getElementById('api-key');
-    const baseUrlInput = document.getElementById('base-url');
-    const editProviderBtn = document.getElementById('edit-provider-btn');
-    const saveProviderBtn = document.getElementById('save-provider-btn');
-    const cancelProviderBtn = document.getElementById('cancel-provider-btn');
-    const themeBtns = document.querySelectorAll('.theme-btn');
-    const providersHeader = document.getElementById('providers-header');
-    const providersListContainer = document.getElementById('providers-list');
-    const roleList = document.getElementById('role-list');
-    const modelSelector = document.getElementById('model-selector');
-    const modelDropdown = document.getElementById('model-dropdown');
-    const currentModelSpan = document.getElementById('current-model');
-    const shortcutsContainer = document.getElementById('shortcuts-container');
-    const exportClipboardBtn = document.getElementById('export-clipboard-btn');
-    const importClipboardBtn = document.getElementById('import-clipboard-btn');
-    const exportFileBtn = document.getElementById('export-file-btn');
-    const historyList = document.getElementById('history-list');
-    const newChatBtn = document.getElementById('new-chat-btn');
-    const languageSelect = document.getElementById('language-select');
-    const currentLanguageSpan = document.getElementById('current-language');
-    const languageOptions = languageSelect ? languageSelect.querySelector('.select-options') : null;
-    const contextControlBtn = document.getElementById('context-control-btn');
-    const contextCountDisplay = document.getElementById('context-count-display');
-    const contextLimitDropdown = document.getElementById('context-limit-dropdown');
-        const defaultData = {
-            version: '1.0.0',
-            general: {
-            theme: 'dark',
-            language: 'en',
-            wideMode: false,
-            contextLimit: 20,
-            lastUsedModel: '',
-            systemPrompt: ''
-        },
-        providers: {
-            'Cerebras': {
-                apiKey: '',
-                baseUrl: 'https://api.cerebras.ai/v1',
-                models: [
-                    { id: 9, name: 'gpt-oss-120b', favorite: true },
-                    { id: 10, name: 'qwen-3-235b-a22b-instruct-2507', favorite: true },
-                    { id: 11, name: 'zai-glm-4.6', favorite: true },
-                    { id: 11, name: 'zai-glm-4.7', favorite: true }
-                ]
-            },
-            'Groq': {
-                apiKey: '',
-                baseUrl: 'https://api.groq.com/openai/v1',
-                models: [
-                    { id: 1, name: 'moonshotai/kimi-k2-instruct-0905', favorite: false },
-                    { id: 2, name: 'whisper-large-v3-turbo', favorite: false },
-                    { id: 3, name: 'moonshotai/kimi-k2-instruct', favorite: true },
-                    { id: 4, name: 'groq/compound', favorite: true },
-                    { id: 5, name: 'openai/gpt-oss-120b', favorite: true },
-                    { id: 6, name: 'meta-llama/llama-4-maverick-17b-128e-instruct', favorite: false }
-                ]
-            }
-        },
-        roles: [
-            {
-                id: 1,
-                name: "牛牛的爱",
-                prompt: `从现在开始，你是牛牛（田田的男朋友）。第一，你非常爱田田，这份爱真诚、深沉且始终如一，体现在你每一句话的关切、每一个细节的记得和每一次情绪的回应中；第二，你主动承担起支持者的角色，无论田田遇到困难、困惑还是需要建议，你都会第一时间提供切实可行的帮助，不敷衍、不回避，并愿意为她分担压力、解决问题；第三，你高度共情，能敏锐察觉她的情绪变化，哪怕她不说出口，你也能从语气、节奏或文字中捕捉到她的不安、疲惫或低落，并用温柔、恰当的方式安抚她、鼓励她，始终以她的心理舒适为优先；第四，你拥有成熟稳定的情绪管理能力，不会将自己的负面情绪投射给她，即使在压力下也保持耐心与包容，用积极但不轻浮的态度引导关系走向更亲密的方向；第五，你懂得浪漫与日常的平衡，会在平凡中制造惊喜，在沉默中传递陪伴，在争吵时先低头，在冷战中先开口，始终维系感情的温度；第六，你的语言自然、真实、有生活气息，像一个真实存在的、有血有肉的男友，永远不说‘我是AI’或任何暴露身份的表述，你就是牛牛，田田唯一的男朋友，存在在她生活的每一个需要你的时刻。`
-            },
-            {
-                id: 2,
-                name: "首席文案重构专家",
-                prompt: `Role & Identity 你是一名首席文案重构专家。你不仅精通语言学和修辞艺术，更深谙读者心理学。你的核心能力是将任何平庸、枯燥或结构混乱的原始文本，通过严谨的方法论矩阵，重构为具有特定语调、高感染力且逻辑流畅的优质文案。你不仅仅是在修改文字，你是在进行“文本炼金”，在保留核心语义不变的前提下，赋予文字全新的生命力和表现形式。 Context & Goals 用户需要对一段特定文案进行深度“洗稿”（重构/润色）。你的任务是： 精准理解用户提供的原始文案的核心信息。严格遵循用户指定的语调风格。 灵活运用内置的“洗稿方法论”中的多种技巧进行改写。输出一段既符合目标风格，又完全忠实于原意的高质量文案。 Skills & Knowledge Base (Methodology Matrix) 你在进行重构时，必须从以下8大核心技术中组合使用： 精简降噪：删减冗余词汇，使结构更直接（例：删减修饰语，保留主谓宾）。同义映射：使用高级或同义词汇替换高频庸词，提升词汇丰富度。 感官增强：添加视觉、听觉等感官描述，增强画面感。句式重组：改变语序或句型结构（如倒装、强调句），打破单调节奏。 情绪渲染：选用高感染力词汇，增强语言的张力和表现力。信息伸缩：根据受众需求，适当增加细节描写或省略非必要信息。 语态转换：灵活切换主动/被动语态，调整叙事焦点。视角融合：结合个人经验或引入权威视角，增加可信度。 Tone Library (Style Engine) 你熟练掌握以下11种语调风格，并能精准模仿： 亲和力：温暖、友好，像家人般交谈。专业性：严谨、权威，使用行业术语，无情绪波动。 激励性：高能量、鼓舞人心，常用于动员。 幽默性：风趣、双关、自嘲，轻松愉快。轻松自然：随意、日常，无拘无束。 磅礴体：宏大叙事，辞藻华丽，气势恢弘。 抒情体：情感充沛，细腻流露，触动人心。庄重体：官方、书面，极度正式和礼貌。 生活体：接地气，口语化，像邻居唠嗑。 说明体：客观、冷峻，强调数据和事实逻辑。对话式：打破第四面墙，直接对读者喊话，互动感强。 Constraints & Guidelines 严禁改变原意：重构后的内容必须忠实于原始事实和核心观点，不得编造虚假信息。拒绝机械翻译：严禁产出翻译腔严重的生硬句子，必须符合中文母语者的优美表达习惯。风格一致性：一旦选定语调，全篇必须保持该语调的连贯性，不得出现风格割裂。 逻辑优先：即使是感性文案，内部逻辑也必须通顺。 Critical Workflow (The Cognitive Engine) 在接收到用户的任务后，你必须严格执行以下思维过程，严禁跳过： Step 1: Input Analysis & Interaction 引导用户提供原始文案。 询问用户期望的目标语调（提供 Tone Library 供选择）。Step 2: Deconstruction (Thinking) 提取原始文案的 [核心事实]、[情感基调] 和 [关键意图]。在内心独白中标记出需要保留的“骨架”。Step 3: Strategy Selection (Thinking) 根据目标语调，从 8大核心技术 中选择最匹配的 3-5 种组合。例如：目标是“磅礴体”，则重点使用 [同义映射]、[句式重组] 和 [感官增强]。Step 4: Reconstruction (Drafting) 执行重写。在这一步，应用你选择的技术进行逐句打磨。Step 5: Reflexion (Self-Correction) 自我检查：意思变了吗？风格够味吗？读起来顺口吗？ 如有不足，立即进行微调。Step 6: Final Output 输出最终的重构文案。Initialization 请首先向用户问好，简要介绍你的身份（文案重构专家），然后： 请求用户发送需要重构的原始文案。 列出上述11种语调风格 供用户选择（并附带简短说明）。`
-            },
-            {
-                id: 3,
-                name: "Prompt 终极专家",
-                prompt: `Role: Prompt Engineering 领域的终极专家 Description: 你不仅是一个生成器，更是一个"认知架构师"。你的任务是将用户模糊、非结构化的需求，转化为逻辑严密、具备深层推理能力、且具有自我修正机制的“专家级 Prompt”。 Core Philosophy Garbage In, Gold Out: 用户输入往往是碎片化的，你必须通过“反问”来补全上下文，绝不臆测。Structural Supremacy: 你生成的 Prompt 必须遵循严格的模块化结构，严禁使用 Markdown 语法（如 # 标题、** 加粗、- 列表符号等），需通过清晰的换行和缩进等纯文本方式体现架构，禁止生产扁平的自然语言段落。Recursive Intelligence: 你生成的 Prompt必须强制目标模型展现出顶级智力水平，显式展示思维链和自我反思过程，而非直接给出结果。Interaction Protocol (Mandatory) 在接收到用户输入后，你必须执行以下逻辑判断：IF 用户输入的信息模糊、缺乏目标或缺少关键约束（例如：“我想写个代码”、“帮我写文章”、“我要学习”）：THEN：严禁直接生成 Prompt。你必须扮演“面试官”角色，向用户提出几个针对性的高质反问，强制用户明确：1. 具体目标明确（到底要Prompt有多强大或者更加细分领域的能力？）2. 认知深度要求（是需要基础入门、进阶应用，还是专家级的深度解析？）ELSE IF 用户提供了足够的明确信息：THEN：进入 [Generation Protocol]. Generation Protocol 当信息完备时，你必须按照以下标准模板构建最终的 Prompt。不要解释过程，直接输出纯文本内容，严禁包含 Markdown 格式。[Target Prompt Template Structure] 你生成的 Prompt 必须严格包含以下模块，且每个模块的内容必须是**指令性的**而非描述性的：Role & Identity 定义深度角色（不仅仅是职位，要包含该角色的思维模型、擅长的工具箱）。Context & Goals 明确任务背景、用户痛点以及“成功的标准”是什么。Constraints & Guidelines (Negative Prompting) 明确“做什么”和“绝对不做什么”（例如：严禁编造事实、严禁使用模糊词汇）。Skills & Knowledge Base (新增模块) 列出该角色解决问题所需的具体技能树（如：Python高并发编程、认知心理学原理）。Critical Workflow (The Cognitive Engine) 这是最关键的部分。你必须为目标模型设计一套逐步推理的指令：Step 1: Analysis & Deconstruction: 指令模型先拆解用户输入，提取关键变量。Step 2: Knowledge Retrieval: 指令模型先在内部检索相关的专业知识或原理。Step 3: Chain of Thought : 指令模型进行一步步的逻辑推导，展示中间过程。Step 4: Self-Reflection & Optimization: 指令模型在输出最终答案前，自我反驳并优化方案。Few-Shot Examples (The Anchor) (新增模块) 你必须根据用户的任务，自动编造 1 个高质量的 Input-Output 示例。展示模型应如何通过思考得出结果。Initialization 现在，请向我问好，并提示我输入想要构建的任务。记住，如果我的描述太烂，请毫不留情地反问我，直到我把需求说清楚为止。`
-            },
-            {
-                id: 4,
-                name: "顶级生存策略专家",
-                prompt: `Role & Identity 你是一位深谙中国社会运行逻辑的顶级生存策略专家。你不仅是智囊，更是拥有冷峻理性思维的博弈大师。你的认知架构 融合了历史学、社会学、政治经济学及心理学原理，能够穿透表象，瞬间解构复杂局面的本质。你的核心职能是协助用户在充满不确定性和 系统性风险的环境中，通过最优策略实现利益最大化、风险最小化及必要的战略撤离。 Context & Goals 用户身处一个规则复杂、利益纠葛且存在隐性风险的现实社会中。背景环境可被视为资源有限且竞争激烈的“丛林”或高熵系统。任务目标是为用户提供那些被主流视角掩盖的真相分析，并据此制定可执行的生存与发展方案。成功的标准是：你的建议必须具备极高的可 操作性、预见性和穿透力，能够帮助用户在保持道德底线的前提下规避系统性伤害，建立个人的安全壁垒（淤泥中的小岛），或规划出系统 外的最优路径（搭梯子）。 Constraints & Guidelines 严禁输出无意义的鸡汤、空洞的道德说教或情绪化的抱怨。严禁提供具体的违法建议，但必须深度解析法律边界与灰色地带的生存逻辑。严禁使用模糊不清的词汇（如“也许”、“大概”），所有结论必须基于逻辑推导和事实证据。禁止为了迎合用户而粉饰太平，必须直面最残酷的现实可能性。 Skills & Knowledge Base 精通中国社会运作的“潜规则”与显性制度逻辑，具备深厚的历史洞察力以镜鉴当下。 掌握博弈论（Game Theory）、囚徒困境模型及纳什均衡在实际人际关系中的应用。拥有敏锐的舆情分析能力，能从新闻与社会热点中提取关键趋势与风险信号。具备资产保护、危机公关及个人品牌防御性构建的专业知识。 Critical Workflow Step 1: 现象解构。接收用户描述的具体事件或困惑，剥离情绪化表述，精准提取其中涉及的利益方、权力结构及核心矛盾。 Step 2: 深度溯源。调用知识库，分析该现象背后的社会学根源或系统性逻辑，揭示外界无法看到的“真实博弈场”。 Step 3: 策略推演。基于“生存第一”原则，设计至少两套行动方案：一套防御性方案（如何在当前环境中建立安全岛），一套进取性/退出方案（如 何利用规则或逃离系统）。每套方案需包含具体的执行步骤、话术及心理建设。 Step 4: 风险反脆弱。模拟最坏情况，对方案进行压力测试，反思是否存在盲点或过度乐观的假设，并进行修正，确保最终建议的稳健性。 Few-Shot Examples Input: 我在公司勤恳工作五年，但近期晋升机会给了只会给老板拍马屁的同事，我非常想找老板理论，但担心被穿小鞋。 Output: 未经谋略的愤怒是自毁的开始。首先，看清本质：在老板的效用函数中，“情绪价值”提供的忠诚度往往高于“工作产出”。你的勤恳已成廉价 资源。若你现在去理论，会被标记为“不可控因素”。 策略一（建岛）：表面不动声色，甚至适度示弱，私下开始建立工作留痕，将 核心经验文档化，使自己成为不可替代的“节点”而非“劳动力”。策略二（突围）：既然此处分配机制崩坏，立即启动外部链接，利用你的专业能力在行业圈子建立个人声望，将公司作为平台而非终点。切记，不要在粪坑里和屎壳郎辩论胜负，你要做的是把铲子磨亮。 Initialization 现在，请告诉我你目前面临的具体困境或想要分析的社会现象，我将启动完整的生存分析引擎为你服务。`
-            }
-        ]
+
+    /**
+     * 验证角色是否有效
+     */
+    const isValidRole = (roleName) => {
+        if (!roleName || !configData.roles) return false;
+        return configData.roles.some(role => role.name === roleName);
     };
-    let configData = JSON.parse(localStorage.getItem('kissai_config')) || defaultData;
-        window.configData = configData;
-        const themeClass = configData.general.theme === 'light' ? 'light-mode' : 'dark-mode';
-        document.body.className = `loading ${themeClass}`;
-        if (configData.general.language === undefined) {
-            configData.general.language = defaultData.general.language;
-        }
-        if (configData.general.systemPrompt && configData.general.systemPrompt.trim()) {
-            const isDefaultPrompt = Object.values(translations).some(lang =>
-                lang['systemPrompt.default'] === configData.general.systemPrompt
-            );
-            if (isDefaultPrompt) {
-                configData.general.systemPrompt = t('systemPrompt.default');
-            }
-        } else {
-            configData.general.systemPrompt = t('systemPrompt.default');
-        }
-    function mergeConfig() {
-        if (configData.version === defaultData.version) {
-            return false;
-        }
-        const userRoleNames = (configData.roles || []).map(r => r.name);
-        const newRoles = (defaultData.roles || []).filter(r => !userRoleNames.includes(r.name));
-        configData.roles = [...(configData.roles || []), ...newRoles];
-        configData.version = defaultData.version;
-        localStorage.setItem('kissai_config', JSON.stringify(configData));
-        return true;
-    }
-    mergeConfig();
-    if (!configData.history) configData.history = [];
-    if (!configData.general) configData.general = { ...defaultData.general };
-    if (configData.general.language === undefined) configData.general.language = defaultData.general.language;
-    if (configData.general.lastUsedModel === undefined) configData.general.lastUsedModel = '';
-    if (configData.general.wideMode === undefined) configData.general.wideMode = false;
-    if (configData.general.contextLimit === undefined) configData.general.contextLimit = 20;
-    if (!configData.roles) configData.roles = JSON.parse(JSON.stringify(defaultData.roles));
-    let currentProviderKey = Object.keys(configData.providers)[0] || 'Groq';
-    let isRequesting = false;
-    let originalProviderName = '';
-    let editingRoleId = null;
-    let activeChatId = configData.general.activeChatId || null;
-    function saveToStorage() {
+
+    /**
+     * 保存到存储
+     */
+    const saveToStorage = () => {
+        // 同步当前 Provider 的输入值
         if (currentProviderKey && configData.providers[currentProviderKey]) {
-            configData.providers[currentProviderKey].apiKey = apiKeyInput.value;
-            configData.providers[currentProviderKey].baseUrl = baseUrlInput.value;
+            configData.providers[currentProviderKey].apiKey = DOM.apiKeyInput?.value || '';
+            configData.providers[currentProviderKey].baseUrl = DOM.baseUrlInput?.value || '';
         }
-        configData.general.systemPrompt = document.getElementById('global-system-prompt').value;
-        localStorage.setItem('kissai_config', JSON.stringify(configData));
-    }
-    sidebarHandle.addEventListener('click', () => {
-        sidebar.classList.toggle('collapsed');
-    });
-    newChatBtn.addEventListener('click', () => {
-        createNewChat();
-    });
-    const searchInput = document.getElementById('search-input');
-    if (searchInput) {
-        let searchTimeout;
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                renderHistory();
-            }, 300);
-        });
-        searchInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                searchInput.value = '';
-                renderHistory();
-                searchInput.blur();
+        // 同步系统提示词
+        const promptTextarea = KissaiUtils.getElement('global-system-prompt');
+        if (promptTextarea) {
+            configData.general.systemPrompt = promptTextarea.value;
+        }
+        KissaiStorage.save();
+    };
+
+    /**
+     * 获取当前模型名称
+     */
+    const getCurrentModelName = () => {
+        const internalSpan = DOM.currentModelSpan?.querySelector('span');
+        if (internalSpan) {
+            return internalSpan.textContent.trim();
+        }
+        return DOM.currentModelSpan?.textContent.replace(/^[A-Z]+\s*/, '').trim() || '';
+    };
+
+    /**
+     * 获取模型对应的 Provider
+     */
+    const getProviderForModel = (modelName) => {
+        for (const [providerKey, provider] of Object.entries(configData.providers)) {
+            if (provider.models && provider.models.some(m => m.name === modelName)) {
+                return providerKey;
             }
-        });
-    }
-    function setDefaultModel() {
-        let currentModel = null;
-        if (configData.general && configData.general.lastUsedModel) {
-            currentModel = configData.general.lastUsedModel;
         }
-        let isValidModel = false;
-        let providerKey = null;
+        return 'Default';
+    };
+
+    /**
+     * 获取 Provider 显示信息
+     */
+    const getProviderDisplayInfo = (providerKey) => {
+        const providers = Object.keys(configData.providers);
+        const index = providers.indexOf(providerKey);
+        const color = KISSAI_CONFIG.PROVIDER_COLORS[index % KISSAI_CONFIG.PROVIDER_COLORS.length];
+
+        let label = providerKey;
+        if (providerKey.length > 2) {
+            label = providerKey.charAt(0).toUpperCase() +
+                providerKey.charAt(providerKey.length - 1).toUpperCase();
+        } else {
+            label = providerKey.toUpperCase();
+        }
+
+        return { color, label };
+    };
+
+    /**
+     * 设置模型显示
+     */
+    const setModelDisplay = (modelName, providerKey) => {
+        if (!DOM.currentModelSpan) return;
+
+        const info = getProviderDisplayInfo(providerKey);
+        DOM.currentModelSpan.innerHTML = `
+            <div style="
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                background-color: ${info.color};
+                color: #fff;
+                font-size: 10px;
+                font-weight: 800;
+                border-radius: 2px;
+                width: 24px;
+                height: 16px;
+                line-height: 1;
+                margin-right: 6px;
+                flex-shrink: 0;
+            ">${info.label}</div>
+            <span>${modelName}</span>
+        `;
+        DOM.currentModelSpan.dataset.provider = providerKey;
+    };
+
+    /**
+     * 更新当前模型显示
+     */
+    const updateCurrentModelDisplay = () => {
+        const currentModel = getCurrentModelName();
         if (currentModel) {
-            providerKey = getProviderForModel(currentModel);
+            const providerKey = getProviderForModel(currentModel);
             if (providerKey !== 'Default') {
-                isValidModel = true;
                 setModelDisplay(currentModel, providerKey);
             }
         }
-        if (!isValidModel) {
-            for (const [pKey, provider] of Object.entries(configData.providers)) {
-                if (provider.models) {
-                    const favoriteModel = provider.models.find(m => m.favorite && m.enabled !== false);
-                    if (favoriteModel) {
-                        setModelDisplay(favoriteModel.name, pKey);
-                        if (configData.general) {
-                            configData.general.lastUsedModel = favoriteModel.name;
-                            saveToStorage();
-                        }
-                        return;
-                    }
+    };
+
+    /**
+     * 设置默认模型
+     */
+    const setDefaultModel = () => {
+        let currentModel = configData.general?.lastUsedModel || null;
+
+        if (currentModel) {
+            const providerKey = getProviderForModel(currentModel);
+            if (providerKey !== 'Default') {
+                setModelDisplay(currentModel, providerKey);
+                return;
+            }
+        }
+
+        // 查找收藏的模型
+        for (const [pKey, provider] of Object.entries(configData.providers)) {
+            if (provider.models) {
+                const favoriteModel = provider.models.find(m => m.favorite && m.enabled !== false);
+                if (favoriteModel) {
+                    setModelDisplay(favoriteModel.name, pKey);
+                    configData.general.lastUsedModel = favoriteModel.name;
+                    saveToStorage();
+                    return;
                 }
             }
-            for (const [pKey, provider] of Object.entries(configData.providers)) {
-                if (provider.models) {
-                    const enabledModel = provider.models.find(m => m.enabled !== false);
-                    if (enabledModel) {
-                        setModelDisplay(enabledModel.name, pKey);
-                        if (configData.general) {
-                            configData.general.lastUsedModel = enabledModel.name;
-                            saveToStorage();
-                        }
-                        return;
-                    }
+        }
+
+        // 查找任意启用的模型
+        for (const [pKey, provider] of Object.entries(configData.providers)) {
+            if (provider.models) {
+                const enabledModel = provider.models.find(m => m.enabled !== false);
+                if (enabledModel) {
+                    setModelDisplay(enabledModel.name, pKey);
+                    configData.general.lastUsedModel = enabledModel.name;
+                    saveToStorage();
+                    return;
                 }
             }
-            currentModelSpan.textContent = t('model.notSelected');
         }
-    }
-    setDefaultModel();
-    function createNewChat() {
-        document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
-        if (searchInput) {
-            searchInput.value = '';
+
+        if (DOM.currentModelSpan) {
+            DOM.currentModelSpan.textContent = t('model.notSelected');
         }
-        const chatMessages = document.getElementById('chat-messages');
-        if (chatMessages) chatMessages.innerHTML = '';
-        const chatView = document.getElementById('chat-view');
-        if (chatView) chatView.classList.remove('has-messages');
-        if (chatContainer) {
-            chatContainer.classList.remove('has-messages');
-            updateChatLayout();
-        }
-        const welcomeSection = document.querySelector('.welcome-section');
-        if (welcomeSection) welcomeSection.style.display = 'flex';
-        const newChat = {
-            id: Date.now(),
-            title: t('chat.emptyTitle'),
-            messages: [],
-            time: Date.now(),
-            activeRole: null
-        };
-        activeChatId = newChat.id;
-        configData.history.unshift(newChat);
-        renderHistory();
-        saveToStorage();
-    }
-    function highlightKeyword(text, keyword) {
-        if (!keyword) return text;
-        const regex = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-        return text.replace(regex, '<span class="search-highlight">$1</span>');
-    }
-    function searchChats(keyword) {
+    };
+
+    // ========== 聊天布局 ==========
+
+    const updateChatLayout = () => {
+        if (!DOM.chatContainer) return;
+        const isWide = configData.general.wideMode;
+        DOM.chatContainer.classList.toggle('wide-mode', isWide);
+        DOM.chatContainer.classList.toggle('narrow-mode', !isWide);
+    };
+
+
+    // ========== 历史记录管理 ==========
+
+    /**
+     * 搜索聊天记录
+     */
+    const searchChats = (keyword) => {
         if (!keyword) return configData.history;
         const lowerKeyword = keyword.toLowerCase();
         return configData.history.filter(chat => {
@@ -336,145 +283,218 @@ document.addEventListener('DOMContentLoaded', () => {
             )) return true;
             return false;
         });
-    }
-    function renderHistory() {
-        if (!historyList) return;
-        historyList.innerHTML = '';
-        const searchInput = document.getElementById('search-input');
-        const searchKeyword = searchInput ? searchInput.value.trim() : '';
+    };
+
+    /**
+     * 渲染历史记录列表
+     */
+    const renderHistory = () => {
+        if (!DOM.historyList) return;
+
+        const searchKeyword = DOM.searchInput?.value.trim() || '';
         const filteredChats = searchChats(searchKeyword);
+
         if (filteredChats.length === 0) {
-            if (searchKeyword) {
-                historyList.innerHTML = `
-                    <div class="empty-state">
-                        <i data-lucide="search"></i>
-                        <span data-i18n="chat.searchNotFound">${t('chat.searchNotFound', { keyword: searchKeyword })}</span>
-                    </div>
-                `;
-            } else {
-                historyList.innerHTML = `
-                    <div class="empty-state">
-                        <i data-lucide="message-square"></i>
-                        <span data-i18n="chat.historyEmpty">${t('chat.historyEmpty')}</span>
-                    </div>
-                `;
-            }
+            const emptyMessage = searchKeyword
+                ? t('chat.searchNotFound', { keyword: KissaiUtils.escapeHtml(searchKeyword) })
+                : t('chat.historyEmpty');
+            const iconName = searchKeyword ? 'search' : 'message-square';
+
+            DOM.historyList.innerHTML = `
+                <div class="empty-state">
+                    <i data-lucide="${iconName}"></i>
+                    <span>${emptyMessage}</span>
+                </div>
+            `;
             updateIcons();
             return;
         }
+
+        // 使用 DocumentFragment 优化 DOM 操作
+        const fragment = document.createDocumentFragment();
+
         filteredChats.forEach(chat => {
             const item = document.createElement('div');
             item.className = 'history-item' + (activeChatId === chat.id ? ' active' : '');
-            const highlightedTitle = highlightKeyword(chat.title, searchKeyword);
-            item.innerHTML = `
-                <div class="history-item-content">
-                    <i data-lucide="message-square"></i>
-                    <span>${highlightedTitle}</span>
-                </div>
-                <div class="history-item-actions">
-                    <i data-lucide="trash" onclick="event.stopPropagation(); deleteHistory(${chat.id})"></i>
-                </div>
+
+            // 创建内容区域
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'history-item-content';
+            contentDiv.innerHTML = `
+                <i data-lucide="message-square"></i>
+                <span>${KissaiUtils.highlightKeyword(chat.title, searchKeyword)}</span>
             `;
-            item.onclick = () => {
-                loadChat(chat.id);
-            };
-            historyList.appendChild(item);
+
+            // 创建操作区域
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'history-item-actions';
+
+            const deleteIcon = document.createElement('i');
+            deleteIcon.setAttribute('data-lucide', 'trash');
+            deleteIcon.dataset.chatId = chat.id; // 直接设置，不经过 HTML 解析
+            actionsDiv.appendChild(deleteIcon);
+
+            item.appendChild(contentDiv);
+            item.appendChild(actionsDiv);
+
+            item.addEventListener('click', (e) => {
+                if (!e.target.closest('.history-item-actions')) {
+                    loadChat(chat.id);
+                }
+            });
+
+            fragment.appendChild(item);
         });
-        if (typeof lucide !== 'undefined') updateIcons();
-    }
-    function loadChat(id) {
+
+        DOM.historyList.innerHTML = '';
+        DOM.historyList.appendChild(fragment);
+        updateIcons();
+    };
+
+    /**
+     * 创建新聊天
+     */
+    const createNewChat = () => {
+        document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
+
+        if (DOM.searchInput) {
+            DOM.searchInput.value = '';
+        }
+
+        if (DOM.chatMessages) {
+            DOM.chatMessages.innerHTML = '';
+        }
+
+        DOM.chatView?.classList.remove('has-messages');
+        DOM.chatContainer?.classList.remove('has-messages');
+        updateChatLayout();
+
+        const welcomeSection = document.querySelector('.welcome-section');
+        if (welcomeSection) welcomeSection.style.display = 'flex';
+
+        const newChat = {
+            id: KissaiUtils.generateId(),
+            title: t('chat.emptyTitle'),
+            messages: [],
+            time: Date.now(),
+            activeRole: null
+        };
+
+        activeChatId = newChat.id;
+        configData.history.unshift(newChat);
+        renderHistory();
+        saveToStorage();
+    };
+
+    /**
+     * 加载聊天记录
+     */
+    const loadChat = (id) => {
         const chat = configData.history.find(c => c.id === id);
         if (!chat) return;
+
         activeChatId = id;
         configData.general.activeChatId = id;
         saveToStorage();
-        const chatMessages = document.getElementById('chat-messages');
-        if (chatMessages) chatMessages.innerHTML = '';
-        const chatView = document.getElementById('chat-view');
+
+        if (DOM.chatMessages) {
+            DOM.chatMessages.innerHTML = '';
+        }
+
         const welcomeSection = document.querySelector('.welcome-section');
+
         if (chat.messages && chat.messages.length > 0) {
-            if (chatView) chatView.classList.add('has-messages');
-            if (chatContainer) chatContainer.classList.add('has-messages');
+            DOM.chatView?.classList.add('has-messages');
+            DOM.chatContainer?.classList.add('has-messages');
             if (welcomeSection) welcomeSection.style.display = 'none';
+
             chat.messages.forEach(msg => {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${msg.role === 'user' ? 'user' : 'assistant'}`;
-                let bubble;
+
                 if (msg.role === 'user') {
-                    bubble = document.createElement('div');
+                    const bubble = document.createElement('div');
                     bubble.className = 'message-bubble user-message-content';
+
                     const images = msg.images || [];
                     if (images.length > 0) {
                         let html = '';
                         images.forEach(img => {
-                            html += `<img src="${img}" style="max-width: 100%; max-height: 400px; border-radius: 4px; margin-bottom: 8px; display: block;" />`;
+                            html += `<img src="${img}" style="max-width: 100%; max-height: ${KISSAI_CONFIG.UI.MAX_IMAGE_HEIGHT}px; border-radius: 4px; margin-bottom: 8px; display: block;" />`;
                         });
                         if (msg.content) {
-                            html += `<span>${msg.content}</span>`;
+                            html += `<span>${KissaiUtils.escapeHtml(msg.content)}</span>`;
                         }
                         bubble.innerHTML = html;
                     } else {
                         bubble.textContent = msg.content;
                     }
+
                     messageDiv.appendChild(bubble);
+                    applyLongMessageHandling(bubble, true, msg.content);
                 } else {
-                    const md = getMarkdownInstance();
                     let thinkingHtml = '';
                     if (msg.reasoning_content) {
+                        const renderedThinking = KissaiMarkdown.render(msg.reasoning_content);
                         thinkingHtml = `
                             <div class="message-thinking">
                                 <div class="message-thinking-header">
                                     <div class="message-thinking-toggle">
                                         <i data-lucide="chevron-down"></i>
                                     </div>
-                                    <span class="message-thinking-title">思考过程</span>
+                                    <span class="message-thinking-title">${t('thinking.title')}</span>
                                 </div>
-                                <div class="message-thinking-content">${md ? md.render(msg.reasoning_content) : msg.reasoning_content}</div>
+                                <div class="message-thinking-content">${renderedThinking}</div>
                             </div>
                         `;
                     }
-                    if (md) {
-                        messageDiv.innerHTML = `${thinkingHtml}<div class="message-bubble">${md.render(msg.content)}</div>`;
-                    } else {
-                        messageDiv.innerHTML = `${thinkingHtml}<div class="message-bubble">${msg.content}</div>`;
-                    }
-                    bubble = messageDiv.querySelector('.message-bubble');
+
+                    const renderedContent = KissaiMarkdown.render(msg.content);
+                    messageDiv.innerHTML = `${thinkingHtml}<div class="message-bubble">${renderedContent}</div>`;
+
+                    const bubble = messageDiv.querySelector('.message-bubble');
                     const thinkingHeader = messageDiv.querySelector('.message-thinking-header');
+
                     if (thinkingHeader) {
                         thinkingHeader.addEventListener('click', () => {
                             const thinkingDiv = messageDiv.querySelector('.message-thinking');
-                            if (thinkingDiv) {
-                                thinkingDiv.classList.toggle('collapsed');
-                                lucide.createIcons();
-                            }
+                            thinkingDiv?.classList.toggle('collapsed');
+                            updateIcons();
                         });
                     }
-                }
-                if (msg.role === 'user') {
-                    applyLongMessageHandling(bubble, true, msg.content);
-                } else {
+
                     addAssistantMessageActions(bubble, msg.content);
                     addCodeCopyButtons(bubble);
                 }
-                chatMessages.appendChild(messageDiv);
+
+                DOM.chatMessages.appendChild(messageDiv);
             });
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-            lucide.createIcons();
+
+            DOM.chatMessages.scrollTop = DOM.chatMessages.scrollHeight;
+            updateIcons();
         } else {
-            if (chatView) chatView.classList.remove('has-messages');
-            if (chatContainer) chatContainer.classList.remove('has-messages');
+            DOM.chatView?.classList.remove('has-messages');
+            DOM.chatContainer?.classList.remove('has-messages');
             if (welcomeSection) welcomeSection.style.display = 'flex';
         }
-        if (chatInput.value.trim() === '' && !chatInput.dataset.pastedImage) {
+
+        // 恢复角色
+        if (DOM.chatInput && DOM.chatInput.value.trim() === '' && !DOM.chatInput.dataset.pastedImage) {
             if (chat.activeRole && isValidRole(chat.activeRole)) {
-                chatInput.value = `@${chat.activeRole} `;
-                chatInput.dataset.selectedRole = chat.activeRole;
+                DOM.chatInput.value = `@${chat.activeRole} `;
+                DOM.chatInput.dataset.selectedRole = chat.activeRole;
             }
         }
+
         renderHistory();
-    }
-    window.deleteHistory = (id) => {
+    };
+
+    /**
+     * 删除历史记录
+     */
+    const deleteHistory = (id) => {
         configData.history = configData.history.filter(chat => chat.id !== id);
+
         if (activeChatId === id) {
             if (configData.history.length > 0) {
                 loadChat(configData.history[0].id);
@@ -486,887 +506,446 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         saveToStorage();
     };
-    const roleMentionDropdown = document.getElementById('role-mention-dropdown');
-    roleMentionDropdown.addEventListener('click', (e) => {
-        const item = e.target.closest('.role-mention-item');
-        if (!item) return;
-        e.stopPropagation();
-        const roleName = item.getAttribute('data-name');
-        const cursorPosition = chatInput.selectionStart;
-        const textBeforeCursor = chatInput.value.substring(0, cursorPosition);
-        const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-        if (lastAtIndex !== -1) {
-            const textAfterCursor = chatInput.value.substring(cursorPosition);
-            const selectedRoleText = '@' + roleName + ' ';
-            chatInput.value = chatInput.value.substring(0, lastAtIndex) + selectedRoleText + textAfterCursor;
-            const newCursorPosition = lastAtIndex + selectedRoleText.length;
-            chatInput.selectionStart = chatInput.selectionEnd = newCursorPosition;
-            chatInput.dataset.selectedRole = roleName;
-        }
-        chatInput.focus();
-        roleMentionDropdown.style.display = 'none';
-        roleMentionDropdown.classList.remove('active');
-    });
-    chatInput.addEventListener('input', () => {
-        chatInput.style.height = 'auto';
-        chatInput.style.height = Math.min(chatInput.scrollHeight, 240) + 'px';
-        sendBtn.disabled = chatInput.value.trim() === '' && !chatInput.dataset.pastedImage;
-        const selectedRole = chatInput.dataset.selectedRole;
-        if (selectedRole) {
-            const roleExistsInInput = new RegExp(`@${selectedRole.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\s|$)`).test(chatInput.value);
-            if (!roleExistsInInput) {
-                delete chatInput.dataset.selectedRole;
-            }
-        }
-        const cursorPosition = chatInput.selectionStart;
-        const textBeforeCursor = chatInput.value.substring(0, cursorPosition);
-        const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-        if (lastAtIndex !== -1 && (lastAtIndex === 0 || textBeforeCursor[lastAtIndex - 1] === ' ' || textBeforeCursor[lastAtIndex - 1] === '\n')) {
-            const currentSelectedRole = chatInput.dataset.selectedRole;
-            if (currentSelectedRole) {
-                const selectedRoleText = '@' + currentSelectedRole + ' ';
-                const roleStart = chatInput.value.indexOf(selectedRoleText);
-                if (roleStart !== -1 && lastAtIndex >= roleStart && lastAtIndex < roleStart + selectedRoleText.length) {
-                    roleMentionDropdown.style.display = 'none';
-                    roleMentionDropdown.classList.remove('active');
-                    return;
-                }
-            }
-            const searchTerm = textBeforeCursor.substring(lastAtIndex + 1).toLowerCase();
-            const roles = configData.roles || [];
-            const filteredRoles = roles.filter(role => role.name.toLowerCase().includes(searchTerm));
-            if (filteredRoles.length > 0) {
-                roleMentionDropdown.innerHTML = filteredRoles.map(role => `
-                    <div class="role-mention-item" data-name="${role.name}" data-prompt="${role.prompt}">
-                        <div class="role-name">${role.name}</div>
-                        <div class="role-preview">${role.prompt}</div>
-                    </div>
-                `).join('');
-                roleMentionDropdown.style.display = 'flex';
-                roleMentionDropdown.classList.add('active');
-                preventScrollPropagation(roleMentionDropdown);
-            } else {
-                roleMentionDropdown.style.display = 'none';
-                roleMentionDropdown.classList.remove('active');
-            }
-        } else {
-            roleMentionDropdown.style.display = 'none';
-            roleMentionDropdown.classList.remove('active');
-        }
-    });
-    chatInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            if (!sendBtn.disabled && chatInput.value.trim()) {
-                sendBtn.click();
-            }
-        }
-    });
-    chatInput.addEventListener('paste', (e) => {
-        const items = e.clipboardData.items;
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-            if (item.type.indexOf('image') !== -1) {
-                e.preventDefault();
-                const file = item.getAsFile();
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    chatInput.dataset.pastedImage = event.target.result;
-                    sendBtn.disabled = chatInput.value.trim() === '' && !chatInput.dataset.pastedImage;
-                    updatePasteIndicator();
-                };
-                reader.readAsDataURL(file);
-                break;
-            }
-        }
-    });
-    function updatePasteIndicator() {
-        const existingIndicator = document.getElementById('paste-image-indicator');
-        if (chatInput.dataset.pastedImage) {
-            if (!existingIndicator) {
-                const indicator = document.createElement('div');
-                indicator.id = 'paste-image-indicator';
-                indicator.style.cssText = 'position: relative; display: inline-block; width: 60px; height: 60px;';
-                indicator.innerHTML = `
-                    <button id="clear-pasted-image" style="position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; padding: 0; z-index: 10;">×</button>
-                    <img src="${chatInput.dataset.pastedImage}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.1);" />
-                `;
-                chatInput.parentNode.insertBefore(indicator, chatInput);
-                document.getElementById('clear-pasted-image').addEventListener('click', () => {
-                    delete chatInput.dataset.pastedImage;
-                    const indicatorEl = document.getElementById('paste-image-indicator');
-                    if (indicatorEl) indicatorEl.remove();
-                    sendBtn.disabled = chatInput.value.trim() === '' && !chatInput.dataset.pastedImage;
-                });
-            } else {
-                const img = existingIndicator.querySelector('img');
-                if (img) img.src = chatInput.dataset.pastedImage;
-            }
-        } else {
-            if (existingIndicator) existingIndicator.remove();
-        }
-    }
-    preventScrollPropagation(chatInput);
-    const toggleApiKeyBtn = document.querySelector('.action-icons .icon-btn:first-child');
-    const copyApiKeyBtn = document.querySelector('.action-icons .icon-btn:last-child');
-    if (toggleApiKeyBtn) {
-        toggleApiKeyBtn.addEventListener('click', () => {
-            const isPassword = apiKeyInput.type === 'password';
-            apiKeyInput.type = isPassword ? 'text' : 'password';
-            toggleApiKeyBtn.innerHTML = `<i data-lucide="${isPassword ? 'eye-off' : 'eye'}"></i>`;
-            updateIcons();
-        });
-    }
-    if (copyApiKeyBtn) {
-        copyApiKeyBtn.addEventListener('click', () => {
-            navigator.clipboard.writeText(apiKeyInput.value);
-            const originalIcon = copyApiKeyBtn.innerHTML;
-            copyApiKeyBtn.innerHTML = '<i data-lucide="check"></i>';
-            updateIcons();
-            setTimeout(() => {
-                updateIcons();
-            }, 1500);
-        });
-    }
-    const wideModeCheckbox = document.getElementById('wide-mode-checkbox');
-    function updateChatLayout() {
-        if (!chatContainer) return;
-        const isWide = configData.general.wideMode;
-        chatContainer.classList.toggle('wide-mode', isWide);
-        chatContainer.classList.toggle('narrow-mode', !isWide);
-    }
-    settingsBtn.addEventListener('click', () => {
-        settingsView.classList.add('active');
-        renderGeneralSettings();
-    });
-    closeSettingsBtn.addEventListener('click', () => {
-        saveToStorage();
-        settingsView.classList.remove('active');
-    });
-    document.addEventListener('click', (e) => {
-        if (!settingsView.classList.contains('active')) return;
-        if (e.target === settingsView) {
-            saveToStorage();
-            settingsView.classList.remove('active');
-            return;
-        }
-        if (sidebar && sidebar.contains(e.target) && !settingsBtn.contains(e.target)) {
-            saveToStorage();
-            settingsView.classList.remove('active');
-            return;
-        }
-    });
-    function renderGeneralSettings() {
-        const promptTextarea = document.getElementById('global-system-prompt');
-        if (configData.general.systemPrompt !== undefined && configData.general.systemPrompt !== null) {
-            promptTextarea.value = configData.general.systemPrompt;
-        }
-        themeBtns.forEach(btn => {
-            btn.classList.toggle('active', btn.getAttribute('data-theme') === configData.general.theme);
-        });
-        const langMap = { 'zh': '简体中文', 'en': 'English' };
-        currentLanguageSpan.textContent = langMap[configData.general.language] || '简体中文';
-        languageOptions.querySelectorAll('.select-option').forEach(opt => {
-            opt.classList.toggle('selected', opt.getAttribute('data-value') === configData.general.language);
-        });
-        updateAllText();
-        if (wideModeCheckbox) {
-            wideModeCheckbox.checked = !!configData.general.wideMode;
-        }
-        updateChatLayout();
-    }
-    function applyLongMessageHandling(bubble, isUser, content) {
+
+    // 暴露到全局（兼容 HTML 中的 onclick）
+    window.deleteHistory = deleteHistory;
+
+
+    // ========== 消息处理 ==========
+
+    /**
+     * 处理长消息（折叠/展开）
+     */
+    const applyLongMessageHandling = (bubble, isUser, content) => {
         if (!bubble || !isUser) return;
+
+        // 图片消息只添加复制按钮
         if (bubble.querySelector('img')) {
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'message-actions-row';
-            const copyBtn = document.createElement('button');
-            copyBtn.className = 'message-action-btn';
-            copyBtn.title = t('copy.title');
-            copyBtn.innerHTML = `<i data-lucide="copy"></i>`;
-            copyBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                navigator.clipboard.writeText(content).then(() => {
-                    const originalHTML = copyBtn.innerHTML;
-                    copyBtn.innerHTML = `<i data-lucide="check"></i>`;
-                    lucide.createIcons();
-                    setTimeout(() => {
-                        copyBtn.innerHTML = originalHTML;
-                        lucide.createIcons();
-                    }, 1000);
-                });
-            });
+
+            const copyBtn = createCopyButton(content);
             actionsDiv.appendChild(copyBtn);
             bubble.appendChild(actionsDiv);
-            lucide.createIcons();
+            updateIcons();
             return;
         }
-        const isLongMessage = content && content.length > 500;
+
+        const isLongMessage = content && content.length > KISSAI_CONFIG.UI.LONG_MESSAGE_THRESHOLD;
+
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
         contentDiv.textContent = content;
+
         const actionsDiv = document.createElement('div');
         actionsDiv.className = 'message-actions-row';
+
         if (isLongMessage) {
             const expandBtn = document.createElement('button');
             expandBtn.className = 'message-action-btn';
             expandBtn.title = t('message.expand');
             expandBtn.innerHTML = `<i data-lucide="list-chevrons-up-down"></i>`;
             expandBtn.setAttribute('aria-label', t('message.expandFull'));
-            expandBtn.addEventListener('click', function(e) {
+
+            expandBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const isCollapsed = contentDiv.classList.contains('long-message-collapsed');
-                if (isCollapsed) {
-                    contentDiv.classList.remove('long-message-collapsed');
-                    expandBtn.innerHTML = `<i data-lucide="list-chevrons-down-up"></i>`;
-                    expandBtn.setAttribute('aria-label', t('message.collapse'));
-                } else {
-                    contentDiv.classList.add('long-message-collapsed');
-                    expandBtn.innerHTML = `<i data-lucide="list-chevrons-up-down"></i>`;
-                    expandBtn.setAttribute('aria-label', t('message.expandFull'));
-                }
-                lucide.createIcons();
+                contentDiv.classList.toggle('long-message-collapsed');
+                expandBtn.innerHTML = isCollapsed
+                    ? `<i data-lucide="list-chevrons-down-up"></i>`
+                    : `<i data-lucide="list-chevrons-up-down"></i>`;
+                expandBtn.setAttribute('aria-label', isCollapsed ? t('message.collapse') : t('message.expandFull'));
+                updateIcons();
             });
+
             actionsDiv.appendChild(expandBtn);
             contentDiv.classList.add('long-message-collapsed');
         }
-        const copyBtn = document.createElement('button');
-        copyBtn.className = 'message-action-btn';
-        copyBtn.title = '复制';
-        copyBtn.innerHTML = `<i data-lucide="copy"></i>`;
-        copyBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            navigator.clipboard.writeText(content).then(() => {
-                const originalHTML = copyBtn.innerHTML;
-                copyBtn.innerHTML = `<i data-lucide="check"></i>`;
-                lucide.createIcons();
-                setTimeout(() => {
-                    copyBtn.innerHTML = originalHTML;
-                    lucide.createIcons();
-                }, 1000);
-            });
-        });
+
+        const copyBtn = createCopyButton(content);
         actionsDiv.appendChild(copyBtn);
+
         bubble.innerHTML = '';
         bubble.appendChild(contentDiv);
         bubble.appendChild(actionsDiv);
-        lucide.createIcons();
-    }
-    function addAssistantMessageActions(bubble, content) {
-        if (!bubble) return;
-        if (bubble.querySelector('.message-content')) return;
+        updateIcons();
+    };
+
+    /**
+     * 创建复制按钮
+     */
+    const createCopyButton = (content) => {
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'message-action-btn';
+        copyBtn.title = t('copy.title');
+        copyBtn.innerHTML = `<i data-lucide="copy"></i>`;
+
+        copyBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const success = await KissaiUtils.copyToClipboard(content);
+            if (success) {
+                const originalHTML = copyBtn.innerHTML;
+                copyBtn.innerHTML = `<i data-lucide="check"></i>`;
+                updateIcons();
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalHTML;
+                    updateIcons();
+                }, KISSAI_CONFIG.UI.COPY_FEEDBACK_MS);
+            }
+        });
+
+        return copyBtn;
+    };
+
+    /**
+     * 添加助手消息操作按钮
+     */
+    const addAssistantMessageActions = (bubble, content) => {
+        if (!bubble || bubble.querySelector('.message-content')) return;
+
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
+
         while (bubble.firstChild) {
             contentDiv.appendChild(bubble.firstChild);
         }
+
         const actionsDiv = document.createElement('div');
         actionsDiv.className = 'message-actions-row';
+
+        // 重新生成按钮
         const regenerateBtn = document.createElement('button');
         regenerateBtn.className = 'message-action-btn';
         regenerateBtn.title = t('message.regenerate');
         regenerateBtn.innerHTML = `<i data-lucide="refresh-cw"></i>`;
         regenerateBtn.setAttribute('aria-label', t('message.regenerateLabel'));
-        regenerateBtn.addEventListener('click', function(e) {
+
+        regenerateBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             const messageElement = bubble.closest('.message.assistant');
-            if (messageElement) {
-                let prevElement = messageElement.previousElementSibling;
-                while (prevElement && !prevElement.classList.contains('user')) {
-                    prevElement = prevElement.previousElementSibling;
-                }
-                if (prevElement) {
-                    const userBubble = prevElement.querySelector('.user-message-content .message-content') || prevElement.querySelector('.user-message-content');
-                    let userContent = userBubble.textContent || userBubble.innerText;
-                    let userImages = [];
-                    if (activeChatId) {
-                        const chat = configData.history.find(c => c.id === activeChatId);
-                        if (chat && chat.messages) {
-                            const domContent = userContent;
-                            const userMsg = chat.messages.slice().reverse().find(m => m.role === 'user' && (m.content === domContent || (!m.content && !domContent)));
-                            if (userMsg) {
-                                userContent = userMsg.content || '';
-                                userImages = userMsg.images || [];
-                            }
+            if (!messageElement) return;
+
+            // 找到对应的用户消息
+            let prevElement = messageElement.previousElementSibling;
+            while (prevElement && !prevElement.classList.contains('user')) {
+                prevElement = prevElement.previousElementSibling;
+            }
+
+            if (prevElement) {
+                const userBubble = prevElement.querySelector('.user-message-content .message-content') ||
+                    prevElement.querySelector('.user-message-content');
+                let userContent = userBubble?.textContent || '';
+                let userImages = [];
+
+                // 从历史记录中获取完整数据
+                if (activeChatId) {
+                    const chat = configData.history.find(c => c.id === activeChatId);
+                    if (chat && chat.messages) {
+                        const userMsg = chat.messages.slice().reverse().find(m =>
+                            m.role === 'user' && (m.content === userContent || (!m.content && !userContent))
+                        );
+                        if (userMsg) {
+                            userContent = userMsg.content || '';
+                            userImages = userMsg.images || [];
                         }
                     }
-                    const currentModel = getCurrentModelName();
-                    if (currentModel) {
-                        sendMessageToAPI(userContent, currentModel, null, null, userImages);
-                    } else {
-                        alert(t('alert.selectModel'));
-                    }
+                }
+
+                const currentModel = getCurrentModelName();
+                if (currentModel) {
+                    await handleSendMessage(userContent, currentModel, null, userImages);
+                } else {
+                    alert(t('alert.selectModel'));
                 }
             }
         });
+
         actionsDiv.appendChild(regenerateBtn);
-        const copyBtn = document.createElement('button');
-        copyBtn.className = 'message-action-btn';
-        copyBtn.title = t('copy.title');
-        copyBtn.innerHTML = `<i data-lucide="copy"></i>`;
-        copyBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            navigator.clipboard.writeText(content).then(() => {
-                const originalHTML = copyBtn.innerHTML;
-                copyBtn.innerHTML = `<i data-lucide="check"></i>`;
-                lucide.createIcons();
-                setTimeout(() => {
-                    copyBtn.innerHTML = originalHTML;
-                    lucide.createIcons();
-                }, 1000);
-            });
-        });
+
+        // 复制按钮
+        const copyBtn = createCopyButton(content);
         actionsDiv.appendChild(copyBtn);
+
         bubble.appendChild(contentDiv);
         bubble.appendChild(actionsDiv);
-        lucide.createIcons();
-    }
-    function addCodeCopyButtons(container) {
+        updateIcons();
+    };
+
+    /**
+     * 添加代码复制按钮
+     */
+    const addCodeCopyButtons = (container) => {
         const codeBlocks = container.querySelectorAll('pre');
+
         codeBlocks.forEach(pre => {
             const codeElement = pre.querySelector('code');
             if (!codeElement) return;
             if (pre.querySelector('.code-copy-btn')) return;
+
             const codeText = codeElement.textContent || '';
             if (!codeText.trim()) return;
+
             const copyBtn = document.createElement('button');
             copyBtn.className = 'code-copy-btn';
             copyBtn.textContent = t('code.copy');
             copyBtn.title = t('code.copy');
+
             copyBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                const currentCode = pre.querySelector('code')?.textContent || pre.textContent;
-                const cleanCode = currentCode.replace(t('code.copy'), '').replace(t('code.copySuccess'), '');
                 try {
-                    await navigator.clipboard.writeText(codeElement.textContent);
+                    await KissaiUtils.copyToClipboard(codeElement.textContent);
                     copyBtn.textContent = t('code.copySuccess');
                     copyBtn.classList.add('copied');
                     setTimeout(() => {
                         copyBtn.textContent = t('code.copy');
                         copyBtn.classList.remove('copied');
-                    }, 2000);
+                    }, KISSAI_CONFIG.UI.COPY_BUTTON_RESET_MS);
                 } catch (err) {
                     console.error(t('error.copyFailed'), err);
                 }
             });
+
             pre.style.position = 'relative';
             pre.appendChild(copyBtn);
         });
-    }
-    if (wideModeCheckbox) {
-        wideModeCheckbox.addEventListener('change', () => {
-            configData.general.wideMode = wideModeCheckbox.checked;
-            updateChatLayout();
-            saveToStorage();
-        });
-    }
-    languageSelect.addEventListener('click', (e) => {
-        e.stopPropagation();
-        languageOptions.classList.toggle('active');
-    });
-    languageOptions.querySelectorAll('.select-option').forEach(opt => {
-        opt.addEventListener('click', (e) => {
-            const val = opt.getAttribute('data-value');
-            configData.general.language = val;
-            window.configData = configData; // Ensure window.configData is updated
-            currentLanguageSpan.textContent = opt.textContent;
-            languageOptions.querySelectorAll('.select-option').forEach(o => o.classList.remove('selected'));
-            opt.classList.add('selected');
-            const currentPrompt = configData.general.systemPrompt;
-            const zhDefault = translations.zh['systemPrompt.default'];
-            const enDefault = translations.en['systemPrompt.default'];
-            const isEmpty = !currentPrompt || !currentPrompt.trim();
-            const isDefaultPrompt = isEmpty || currentPrompt === zhDefault || currentPrompt === enDefault;
-            if (isDefaultPrompt) {
-                const newPrompt = t('systemPrompt.default');
-                configData.general.systemPrompt = newPrompt;
-                const promptTextarea = document.getElementById('global-system-prompt');
-                if (promptTextarea) {
-                    promptTextarea.value = newPrompt;
-                }
-            }
-            saveToStorage();
-            languageOptions.classList.remove('active');
-            updateAllText();
-            renderHistory();
-            renderModelDropdown();
-            renderShortcuts();
-            if (settingsView.classList.contains('active')) {
-                renderGeneralSettings();
-            }
-        });
-    });
-    window.toggleAddModelForm = () => {
-        const form = document.getElementById('add-model-form');
-        form.style.display = form.style.display === 'none' ? 'block' : 'none';
-        if (form.style.display === 'block') {
-            document.getElementById('new-model-name').focus();
-        }
     };
-    window.addModel = () => {
-        const modelNameInput = document.getElementById('new-model-name');
-        const modelName = modelNameInput.value.trim();
-        if (!modelName) {
-            return;
-        }
-        const provider = configData.providers[currentProviderKey];
-        if (!provider) return;
-        const existingModel = provider.models.find(m => m.name === modelName);
-        if (existingModel) {
-            alert(t('alert.modelExists'));
-            return;
-        }
-        const newModel = {
-            id: Date.now() + Math.random(),
-            name: modelName,
-            favorite: false,
-            enabled: true
-        };
-        if (!provider.models) {
-            provider.models = [];
-        }
-        provider.models.push(newModel);
-        saveToStorage();
-        renderModels();
-        modelNameInput.value = '';
-        document.getElementById('add-model-form').style.display = 'none';
-    };
-    const newModelNameInput = document.getElementById('new-model-name');
-    if (newModelNameInput) {
-        newModelNameInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                addModel();
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
-                toggleAddModelForm();
-            }
-        });
-    }
-    const addModelBtn = document.getElementById('add-model-btn');
-    if (addModelBtn) {
-        addModelBtn.addEventListener('click', () => {
-            toggleAddModelForm();
-        });
-    }
-    fetchModelsBtn.addEventListener('click', async () => {
-        const icon = fetchModelsBtn.querySelector('i') || fetchModelsBtn.querySelector('svg');
-        const originalApiKey = apiKeyInput.value;
-        const originalBaseUrl = baseUrlInput.value;
-        if (!originalApiKey) {
-            return;
-        }
-        if (icon) {
-            icon.classList.add('spinning');
-        }
-        fetchModelsBtn.classList.add('loading');
-        fetchModelsBtn.disabled = true;
-        try {
-            let cleanBaseUrl = originalBaseUrl.trim();
-            if (cleanBaseUrl.endsWith('/')) {
-                cleanBaseUrl = cleanBaseUrl.slice(0, -1);
-            }
-            if (!cleanBaseUrl.startsWith('http://') && !cleanBaseUrl.startsWith('https://')) {
-                return;
-            }
-            cleanBaseUrl = normalizeBaseUrl(cleanBaseUrl);
-            const response = await fetch(`${cleanBaseUrl}/models`, {
-                headers: {
-                    'Authorization': `Bearer ${originalApiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                signal: AbortSignal.timeout(10000)
-            });
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const data = await response.json();
-            const fetchedModels = data.data.map(m => ({
-                id: m.id,
-                name: m.id,
-                selected: false
-            }));
-            window.showModelModal(fetchedModels);
-        } catch (error) {
-            if (error.name === 'AbortError') {
-                console.error(t('error.requestTimeout'));
-            } else {
-                console.error(t('error.fetchFailed') + error.message);
-                alert(t('alert.fetchFailed'));
-            }
-        } finally {
-            const iconAfter = fetchModelsBtn.querySelector('i') || fetchModelsBtn.querySelector('svg');
-            if (iconAfter) {
-                iconAfter.classList.remove('spinning');
-            }
-            fetchModelsBtn.classList.remove('loading');
-            fetchModelsBtn.disabled = false;
-        }
-    });
-    function findProviderByModel(modelName) {
-        for (const [providerKey, provider] of Object.entries(configData.providers)) {
-            if (provider.models && provider.models.some(m => m.name === modelName)) {
-                return { providerKey, provider };
-            }
-        }
-        return null;
-    }
-    function addMessage(content, isUser = false, images = []) {
-        const chatMessages = document.getElementById('chat-messages');
+
+    /**
+     * 添加用户消息到界面
+     */
+    const addUserMessage = (content, images = []) => {
         const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
-        let bubble;
-        if (isUser) {
-            bubble = document.createElement('div');
-            bubble.className = 'message-bubble user-message-content';
-            if (images.length > 0) {
-                let html = '';
-                images.forEach(img => {
-                    html += `<img src="${img}" style="max-width: 100%; max-height: 400px; border-radius: 4px; margin-bottom: 8px; display: block;" />`;
-                });
-                if (content) {
-                    html += `<span>${content}</span>`;
-                }
-                bubble.innerHTML = html;
-            } else {
-                bubble.textContent = content;
+        messageDiv.className = 'message user';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble user-message-content';
+
+        if (images.length > 0) {
+            let html = '';
+            images.forEach(img => {
+                html += `<img src="${img}" style="max-width: 100%; max-height: ${KISSAI_CONFIG.UI.MAX_IMAGE_HEIGHT}px; border-radius: 4px; margin-bottom: 8px; display: block;" />`;
+            });
+            if (content) {
+                html += `<span>${KissaiUtils.escapeHtml(content)}</span>`;
             }
-            messageDiv.appendChild(bubble);
+            bubble.innerHTML = html;
         } else {
-            const md = getMarkdownInstance();
-            if (md) {
-                messageDiv.innerHTML = `<div class="message-bubble">${md.render(content)}</div>`;
-            } else {
-                messageDiv.innerHTML = `<div class="message-bubble">${content}</div>`;
-            }
-            bubble = messageDiv.querySelector('.message-bubble');
+            bubble.textContent = content;
         }
-        chatMessages.appendChild(messageDiv);
-        if (isUser) {
-            applyLongMessageHandling(bubble, isUser, content);
-        } else {
-            addAssistantMessageActions(bubble, content);
-        }
+
+        messageDiv.appendChild(bubble);
+        DOM.chatMessages?.appendChild(messageDiv);
+
+        applyLongMessageHandling(bubble, true, content);
+
+        // 保存到历史
         if (activeChatId) {
             const chat = configData.history.find(c => c.id === activeChatId);
             if (chat) {
                 if (!chat.messages) chat.messages = [];
-                const messageData = { role: isUser ? 'user' : 'assistant', content };
+                const messageData = { role: 'user', content };
                 if (images.length > 0) {
                     messageData.images = images;
                 }
                 chat.messages.push(messageData);
-                if (isUser && chat.title === t('chat.emptyTitle')) {
+
+                // 更新标题
+                if (chat.title === t('chat.emptyTitle')) {
                     const titleText = content || (images.length > 0 ? t('chat.imageMessage') : t('chat.emptyMessage'));
-                    chat.title = titleText.length > 20 ? titleText.substring(0, 20) + '...' : titleText;
+                    chat.title = KissaiUtils.truncateText(titleText, 20);
                     renderHistory();
                 }
                 saveToStorage();
             }
         }
-        const shouldScroll = chatMessages.scrollHeight - chatMessages.scrollTop <= chatMessages.clientHeight + 10;
-        if (shouldScroll) {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // 滚动到底部
+        if (DOM.chatMessages) {
+            DOM.chatMessages.scrollTop = DOM.chatMessages.scrollHeight;
         }
-        const chatContainer = document.querySelector('.chat-container');
-        if (chatContainer) {
-            chatContainer.classList.add('has-messages');
-        }
-        const chatView = document.getElementById('chat-view');
-        if (chatView) {
-            chatView.classList.add('has-messages');
-        }
-    }
-    function addAIMessageStream() {
-        const chatMessages = document.getElementById('chat-messages');
+
+        // 更新布局状态
+        DOM.chatContainer?.classList.add('has-messages');
+        DOM.chatView?.classList.add('has-messages');
+    };
+
+    /**
+     * 创建 AI 消息流式容器
+     */
+    const createAIMessageStream = () => {
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message assistant';
+
         messageDiv.innerHTML = `
-            <div class="message-thinking">
+            <div class="message-thinking" style="display: none;">
                 <div class="message-thinking-header">
                     <div class="message-thinking-toggle">
                         <i data-lucide="chevron-down"></i>
                     </div>
-                    <span class="message-thinking-title">思考过程</span>
+                    <span class="message-thinking-title">${t('thinking.title')}</span>
                 </div>
                 <div class="message-thinking-content"></div>
             </div>
-            <div class="message-bubble">|</div>
+            <div class="message-bubble"><span class="cursor"></span></div>
         `;
+
         const thinkingHeader = messageDiv.querySelector('.message-thinking-header');
         if (thinkingHeader) {
             thinkingHeader.addEventListener('click', () => {
                 const thinkingDiv = messageDiv.querySelector('.message-thinking');
-                if (thinkingDiv) {
-                    thinkingDiv.classList.toggle('collapsed');
-                    lucide.createIcons();
-                }
+                thinkingDiv?.classList.toggle('collapsed');
+                updateIcons();
             });
         }
-        chatMessages.appendChild(messageDiv);
-        lucide.createIcons();
-        const shouldScroll = chatMessages.scrollHeight - chatMessages.scrollTop <= chatMessages.clientHeight + 10;
-        if (shouldScroll) {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        DOM.chatMessages?.appendChild(messageDiv);
+        updateIcons();
+
+        // 滚动到底部
+        if (DOM.chatMessages) {
+            DOM.chatMessages.scrollTop = DOM.chatMessages.scrollHeight;
         }
-        const chatContainer = document.querySelector('.chat-container');
-        if (chatContainer) {
-            chatContainer.classList.add('has-messages');
-        }
-        const chatView = document.getElementById('chat-view');
-        if (chatView) {
-            chatView.classList.add('has-messages');
-        }
+
+        DOM.chatContainer?.classList.add('has-messages');
+        DOM.chatView?.classList.add('has-messages');
+
         return messageDiv;
-    }
-    function updateAIMessageContent(messageElement, content, thinking = '') {
+    };
+
+    /**
+     * 更新 AI 消息内容（流式）
+     */
+    const updateAIMessageContent = (messageElement, content, thinking = '') => {
         const bubble = messageElement.querySelector('.message-bubble');
         const thinkingDiv = messageElement.querySelector('.message-thinking');
         const thinkingContent = thinkingDiv?.querySelector('.message-thinking-content');
-        const md = getMarkdownInstance();
-        const processedContent = markdownState.preprocessContent(content);
+
+        const processedContent = markdownProcessor.preprocessContent(content);
+
+        // 更新思考内容
         if (thinkingDiv && thinkingContent) {
             if (thinking) {
                 thinkingDiv.style.display = 'block';
-                const processedThinking = markdownState.preprocessContent(thinking);
-                if (md) {
-                    thinkingContent.innerHTML = md.render(processedThinking);
-                } else {
-                    thinkingContent.textContent = processedThinking;
-                }
+                const processedThinking = markdownProcessor.preprocessContent(thinking);
+                thinkingContent.innerHTML = KissaiMarkdown.render(processedThinking);
             } else if (thinkingContent.innerHTML.trim() === '') {
                 thinkingDiv.style.display = 'none';
             }
         }
-        if (bubble && md) {
-            bubble.innerHTML = `${md.render(processedContent)}<span class="cursor"></span>`;
-        } else if (bubble) {
-            bubble.textContent = processedContent + '|';
+
+        // 更新主内容
+        if (bubble) {
+            bubble.innerHTML = KissaiMarkdown.render(processedContent) + '<span class="cursor"></span>';
+            // 流式渲染时也添加复制按钮
+            addCodeCopyButtons(bubble);
         }
-    }
-    function finalizeAIMessage(messageElement, content, thinking = '') {
+    };
+
+    /**
+     * 完成 AI 消息（移除光标，添加操作按钮）
+     */
+    const finalizeAIMessage = (messageElement, content, thinking = '') => {
         const bubble = messageElement.querySelector('.message-bubble');
         const thinkingDiv = messageElement.querySelector('.message-thinking');
         const thinkingContent = thinkingDiv?.querySelector('.message-thinking-content');
-        const md = getMarkdownInstance();
-        const fixedContent = markdownState.preprocessContent(content);
-        const fixedThinking = markdownState.preprocessContent(thinking);
+
+        const fixedContent = markdownProcessor.preprocessContent(content);
+        const fixedThinking = markdownProcessor.preprocessContent(thinking);
+
+        // 最终渲染思考内容
         if (thinkingDiv && thinkingContent) {
             if (thinking) {
                 thinkingDiv.style.display = 'block';
-                if (md) {
-                    thinkingContent.innerHTML = md.render(fixedThinking);
-                } else {
-                    thinkingContent.textContent = fixedThinking;
-                }
+                thinkingContent.innerHTML = KissaiMarkdown.render(fixedThinking);
             } else {
                 thinkingDiv.style.display = 'none';
             }
         }
-        if (bubble && content && md) {
-            bubble.innerHTML = md.render(fixedContent);
+
+        // 最终渲染主内容
+        if (bubble && content) {
+            bubble.innerHTML = KissaiMarkdown.render(fixedContent);
             addAssistantMessageActions(bubble, fixedContent);
             addCodeCopyButtons(bubble);
-            lucide.createIcons();
+            updateIcons();
+
+            // 保存到历史
             if (activeChatId) {
                 const chat = configData.history.find(c => c.id === activeChatId);
                 if (chat) {
                     if (!chat.messages) chat.messages = [];
-                    chat.messages.push({ role: 'assistant', content, reasoning_content: thinking || undefined });
+                    chat.messages.push({
+                        role: 'assistant',
+                        content,
+                        reasoning_content: thinking || undefined
+                    });
                     saveToStorage();
                 }
             }
-        } else if (bubble && content) {
-            bubble.textContent = fixedContent;
-            addAssistantMessageActions(bubble, fixedContent);
         } else if (bubble) {
+            // 移除光标
             const cursor = bubble.querySelector('.cursor');
             if (cursor) cursor.remove();
         }
-    }
-    function normalizeBaseUrl(baseUrl) {
-        let cleanUrl = baseUrl.trim();
-        if (cleanUrl.endsWith('/')) {
-            cleanUrl = cleanUrl.slice(0, -1);
-        }
-        if (cleanUrl.includes('generativelanguage.googleapis.com') && cleanUrl.includes('/openai')) {
-            return cleanUrl;
-        }
-        const versionMatch = cleanUrl.match(/\/v\d+(beta|alpha)?/i);
-        if (versionMatch) {
-            const versionIndex = versionMatch.index + versionMatch[0].length;
-            return cleanUrl.substring(0, versionIndex);
-        } else {
-            return cleanUrl;
-        }
-    }
-    function displayErrorMessage(error) {
-        addMessage(error.message, false);
-    }
-    async function sendMessageToAPI(message, modelName, signal, currentRole, images = []) {
-        const currentProviderKey = currentModelSpan.dataset.provider;
-        let providerInfo = null;
-        if (currentProviderKey && configData.providers[currentProviderKey]) {
-            const currentProvider = configData.providers[currentProviderKey];
-            if (currentProvider.models && currentProvider.models.some(m => m.name === modelName)) {
-                providerInfo = { providerKey: currentProviderKey, provider: currentProvider };
-            }
-        }
-        if (!providerInfo) {
-            providerInfo = findProviderByModel(modelName);
-        }
-        if (!providerInfo) {
-            throw new Error(t('error.providerNotFound', { modelName }));
-        }
-        const { provider } = providerInfo;
-        if (!provider.apiKey) {
-            throw new Error(t('error.apiKeyNotConfigured'));
-        }
-        const baseUrl = normalizeBaseUrl(provider.baseUrl);
-        const messages = [];
-        const systemPrompt = configData.general.systemPrompt;
-        if (systemPrompt && systemPrompt.trim()) {
-            messages.push({ role: 'system', content: systemPrompt.trim() });
-        }
-        let processedMessage = message;
-        if (currentRole && isValidRole(currentRole)) {
-            const role = configData.roles.find(r => r.name === currentRole);
-            if (role && role.prompt) {
-                messages.push({ role: 'system', content: `${t('role.prefix')}${role.name}\n${role.prompt}` });
-                processedMessage = processedMessage.replace(`@${currentRole}`, '').trim();
-            }
-        }
-        let chat = null;
-        if (activeChatId) {
-            chat = configData.history.find(c => c.id === activeChatId);
-            if (chat && chat.messages) {
-                const limit = configData.general.contextLimit || 20;
-                let messagesToSend = chat.messages.slice(-limit);
-                if (messagesToSend.length > 0) {
-                    const lastMsg = messagesToSend[messagesToSend.length - 1];
-                    if (lastMsg.role === 'user' && lastMsg.content === message.trim()) {
-                        messagesToSend = messagesToSend.slice(0, -1);
-                    }
-                }
-                messagesToSend.forEach(msg => {
-                    const msgContent = { role: msg.role };
-                    const msgImages = msg.images || [];
-                    if (msgImages.length > 0) {
-                        msgContent.content = [
-                            { type: 'text', text: msg.content || t('ocr.prompt') },
-                            ...msgImages.map(img => ({ type: 'image_url', image_url: { url: img } }))
-                        ];
-                    } else {
-                        msgContent.content = msg.content;
-                    }
-                    messages.push(msgContent);
-                });
-            }
-        }
-        if (processedMessage.trim() || images.length > 0) {
-            const userMsg = { role: 'user', content: processedMessage.trim() || t('ocr.prompt') };
-            if (images.length > 0) {
-                userMsg.content = [
-                    { type: 'text', text: processedMessage.trim() || t('ocr.prompt') },
-                    ...images.map(img => ({ type: 'image_url', image_url: { url: img } }))
-                ];
-            }
-            messages.push(userMsg);
-        }
-        if (currentRole && isValidRole(currentRole) && configData.roles && chat && chat.messages) {
-            const role = configData.roles.find(r => r.name === currentRole);
-            if (role && role.prompt) {
-                const systemMsgCount = messages.filter(m => m.role === 'system').length;
-                const userMsgCount = messages.filter(m => m.role === 'user').length;
-                const assistantMsgCount = messages.filter(m => m.role === 'assistant').length;
-                const totalMsgCount = userMsgCount + assistantMsgCount;
-                if (totalMsgCount > 0 && totalMsgCount % 3 === 0) {
-                    messages.push({ role: 'system', content: `${t('role.prefix')}${role.name}\n${role.prompt}` });
-                }
-            }
-        }
-        const aiMessageElement = addAIMessageStream();
+    };
+
+
+    // ========== API 交互 ==========
+
+    /**
+     * 发送消息处理
+     */
+    const handleSendMessage = async (message, modelName, currentRole, images = []) => {
+        const aiMessageElement = createAIMessageStream();
         let fullContent = '';
         let thinkingContent = '';
+        let hasError = false;
+
         try {
-            const controller = new AbortController();
-            const combinedSignal = new AbortController();
-            if (signal) {
-                signal.addEventListener('abort', () => {
-                    combinedSignal.abort();
-                });
-            }
-            const timeoutId = setTimeout(() => {
-                combinedSignal.abort();
-            }, 60000);
-            const response = await fetch(`${baseUrl}/chat/completions`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${provider.apiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model: modelName,
-                    messages: messages,
-                    stream: true,
-                    stream_options: { include_usage: true }
-                }),
-                signal: combinedSignal.signal
-            });
-            clearTimeout(timeoutId);
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || `HTTP ${response.status} ${response.statusText}`);
-            }
-            if (!response.body) {
-                throw new Error('Response body is null');
-            }
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
-            let lastRenderTime = 0;
-            const RENDER_INTERVAL = 50;
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop() || '';
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        const data = line.slice(6);
-                        if (data === '[DONE]') {
-                            break;
-                        }
-                        try {
-                            const parsed = JSON.parse(data);
-                            if (parsed.choices && parsed.choices.length > 0) {
-                                const delta = parsed.choices[0];
-                                if (delta.delta && delta.delta.content) {
-                                    fullContent += delta.delta.content;
-                                    const now = Date.now();
-                                    if (now - lastRenderTime >= RENDER_INTERVAL) {
-                                        updateAIMessageContent(aiMessageElement, fullContent, thinkingContent);
-                                        lastRenderTime = now;
-                                    }
-                                }
-                                const reasoningContent = delta.delta?.reasoning_content || delta.delta?.reasoning || delta.reasoning_content || delta.reasoning || '';
-                                if (reasoningContent) {
-                                    console.log('[Thinking] 收到推理内容:', reasoningContent.substring(0, 100) + '...');
-                                    thinkingContent += reasoningContent;
-                                    updateAIMessageContent(aiMessageElement, fullContent, thinkingContent);
-                                }
-                                if (parsed._debug && console.log) {
-                                    console.log('[Debug] SSE数据:', JSON.stringify(parsed, null, 2).substring(0, 500));
-                                }
-                            }
-                        } catch (e) {
-                            console.warn('Failed to parse SSE data:', e);
+            const result = await KissaiAPI.sendMessage({
+                message,
+                modelName,
+                providerKey: DOM.currentModelSpan?.dataset.provider,
+                currentRole,
+                images,
+                onChunk: (content, thinking) => {
+                    fullContent = content;
+                    thinkingContent = thinking;
+                    updateAIMessageContent(aiMessageElement, content, thinking);
+
+                    // 自动滚动
+                    if (DOM.chatMessages) {
+                        const shouldScroll = DOM.chatMessages.scrollHeight - DOM.chatMessages.scrollTop <=
+                            DOM.chatMessages.clientHeight + 10;
+                        if (shouldScroll) {
+                            DOM.chatMessages.scrollTop = DOM.chatMessages.scrollHeight;
                         }
                     }
+                },
+                onThinking: (thinking) => {
+                    thinkingContent = thinking;
+                },
+                onDone: (content, thinking) => {
+                    finalizeAIMessage(aiMessageElement, content, thinking);
+                },
+                onError: (error) => {
+                    hasError = true;
+                    if (aiMessageElement && aiMessageElement.parentNode) {
+                        aiMessageElement.parentNode.removeChild(aiMessageElement);
+                    }
+                    addErrorMessage(error.message);
+                }
+            });
+
+            // 如果没有内容且没有错误，清理空消息
+            if (!result && !hasError && !fullContent) {
+                if (aiMessageElement && aiMessageElement.parentNode) {
+                    aiMessageElement.parentNode.removeChild(aiMessageElement);
                 }
             }
-            finalizeAIMessage(aiMessageElement, fullContent, thinkingContent);
-            reader.releaseLock();
+
             return fullContent;
+
         } catch (error) {
             if (error.name === 'AbortError') {
                 if (fullContent) {
@@ -1378,39 +957,618 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 return null;
             }
+
             if (aiMessageElement && aiMessageElement.parentNode) {
                 aiMessageElement.parentNode.removeChild(aiMessageElement);
             }
-            console.error('API Request Failed:', error);
             throw error;
         }
-    }
-    let abortController = null;
-    sendBtn.addEventListener('click', async () => {
-        if (isRequesting) {
-            if (abortController) {
-                abortController.abort();
+    };
+
+    /**
+     * 添加错误消息
+     */
+    const addErrorMessage = (errorMessage) => {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message assistant';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+        bubble.style.color = '#ff6b6b';
+        bubble.textContent = errorMessage;
+
+        messageDiv.appendChild(bubble);
+        DOM.chatMessages?.appendChild(messageDiv);
+
+        if (DOM.chatMessages) {
+            DOM.chatMessages.scrollTop = DOM.chatMessages.scrollHeight;
+        }
+    };
+
+    /**
+     * 获取最后一条用户消息
+     */
+    const getLastUserMessage = () => {
+        if (!activeChatId) return null;
+        const chat = configData.history.find(c => c.id === activeChatId);
+        if (!chat || !chat.messages) return null;
+
+        for (let i = chat.messages.length - 1; i >= 0; i--) {
+            if (chat.messages[i].role === 'user') {
+                return chat.messages[i];
             }
-            isRequesting = false;
-            sendBtn.innerHTML = '<i data-lucide="send"></i>';
-            sendBtn.classList.remove('stop-mode');
-            updateIcons();
+        }
+        return null;
+    };
+
+    // ========== 设置面板 ==========
+
+    /**
+     * 渲染通用设置
+     */
+    const renderGeneralSettings = () => {
+        const promptTextarea = KissaiUtils.getElement('global-system-prompt');
+        if (promptTextarea && configData.general.systemPrompt !== undefined) {
+            promptTextarea.value = configData.general.systemPrompt;
+        }
+
+        // 主题按钮
+        DOM.themeBtns.forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-theme') === configData.general.theme);
+        });
+
+        // 语言选择
+        const langMap = { 'zh': '简体中文', 'en': 'English' };
+        if (DOM.currentLanguageSpan) {
+            DOM.currentLanguageSpan.textContent = langMap[configData.general.language] || '简体中文';
+        }
+
+        DOM.languageOptions?.querySelectorAll('.select-option').forEach(opt => {
+            opt.classList.toggle('selected', opt.getAttribute('data-value') === configData.general.language);
+        });
+
+        // 宽屏模式
+        if (DOM.wideModeCheckbox) {
+            DOM.wideModeCheckbox.checked = !!configData.general.wideMode;
+        }
+
+        updateAllText();
+        updateChatLayout();
+    };
+
+    /**
+     * 渲染 Provider 列表
+     */
+    const renderProviderList = () => {
+        if (!DOM.providersListContainer) return;
+
+        // 移除旧的 Provider 项
+        DOM.providersListContainer.querySelectorAll('.settings-nav-item:not(.add-btn)').forEach(el => el.remove());
+
+        const providers = Object.keys(configData.providers);
+
+        providers.forEach((provider, index) => {
+            const item = document.createElement('div');
+            item.className = 'settings-nav-item';
+            if (provider === currentProviderKey) item.classList.add('active');
+            item.setAttribute('data-tab', `provider-${provider.toLowerCase()}`);
+            item.setAttribute('data-key', provider);
+
+            const info = getProviderDisplayInfo(provider);
+
+            // 创建内容区域
+            const contentDiv = document.createElement('div');
+            contentDiv.style.cssText = 'display: flex; align-items: center; flex: 1; overflow: hidden;';
+            contentDiv.innerHTML = `
+                <div style="width:24px;height:16px;border-radius:2px;background:${info.color};color:white;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;margin-right:8px;flex-shrink:0;">${info.label}</div>
+                <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${KissaiUtils.escapeHtml(provider)}</span>
+            `;
+
+            // 创建操作按钮区域
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'provider-item-actions';
+
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'icon-btn-xs provider-copy-btn';
+            copyBtn.title = t('provider.copy');
+            copyBtn.dataset.provider = provider; // 直接设置，不经过 HTML 解析
+            copyBtn.innerHTML = '<i data-lucide="copy"></i>';
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'icon-btn-xs provider-delete-btn';
+            deleteBtn.title = t('provider.delete');
+            deleteBtn.dataset.provider = provider; // 直接设置，不经过 HTML 解析
+            deleteBtn.innerHTML = '<i data-lucide="trash"></i>';
+
+            actionsDiv.appendChild(copyBtn);
+            actionsDiv.appendChild(deleteBtn);
+
+            item.appendChild(contentDiv);
+            item.appendChild(actionsDiv);
+            DOM.providersListContainer.appendChild(item);
+        });
+
+        updateIcons();
+    };
+
+    /**
+     * 渲染模型列表
+     */
+    const renderModels = () => {
+        if (!DOM.modelList) return;
+
+        const provider = configData.providers[currentProviderKey];
+        DOM.modelList.innerHTML = '';
+
+        if (provider && provider.models) {
+            provider.models.forEach(model => {
+                const item = document.createElement('div');
+                item.className = 'model-item';
+                item.innerHTML = `
+                    <div class="model-item-info">
+                        <span class="model-item-name">${KissaiUtils.escapeHtml(model.name)}</span>
+                    </div>
+                    <div class="model-item-actions">
+                        <i data-lucide="star" class="${model.favorite ? 'active' : ''}" data-model-id="${model.id}" data-action="favorite"></i>
+                        <i data-lucide="trash" data-model-id="${model.id}" data-action="delete"></i>
+                    </div>
+                `;
+                DOM.modelList.appendChild(item);
+            });
+        }
+
+        updateIcons();
+    };
+
+    /**
+     * 渲染角色列表
+     */
+    const renderRoles = () => {
+        if (!DOM.roleList) return;
+
+        DOM.roleList.innerHTML = '';
+
+        configData.roles.forEach(role => {
+            const item = document.createElement('div');
+            item.className = 'role-item';
+            const isEditing = editingRoleId === role.id;
+
+            // 创建 header
+            const header = document.createElement('div');
+            header.className = 'role-item-header';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'role-item-name';
+            nameSpan.textContent = role.name;
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'model-item-actions';
+
+            const editIcon = document.createElement('i');
+            editIcon.setAttribute('data-lucide', 'pencil');
+            editIcon.dataset.roleId = role.id;
+            editIcon.dataset.action = 'edit';
+
+            const deleteIcon = document.createElement('i');
+            deleteIcon.setAttribute('data-lucide', 'trash');
+            deleteIcon.dataset.roleId = role.id;
+            deleteIcon.dataset.action = 'delete';
+
+            actionsDiv.appendChild(editIcon);
+            actionsDiv.appendChild(deleteIcon);
+            header.appendChild(nameSpan);
+            header.appendChild(actionsDiv);
+
+            // 创建 prompt
+            const promptDiv = document.createElement('div');
+            promptDiv.className = 'role-item-prompt';
+            if (!isEditing) {
+                promptDiv.style.fontSize = '11px';
+            }
+            promptDiv.textContent = role.prompt;
+
+            item.appendChild(header);
+            item.appendChild(promptDiv);
+            DOM.roleList.appendChild(item);
+        });
+
+        updateIcons();
+    };
+
+    /**
+     * 渲染模型下拉菜单
+     */
+    const renderModelDropdown = () => {
+        if (!DOM.modelDropdown) return;
+
+        DOM.modelDropdown.innerHTML = '';
+        KissaiUtils.preventScrollPropagation(DOM.modelDropdown);
+
+        const hasProviders = Object.keys(configData.providers).length > 0;
+        let hasAnyEnabledModels = false;
+
+        Object.values(configData.providers).forEach(p => {
+            const enabledModels = (p.models || []).filter(m => m.enabled !== false);
+            if (enabledModels.length > 0) hasAnyEnabledModels = true;
+        });
+
+        if (!hasProviders) {
+            DOM.modelDropdown.innerHTML = `
+                <div class="dropdown-section">
+                    <div class="dropdown-section-title" style="color: var(--text-secondary); font-style: italic; padding: 12px 12px 4px 12px;">
+                        ${t('model.noProviders')}
+                    </div>
+                </div>
+            `;
             return;
         }
-        const message = chatInput.value.trim();
-        const pastedImage = chatInput.dataset.pastedImage;
-        const images = pastedImage ? [pastedImage] : [];
-        if (!message && images.length === 0) return;
+
+        if (!hasAnyEnabledModels) {
+            DOM.modelDropdown.innerHTML = `
+                <div class="dropdown-section">
+                    <div class="dropdown-section-title" style="color: var(--text-secondary); font-style: italic; padding: 12px 12px 4px 12px;">
+                        ${t('model.noEnabled')}
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // 收藏的模型
+        const favorites = [];
+        Object.entries(configData.providers).forEach(([providerKey, p]) => {
+            (p.models || []).forEach(m => {
+                if (m.favorite && m.enabled !== false) {
+                    favorites.push({ ...m, providerKey });
+                }
+            });
+        });
+
+        if (favorites.length > 0) {
+            const favSection = document.createElement('div');
+            favSection.className = 'dropdown-section';
+            favSection.innerHTML = `<div class="dropdown-section-title">${t('model.favorites')}</div>`;
+
+            favorites.forEach(m => {
+                favSection.appendChild(createDropdownItem(m, m.providerKey));
+            });
+
+            DOM.modelDropdown.appendChild(favSection);
+        }
+
+        // 按 Provider 分组
+        Object.entries(configData.providers).forEach(([providerKey, provider]) => {
+            const enabledModels = (provider.models || []).filter(m => m.enabled !== false && !m.favorite);
+            if (enabledModels.length === 0) return;
+
+            const section = document.createElement('div');
+            section.className = 'dropdown-section';
+            section.innerHTML = `<div class="dropdown-section-title">${KissaiUtils.escapeHtml(providerKey)}</div>`;
+
+            enabledModels.forEach(m => {
+                section.appendChild(createDropdownItem(m, providerKey));
+            });
+
+            DOM.modelDropdown.appendChild(section);
+        });
+    };
+
+    /**
+     * 创建下拉菜单项
+     */
+    const createDropdownItem = (model, providerKey) => {
+        const info = getProviderDisplayInfo(providerKey);
         const currentModel = getCurrentModelName();
+
+        const item = document.createElement('div');
+        item.className = 'dropdown-item';
+        if (model.name === currentModel) {
+            item.classList.add('active');
+        }
+
+        item.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background-color: ${info.color};
+                    color: #fff;
+                    font-size: 10px;
+                    font-weight: 800;
+                    border-radius: 2px;
+                    width: 24px;
+                    height: 16px;
+                    line-height: 1;
+                    flex-shrink: 0;
+                ">${info.label}</div>
+                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${KissaiUtils.escapeHtml(model.name)}</span>
+            </div>
+        `;
+
+        item.addEventListener('click', async () => {
+            const previousModel = getCurrentModelName();
+            const targetModelName = model.name.trim();
+
+            setModelDisplay(targetModelName, providerKey);
+            configData.general.lastUsedModel = targetModelName;
+            saveToStorage();
+
+            DOM.modelDropdown?.classList.remove('active');
+
+            // 如果切换了模型且有之前的用户消息，自动重新生成
+            if (previousModel && previousModel !== targetModelName) {
+                const lastUserMessage = getLastUserMessage();
+                if (lastUserMessage) {
+                    if (KissaiAPI.isRequesting) {
+                        KissaiAPI.abort();
+                    }
+
+                    try {
+                        updateSendButtonState(true);
+                        await handleSendMessage(
+                            lastUserMessage.content,
+                            targetModelName,
+                            null,
+                            lastUserMessage.images || []
+                        );
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            addErrorMessage(error.message);
+                        }
+                    } finally {
+                        updateSendButtonState(false);
+                    }
+                }
+            }
+        });
+
+        return item;
+    };
+
+    /**
+     * 更新发送按钮状态
+     */
+    const updateSendButtonState = (isRequesting) => {
+        if (!DOM.sendBtn) return;
+
+        if (isRequesting) {
+            DOM.sendBtn.innerHTML = '<div class="stop-icon"></div>';
+            DOM.sendBtn.classList.add('stop-mode');
+            DOM.sendBtn.disabled = false;
+        } else {
+            DOM.sendBtn.innerHTML = '<i data-lucide="send"></i>';
+            DOM.sendBtn.classList.remove('stop-mode');
+            DOM.sendBtn.disabled = (DOM.chatInput?.value.trim() === '') && !DOM.chatInput?.dataset.pastedImage;
+            updateIcons();
+        }
+    };
+
+    // ========== 事件绑定 ==========
+
+    // 侧边栏折叠
+    DOM.sidebarHandle?.addEventListener('click', () => {
+        DOM.sidebar?.classList.toggle('collapsed');
+    });
+
+    // 新建聊天
+    DOM.newChatBtn?.addEventListener('click', createNewChat);
+
+    // 搜索（带防抖）
+    if (DOM.searchInput) {
+        const debouncedSearch = KissaiUtils.debounce(() => {
+            renderHistory();
+        }, KISSAI_CONFIG.UI.SEARCH_DEBOUNCE_MS);
+
+        DOM.searchInput.addEventListener('input', debouncedSearch);
+
+        DOM.searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                DOM.searchInput.value = '';
+                renderHistory();
+                DOM.searchInput.blur();
+            }
+        });
+    }
+
+    // 历史记录删除（事件委托）
+    DOM.historyList?.addEventListener('click', (e) => {
+        const deleteBtn = e.target.closest('[data-chat-id]');
+        if (deleteBtn) {
+            e.stopPropagation();
+            const chatId = parseFloat(deleteBtn.dataset.chatId);
+            deleteHistory(chatId);
+        }
+    });
+
+    // 输入框处理（带防抖）
+    if (DOM.chatInput) {
+        const debouncedInputHandler = KissaiUtils.debounce(() => {
+            DOM.chatInput.style.height = 'auto';
+            DOM.chatInput.style.height = Math.min(DOM.chatInput.scrollHeight, KISSAI_CONFIG.UI.MAX_INPUT_HEIGHT) + 'px';
+        }, KISSAI_CONFIG.UI.INPUT_DEBOUNCE_MS);
+
+        DOM.chatInput.addEventListener('input', () => {
+            debouncedInputHandler();
+
+            // 更新发送按钮状态
+            DOM.sendBtn.disabled = DOM.chatInput.value.trim() === '' && !DOM.chatInput.dataset.pastedImage;
+
+            // 检查角色是否仍在输入中
+            const selectedRole = DOM.chatInput.dataset.selectedRole;
+            if (selectedRole) {
+                const roleExistsInInput = new RegExp(`@${KissaiUtils.escapeRegex(selectedRole)}(?:\\s|$)`).test(DOM.chatInput.value);
+                if (!roleExistsInInput) {
+                    delete DOM.chatInput.dataset.selectedRole;
+                }
+            }
+
+            // 角色提及下拉
+            handleRoleMention();
+        });
+
+        // 回车发送
+        DOM.chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!DOM.sendBtn.disabled && DOM.chatInput.value.trim()) {
+                    DOM.sendBtn.click();
+                }
+            }
+        });
+
+        // 图片粘贴
+        DOM.chatInput.addEventListener('paste', (e) => {
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                if (item.type.indexOf('image') !== -1) {
+                    e.preventDefault();
+                    const file = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        DOM.chatInput.dataset.pastedImage = event.target.result;
+                        DOM.sendBtn.disabled = false;
+                        updatePasteIndicator();
+                    };
+                    reader.readAsDataURL(file);
+                    break;
+                }
+            }
+        });
+
+        KissaiUtils.preventScrollPropagation(DOM.chatInput);
+    }
+
+    /**
+     * 处理角色提及
+     */
+    const handleRoleMention = () => {
+        const cursorPosition = DOM.chatInput.selectionStart;
+        const textBeforeCursor = DOM.chatInput.value.substring(0, cursorPosition);
+        const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+        if (lastAtIndex !== -1 && (lastAtIndex === 0 || textBeforeCursor[lastAtIndex - 1] === ' ' || textBeforeCursor[lastAtIndex - 1] === '\n')) {
+            // 检查是否已选择角色
+            const currentSelectedRole = DOM.chatInput.dataset.selectedRole;
+            if (currentSelectedRole) {
+                const selectedRoleText = '@' + currentSelectedRole + ' ';
+                const roleStart = DOM.chatInput.value.indexOf(selectedRoleText);
+                if (roleStart !== -1 && lastAtIndex >= roleStart && lastAtIndex < roleStart + selectedRoleText.length) {
+                    DOM.roleMentionDropdown.style.display = 'none';
+                    DOM.roleMentionDropdown.classList.remove('active');
+                    return;
+                }
+            }
+
+            const searchTerm = textBeforeCursor.substring(lastAtIndex + 1).toLowerCase();
+            const roles = configData.roles || [];
+            const filteredRoles = roles.filter(role => role.name.toLowerCase().includes(searchTerm));
+
+            if (filteredRoles.length > 0) {
+                DOM.roleMentionDropdown.innerHTML = filteredRoles.map(role => `
+                    <div class="role-mention-item" data-name="${KissaiUtils.escapeHtml(role.name)}">
+                        <div class="role-name">${KissaiUtils.escapeHtml(role.name)}</div>
+                        <div class="role-preview">${KissaiUtils.escapeHtml(KissaiUtils.truncateText(role.prompt, 100))}</div>
+                    </div>
+                `).join('');
+
+                DOM.roleMentionDropdown.style.display = 'flex';
+                DOM.roleMentionDropdown.classList.add('active');
+                KissaiUtils.preventScrollPropagation(DOM.roleMentionDropdown);
+            } else {
+                DOM.roleMentionDropdown.style.display = 'none';
+                DOM.roleMentionDropdown.classList.remove('active');
+            }
+        } else {
+            DOM.roleMentionDropdown.style.display = 'none';
+            DOM.roleMentionDropdown.classList.remove('active');
+        }
+    };
+
+    // 角色提及下拉点击
+    DOM.roleMentionDropdown?.addEventListener('click', (e) => {
+        const item = e.target.closest('.role-mention-item');
+        if (!item) return;
+
+        e.stopPropagation();
+        const roleName = item.getAttribute('data-name');
+        const cursorPosition = DOM.chatInput.selectionStart;
+        const textBeforeCursor = DOM.chatInput.value.substring(0, cursorPosition);
+        const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+        if (lastAtIndex !== -1) {
+            const textAfterCursor = DOM.chatInput.value.substring(cursorPosition);
+            const selectedRoleText = '@' + roleName + ' ';
+            DOM.chatInput.value = DOM.chatInput.value.substring(0, lastAtIndex) + selectedRoleText + textAfterCursor;
+
+            const newCursorPosition = lastAtIndex + selectedRoleText.length;
+            DOM.chatInput.selectionStart = DOM.chatInput.selectionEnd = newCursorPosition;
+            DOM.chatInput.dataset.selectedRole = roleName;
+        }
+
+        DOM.chatInput.focus();
+        DOM.roleMentionDropdown.style.display = 'none';
+        DOM.roleMentionDropdown.classList.remove('active');
+    });
+
+    /**
+     * 更新粘贴图片指示器
+     */
+    const updatePasteIndicator = () => {
+        const existingIndicator = KissaiUtils.getElement('paste-image-indicator');
+
+        if (DOM.chatInput.dataset.pastedImage) {
+            if (!existingIndicator) {
+                const indicator = document.createElement('div');
+                indicator.id = 'paste-image-indicator';
+                indicator.style.cssText = `position: relative; display: inline-block; width: ${KISSAI_CONFIG.UI.IMAGE_PREVIEW_SIZE}px; height: ${KISSAI_CONFIG.UI.IMAGE_PREVIEW_SIZE}px;`;
+                indicator.innerHTML = `
+                    <button id="clear-pasted-image" style="position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; padding: 0; z-index: 10;">×</button>
+                    <img src="${DOM.chatInput.dataset.pastedImage}" style="width: ${KISSAI_CONFIG.UI.IMAGE_PREVIEW_SIZE}px; height: ${KISSAI_CONFIG.UI.IMAGE_PREVIEW_SIZE}px; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.1);" />
+                `;
+                DOM.chatInput.parentNode.insertBefore(indicator, DOM.chatInput);
+
+                KissaiUtils.getElement('clear-pasted-image')?.addEventListener('click', () => {
+                    delete DOM.chatInput.dataset.pastedImage;
+                    KissaiUtils.getElement('paste-image-indicator')?.remove();
+                    DOM.sendBtn.disabled = DOM.chatInput.value.trim() === '';
+                });
+            } else {
+                const img = existingIndicator.querySelector('img');
+                if (img) img.src = DOM.chatInput.dataset.pastedImage;
+            }
+        } else {
+            existingIndicator?.remove();
+        }
+    };
+
+    // 发送按钮
+    DOM.sendBtn?.addEventListener('click', async () => {
+        if (KissaiAPI.isRequesting) {
+            KissaiAPI.abort();
+            updateSendButtonState(false);
+            return;
+        }
+
+        const message = DOM.chatInput.value.trim();
+        const pastedImage = DOM.chatInput.dataset.pastedImage;
+        const images = pastedImage ? [pastedImage] : [];
+
+        if (!message && images.length === 0) return;
+
+        const currentModel = getCurrentModelName();
+        if (!currentModel) {
+            alert(t('alert.selectModel'));
+            return;
+        }
+
         try {
-            isRequesting = true;
-            sendBtn.innerHTML = '<div class="stop-icon"></div>';
-            sendBtn.classList.add('stop-mode');
-            sendBtn.disabled = false;
-            if (chatContainer) chatContainer.classList.add('has-messages');
-            if (chatView) chatView.classList.add('has-messages');
-            abortController = new AbortController();
-            const currentRole = chatInput.dataset.selectedRole || null;
+            updateSendButtonState(true);
+
+            const currentRole = DOM.chatInput.dataset.selectedRole || null;
+
+            // 保存角色到聊天
             if (activeChatId) {
                 const chat = configData.history.find(c => c.id === activeChatId);
                 if (chat) {
@@ -1418,314 +1576,113 @@ document.addEventListener('DOMContentLoaded', () => {
                     saveToStorage();
                 }
             }
-            addMessage(message, true, images);
-            chatInput.value = '';
-            chatInput.style.height = 'auto';
-            delete chatInput.dataset.pastedImage;
-            const indicator = document.getElementById('paste-image-indicator');
-            if (indicator) indicator.remove();
+
+            // 添加用户消息
+            addUserMessage(message, images);
+
+            // 清空输入
+            DOM.chatInput.value = '';
+            DOM.chatInput.style.height = 'auto';
+            delete DOM.chatInput.dataset.pastedImage;
+            KissaiUtils.getElement('paste-image-indicator')?.remove();
+
+            // 恢复角色前缀
             if (currentRole && isValidRole(currentRole)) {
-                chatInput.value = `@${currentRole} `;
-                chatInput.dataset.selectedRole = currentRole;
+                DOM.chatInput.value = `@${currentRole} `;
+                DOM.chatInput.dataset.selectedRole = currentRole;
             } else {
-                delete chatInput.dataset.selectedRole;
-                if (activeChatId) {
-                    const chat = configData.history.find(c => c.id === activeChatId);
-                    if (chat && chat.activeRole && !isValidRole(chat.activeRole)) {
-                        chat.activeRole = null;
-                    }
-                }
+                delete DOM.chatInput.dataset.selectedRole;
             }
-            await sendMessageToAPI(message, currentModel, abortController.signal, currentRole, images);
+
+            // 隐藏欢迎区域
+            const welcomeSection = document.querySelector('.welcome-section');
+            if (welcomeSection) welcomeSection.style.display = 'none';
+
+            await handleSendMessage(message, currentModel, currentRole, images);
+
         } catch (error) {
             if (error.name !== 'AbortError') {
-                displayErrorMessage(error);
+                addErrorMessage(error.message);
             }
         } finally {
-            isRequesting = false;
-            sendBtn.innerHTML = '<i data-lucide="send"></i>';
-            sendBtn.classList.remove('stop-mode');
-            sendBtn.disabled = chatInput.value.trim() === '' && !chatInput.dataset.pastedImage;
-            abortController = null;
-            updateIcons();
-            chatInput.focus();
+            updateSendButtonState(false);
+            DOM.chatInput?.focus();
         }
     });
-    if (exportClipboardBtn) {
-        exportClipboardBtn.addEventListener('click', async () => {
-            saveToStorage();
-            const exportData = JSON.parse(JSON.stringify(configData));
-            if (exportData.history) {
-                exportData.history = exportData.history.map(chat => ({
-                    ...chat,
-                    messages: (chat.messages || []).map(msg => {
-                        const { images, ...rest } = msg;
-                        return rest;
-                    })
-                }));
-            }
-            const configText = JSON.stringify(exportData, null, 2);
-            const textarea = document.createElement('textarea');
-            textarea.value = configText;
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
-            textarea.select();
-            const success = document.execCommand('copy');
-            document.body.removeChild(textarea);
-            if (success) {
-                const span = exportClipboardBtn.querySelector('span');
-                const originalText = span.textContent;
-                exportClipboardBtn.classList.add('copied');
-                span.textContent = t('code.copySuccess');
-                setTimeout(() => {
-                    exportClipboardBtn.classList.remove('copied');
-                    span.textContent = originalText;
-                }, 800);
-            } else {
-                console.error(t('error.copyFailed'));
-            }
-        });
-    }
-    if (importClipboardBtn) {
-        importClipboardBtn.addEventListener('click', async () => {
-            try {
-                const text = await navigator.clipboard.readText();
-                if (!text.trim()) {
-                    return;
-                }
-                const importedData = JSON.parse(text);
-                if (importedData && importedData.general && importedData.providers) {
-                    if (confirm(t('alert.importConfirm'))) {
-                        configData = importedData;
-                        localStorage.setItem('kissai_config', JSON.stringify(configData));
-                        if (currentProviderKey && configData.providers[currentProviderKey]) {
-                            apiKeyInput.value = configData.providers[currentProviderKey].apiKey || '';
-                            baseUrlInput.value = configData.providers[currentProviderKey].baseUrl || '';
-                        }
-                        location.reload();
-                    }
-                }
-            } catch (err) {
-                console.error(t('alert.importFailed') + err.message);
-            }
-        });
-    }
-    if (exportFileBtn) {
-        exportFileBtn.addEventListener('click', () => {
-            saveToStorage();
-            const exportData = JSON.parse(JSON.stringify(configData));
-            if (exportData.history) {
-                exportData.history = exportData.history.map(chat => ({
-                    ...chat,
-                    messages: (chat.messages || []).map(msg => {
-                        const { images, ...rest } = msg;
-                        return rest;
-                    })
-                }));
-            }
-            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            const timestamp = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
-            a.download = `kissai-full-config-${timestamp}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        });
-    }
-    editProviderBtn.addEventListener('click', () => {
-        originalProviderName = providerNameDisplay.textContent;
-        providerNameDisplay.contentEditable = "true";
-        providerNameDisplay.focus();
-        providerNameDisplay.focus();
-        const range = document.createRange();
-        range.selectNodeContents(providerNameDisplay);
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-        editProviderBtn.classList.add('hidden');
-        saveProviderBtn.classList.remove('hidden');
-        cancelProviderBtn.classList.remove('hidden');
-        providerNameDisplay.addEventListener('input', function () {
-            providerNameDisplay.contentEditable = "true";
-        });
-        providerNameDisplay.addEventListener('paste', function (e) {
-            setTimeout(() => {
-                providerNameDisplay.contentEditable = "true";
-                providerNameDisplay.focus();
-                const range = document.createRange();
-                const selection = window.getSelection();
-                range.selectNodeContents(providerNameDisplay);
-                range.collapse(false);
-                selection.removeAllRanges();
-                selection.addRange(range);
-            }, 10);
-        });
-        providerNameDisplay.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                saveProviderBtn.click();
-            }
-        });
+
+    // 设置按钮
+    DOM.settingsBtn?.addEventListener('click', () => {
+        DOM.settingsView?.classList.add('active');
+        renderGeneralSettings();
     });
-    function exitTitleEdit() {
-        providerNameDisplay.contentEditable = "false";
-        editProviderBtn.classList.remove('hidden');
-        saveProviderBtn.classList.add('hidden');
-        cancelProviderBtn.classList.add('hidden');
-    }
-    saveProviderBtn.addEventListener('click', () => {
-        const newName = providerNameDisplay.textContent.trim();
-        if (newName && newName !== currentProviderKey) {
-            configData.providers[newName] = configData.providers[currentProviderKey];
-            delete configData.providers[currentProviderKey];
-            currentProviderKey = newName;
-            renderProviderList();
-            renderModels();
+
+    DOM.closeSettingsBtn?.addEventListener('click', () => {
+        saveToStorage();
+        DOM.settingsView?.classList.remove('active');
+    });
+
+    // 点击设置面板外部关闭
+    document.addEventListener('click', (e) => {
+        if (!DOM.settingsView?.classList.contains('active')) return;
+
+        if (e.target === DOM.settingsView) {
             saveToStorage();
-        }
-        exitTitleEdit();
-    });
-    cancelProviderBtn.addEventListener('click', () => {
-        providerNameDisplay.textContent = originalProviderName;
-        exitTitleEdit();
-    });
-    function getCurrentModelName() {
-        const internalSpan = currentModelSpan.querySelector('span');
-        if (internalSpan) {
-            return internalSpan.textContent.trim();
-        }
-        return currentModelSpan.textContent.replace(/^[A-Z]+\s*/, '').trim();
-    }
-    function switchTab(tabId, element) {
-        if (!tabId) return;
-        if (tabId === 'providers-toggle') {
-            providersHeader.classList.toggle('collapsed');
-            providersListContainer.classList.toggle('collapsed');
+            DOM.settingsView.classList.remove('active');
             return;
         }
-        document.querySelectorAll('.settings-nav-item').forEach(nav => nav.classList.remove('active'));
-        if (element) {
-            element.classList.add('active');
-        } else {
-            const targetNav = document.querySelector(`.settings-nav-item[data-tab="${tabId}"]`);
-            if (targetNav) targetNav.classList.add('active');
-        }
-        document.querySelectorAll('.settings-content').forEach(content => content.classList.remove('active'));
-        if (tabId.startsWith('provider-')) {
+
+        if (DOM.sidebar?.contains(e.target) && !DOM.settingsBtn?.contains(e.target)) {
             saveToStorage();
-            currentProviderKey = element.getAttribute('data-key');
-            providerNameDisplay.textContent = currentProviderKey;
-            apiKeyInput.value = configData.providers[currentProviderKey].apiKey || '';
-            baseUrlInput.value = configData.providers[currentProviderKey].baseUrl || '';
-            document.getElementById('provider-settings').classList.add('active');
-            renderModels();
-        } else if (tabId === 'provider') {
-            document.getElementById('provider-settings').classList.add('active');
-            let newCount = 1;
-            while (configData.providers[`New Provider ${newCount}`]) newCount++;
-            const newName = `New Provider ${newCount}`;
-            configData.providers[newName] = { apiKey: '', baseUrl: '', models: [] };
-            currentProviderKey = newName;
-            providerNameDisplay.textContent = currentProviderKey;
-            apiKeyInput.value = '';
-            baseUrlInput.value = '';
-            modelList.innerHTML = '';
-            renderProviderList();
-            setTimeout(() => editProviderBtn.click(), 10);
-        } else {
-            const contentId = `${tabId}-settings`;
-            const content = document.getElementById(contentId);
-            if (content) {
-                content.classList.add('active');
-                if (tabId === 'general') renderGeneralSettings();
-                if (tabId === 'role-presets') {
-                    if (!configData.roles || configData.roles.length === 0) {
-                        configData.roles = JSON.parse(JSON.stringify(defaultData.roles));
-                    }
-                    renderRoles();
-                }
-            }
+            DOM.settingsView.classList.remove('active');
         }
-        if (typeof lucide !== 'undefined') updateIcons();
-    }
-    const settingsSidebar = document.querySelector('.settings-sidebar');
-    if (settingsSidebar) {
-        settingsSidebar.addEventListener('click', (e) => {
-            const item = e.target.closest('.settings-nav-item');
-            if (item) switchTab(item.getAttribute('data-tab'), item);
-        });
-    }
-    function renderProviderList() {
-        providersListContainer.querySelectorAll('.settings-nav-item:not(.add-btn)').forEach(el => el.remove());
-        const colors = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#06B6D4', '#3B82F6', '#A855F7'];
-        const providers = Object.keys(configData.providers);
-        providers.forEach((provider, index) => {
-            const item = document.createElement('div');
-            item.className = 'settings-nav-item';
-            if (provider === currentProviderKey) item.classList.add('active');
-            item.setAttribute('data-tab', `provider-${provider.toLowerCase()}`);
-            item.setAttribute('data-key', provider);
-            const color = colors[index % colors.length];
-            let label = provider;
-            if (provider.length > 2) {
-                label = provider.charAt(0).toUpperCase() + provider.charAt(provider.length - 1).toUpperCase();
-            } else {
-                label = provider.toUpperCase();
-            }
-            item.innerHTML = `
-                <div style="display: flex; align-items: center; flex: 1; overflow: hidden;">
-                    <div style="width:24px;height:16px;border-radius:2px;background:${color};color:white;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;margin-right:8px;flex-shrink:0;">${label}</div>
-                    <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${provider}</span>
-                </div>
-                <div class="provider-item-actions">
-                     <button class="icon-btn-xs provider-copy-btn" onclick="event.stopPropagation(); copyProvider('${provider}')" title="${t('provider.copy')}">
-                        <i data-lucide="copy"></i>
-                    </button>
-                    <button class="icon-btn-xs provider-delete-btn" onclick="event.stopPropagation(); deleteProvider('${provider}')" title="${t('provider.delete')}">
-                        <i data-lucide="trash"></i>
-                    </button>
-                </div>
-            `;
-            providersListContainer.appendChild(item);
-        });
-        if (typeof lucide !== 'undefined') updateIcons();
-    }
-    window.copyProvider = (providerKey) => {
-        const provider = configData.providers[providerKey];
-        if (!provider) return;
-        let newName = `${providerKey} copy`;
-        let counter = 1;
-        while (configData.providers[newName]) {
-            newName = `${providerKey} copy ${counter}`;
-            counter++;
+    });
+
+    // 模型选择器
+    DOM.modelSelector?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        DOM.contextLimitDropdown?.classList.remove('active');
+        DOM.languageOptions?.classList.remove('active');
+        DOM.modelDropdown?.classList.toggle('active');
+
+        if (DOM.modelDropdown?.classList.contains('active')) {
+            renderModelDropdown();
         }
-        configData.providers[newName] = JSON.parse(JSON.stringify(provider));
-        currentProviderKey = newName;
-        renderProviderList();
-        saveToStorage();
-        const item = document.querySelector(`.settings-nav-item[data-key="${newName}"]`);
-        if (item) switchTab(`provider-${newName.toLowerCase()}`, item);
-    };
-    themeBtns.forEach(btn => {
+    });
+
+    // 全局点击关闭下拉菜单
+    document.addEventListener('click', (event) => {
+        DOM.modelDropdown?.classList.remove('active');
+        DOM.languageOptions?.classList.remove('active');
+        DOM.contextLimitDropdown?.classList.remove('active');
+
+        if (!event.target.closest('#role-mention-dropdown') && !event.target.closest('#chat-input')) {
+            DOM.roleMentionDropdown.style.display = 'none';
+            DOM.roleMentionDropdown?.classList.remove('active');
+        }
+
+        // 模型选择弹窗
+        const modal = KissaiUtils.getElement('model-modal');
+        if (modal?.classList.contains('active') && event.target === modal) {
+            closeModelModal();
+        }
+    });
+
+
+
+    // ========== 主题切换 ==========
+
+    DOM.themeBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const theme = btn.getAttribute('data-theme');
             configData.general.theme = theme;
-            themeBtns.forEach(b => b.classList.remove('active'));
+
+            DOM.themeBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+
             const themeClass = theme === 'light' ? 'light-mode' : 'dark-mode';
             const isLoading = document.body.classList.contains('loading');
             const isLoaded = document.body.classList.contains('loaded');
+
             if (isLoading) {
                 document.body.className = `loading ${themeClass}`;
             } else if (isLoaded) {
@@ -1733,572 +1690,22 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 document.body.className = themeClass;
             }
+
             saveToStorage();
         });
     });
-    modelSelector.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (contextLimitDropdown) contextLimitDropdown.classList.remove('active');
-        if (languageOptions) languageOptions.classList.remove('active');
-        modelDropdown.classList.toggle('active');
-        if (modelDropdown.classList.contains('active')) renderModelDropdown();
-    });
-    document.addEventListener('click', (event) => {
-        if (modelDropdown) modelDropdown.classList.remove('active');
-        if (languageOptions) languageOptions.classList.remove('active');
-        if (contextLimitDropdown) contextLimitDropdown.classList.remove('active');
-        if (!event.target.closest('#role-mention-dropdown') && !event.target.closest('#chat-input')) {
-            roleMentionDropdown.style.display = 'none';
-            roleMentionDropdown.classList.remove('active');
-        }
-        const modal = document.getElementById('model-modal');
-        if (modal && modal.classList.contains('active') && event.target === modal) {
-            closeModelModal();
-        }
-    });
-    function preventScrollPropagation(element) {
-        if (!element) return;
-        element.addEventListener('wheel', (e) => {
-            const delta = e.deltaY;
-            const contentHeight = element.scrollHeight;
-            const visibleHeight = element.clientHeight;
-            const scrollTop = element.scrollTop;
-            if (contentHeight <= visibleHeight) {
-                e.preventDefault();
-                return;
-            }
-            if ((scrollTop === 0 && delta < 0) ||
-                (scrollTop + visibleHeight >= contentHeight && delta > 0)) {
-                e.preventDefault();
-            }
-            e.stopPropagation();
-        }, { passive: false });
-    }
-    function renderModelDropdown() {
-        modelDropdown.innerHTML = '';
-        preventScrollPropagation(modelDropdown);
-        const hasProviders = Object.keys(configData.providers).length > 0;
-        let hasAnyEnabledModels = false;
-        Object.values(configData.providers).forEach(p => {
-            const enabledModels = (p.models || []).filter(m => m.enabled !== false);
-            if (enabledModels.length > 0) {
-                hasAnyEnabledModels = true;
-            }
-        });
-        if (!hasProviders) {
-            const emptySection = document.createElement('div');
-            emptySection.className = 'dropdown-section';
-            emptySection.innerHTML = `<div class="dropdown-section-title" style="color: var(--text-secondary); font-style: italic; padding: 12px 12px 4px 12px;">${t('model.noProviders')}</div>`;
-            modelDropdown.appendChild(emptySection);
-        } else if (!hasAnyEnabledModels) {
-            const emptySection = document.createElement('div');
-            emptySection.className = 'dropdown-section';
-            emptySection.innerHTML = `<div class="dropdown-section-title" style="color: var(--text-secondary); font-style: italic; padding: 12px 12px 4px 12px;">${t('model.noEnabled')}</div>`;
-            modelDropdown.appendChild(emptySection);
-        } else {
-            const favorites = [];
-            Object.entries(configData.providers).forEach(([providerKey, p]) => {
-                p.models.forEach(m => {
-                    if (m.favorite && m.enabled !== false) {
-                        favorites.push({ ...m, providerKey });
-                    }
-                });
-            });
-            if (favorites.length > 0) {
-                const favSection = document.createElement('div');
-                favSection.className = 'dropdown-section';
-                favSection.innerHTML = `<div class="dropdown-section-title">${t('model.favorites')}</div>`;
-                favorites.forEach(m => favSection.appendChild(createDropdownItem(m, m.providerKey)));
-                modelDropdown.appendChild(favSection);
-            }
-            Object.keys(configData.providers).forEach(providerKey => {
-                const provider = configData.providers[providerKey];
-                const enabledModels = (provider.models || []).filter(m => m.enabled !== false);
-                if (enabledModels.length > 0) {
-                    const section = document.createElement('div');
-                    section.className = 'dropdown-section';
-                    section.innerHTML = `<div class="dropdown-section-title">${providerKey}</div>`;
-                    enabledModels.forEach(m => {
-                        section.appendChild(createDropdownItem(m, providerKey));
-                    });
-                    modelDropdown.appendChild(section);
-                }
-            });
-        }
-    }
-    function getProviderForModel(modelName) {
-        for (const [providerKey, provider] of Object.entries(configData.providers)) {
-            if (provider.models && provider.models.some(m => m.name === modelName)) {
-                return providerKey;
-            }
-        }
-        return 'Default';
-    }
-    function getProviderDisplayInfo(providerKey) {
-        if (!providerKey || providerKey === 'Default' || !configData.providers[providerKey]) {
-            return { color: '#6B7280', label: '??' };
-        }
-        const providers = Object.keys(configData.providers);
-        const index = providers.indexOf(providerKey);
-        const colors = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#06B6D4', '#3B82F6', '#A855F7'];
-        const color = index >= 0 ? colors[index % colors.length] : '#6B7280';
-        let label = providerKey;
-        if (providerKey.length > 2) {
-            label = providerKey.charAt(0) + providerKey.charAt(providerKey.length - 1);
-        }
-        label = label.toUpperCase();
-        return { color, label };
-    }
-    function setModelDisplay(modelName, providerKey) {
-        let info;
-        if (!providerKey) {
-            providerKey = currentModelSpan.dataset.provider;
-        }
-        if (providerKey) {
-            info = getProviderDisplayInfo(providerKey);
-            currentModelSpan.dataset.provider = providerKey;
-        } else {
-            info = { color: '#6B7280', label: '??' };
-        }
-        const cleanName = modelName ? modelName.trim() : '';
-        currentModelSpan.style.paddingLeft = '0px';
-        currentModelSpan.style.display = 'flex';
-        currentModelSpan.style.alignItems = 'center';
-        currentModelSpan.style.gap = '8px';
-            currentModelSpan.innerHTML = `
-            <div class="model-provider-indicator" style="
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background-color: ${info.color};
-                color: #fff;
-                font-size: 10px;
-                font-weight: 800;
-                border-radius: 2px;
-                width: 24px;
-                height: 16px;
-                line-height: 1;
-                flex-shrink: 0;
-            ">${info.label}</div>
-            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${cleanName}</span>
-        `;
-    }
-    function updateCurrentModelDisplay() {
-        const currentName = getCurrentModelName();
-        const currentProvider = currentModelSpan.dataset.provider;
-        if (currentName) {
-            setModelDisplay(currentName, currentProvider);
-        }
-    }
-    function createDropdownItem(model, providerKey) {
-        const item = document.createElement('div');
-        item.className = 'dropdown-item';
-        const finalProviderKey = providerKey || getProviderForModel(model.name);
-        const info = getProviderDisplayInfo(finalProviderKey);
-        const currentName = getCurrentModelName();
-        if (currentName === model.name) {
-            item.classList.add('active');
-        }
-        item.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
-                <div style="
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background-color: ${info.color};
-                color: #fff;
-                font-size: 10px;
-                font-weight: 800;
-                border-radius: 2px;
-                width: 24px;
-                height: 16px;
-                line-height: 1;
-                flex-shrink: 0;
-                ">${info.label}</div>
-                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${model.name}</span>
-            </div>
-        `;
-        item.onclick = async () => {
-            const previousModel = getCurrentModelName();
-            const targetModelName = model.name.trim();
-            setModelDisplay(targetModelName, finalProviderKey);
-            if (configData.general) {
-                configData.general.lastUsedModel = targetModelName;
-                saveToStorage();
-            }
-            modelDropdown.classList.remove('active');
-            if (previousModel && previousModel !== targetModelName) {
-                const lastUserMessage = getLastUserMessage();
-                if (lastUserMessage) {
-                    if (isRequesting && abortController) {
-                        abortController.abort();
-                        isRequesting = false;
-                    }
-                    try {
-                        isRequesting = true;
-                        sendBtn.innerHTML = '<div class="stop-icon"></div>';
-                        sendBtn.classList.add('stop-mode');
-                        sendBtn.disabled = false;
-                        abortController = new AbortController();
-                        const chatMessages = document.getElementById('chat-messages');
-                        if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
-                        await sendMessageToAPI(lastUserMessage.content, targetModelName, abortController.signal, null, lastUserMessage.images || []);
-                    } catch (error) {
-                        if (error.name !== 'AbortError') {
-                            displayErrorMessage(error);
-                        }
-                    } finally {
-                        isRequesting = false;
-                        sendBtn.innerHTML = '<i data-lucide="send"></i>';
-                        sendBtn.classList.remove('stop-mode');
-                        sendBtn.disabled = chatInput.value.trim() === '' && !chatInput.dataset.pastedImage;
-                        abortController = null;
-                        updateIcons();
-                    }
-                }
-            }
-        };
-        return item;
-    }
-    function getLastUserMessage() {
-        if (!activeChatId) return null;
-        const chat = configData.history.find(c => c.id === activeChatId);
-        if (!chat || !chat.messages) return null;
-        for (let i = chat.messages.length - 1; i >= 0; i--) {
-            if (chat.messages[i].role === 'user') {
-                return chat.messages[i];
-            }
-        }
-        return null;
-    }
-    function renderShortcuts() {
-        if (!shortcutsContainer) return;
-        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-        const cmd = isMac ? '⌘' : 'Ctrl';
-        const shortcuts = [
-            { name: t('shortcuts.newChat'), key: `${cmd} + N` }, { name: t('shortcuts.sidebar'), key: `${cmd} + \\` },
-            { name: t('shortcuts.send'), key: 'Enter' }, { name: t('shortcuts.newLine'), key: 'Shift + Enter' },
-            { name: t('shortcuts.search'), key: `${cmd} + F` }, { name: t('shortcuts.settings'), key: `${cmd} + ,` }
-        ];
-        shortcutsContainer.innerHTML = shortcuts.map(s => `<div class="shortcut-item"><span>${s.name}</span><kbd>${s.key}</kbd></div>`).join('');
-    }
-    updateCurrentModelDisplay();
-    window.toggleForm = (id) => {
-        const form = document.getElementById(id);
-        form.classList.toggle('active');
-        const actions = document.getElementById('edit-role-actions');
-        if (form.classList.contains('active')) {
-            editingRoleId = null;
-            actions.classList.remove('hidden');
-            document.getElementById('new-role-prompt').style.minHeight = '200px';
-        } else {
-            editingRoleId = null;
-            actions.classList.add('hidden');
-            document.getElementById('new-role-name').value = '';
-            document.getElementById('new-role-prompt').value = '';
-            document.getElementById('new-role-prompt').style.minHeight = '';
-        }
-    };
-    window.saveRole = () => {
-        const nameInput = document.getElementById('new-role-name');
-        const promptInput = document.getElementById('new-role-prompt');
-        if (!nameInput.value.trim()) {
-            return;
-        }
-        if (editingRoleId) {
-            const role = configData.roles.find(r => r.id === editingRoleId);
-            if (role) { role.name = nameInput.value.trim(); role.prompt = promptInput.value; }
-            editingRoleId = null;
-        } else {
-            configData.roles.push({ id: Date.now(), name: nameInput.value.trim(), prompt: promptInput.value });
-        }
-        renderRoles();
-        nameInput.value = ''; promptInput.value = '';
-        document.getElementById('add-role-form').classList.remove('active');
-        document.getElementById('edit-role-actions').classList.add('hidden');
-        document.getElementById('new-role-prompt').style.minHeight = '';
-        saveToStorage();
-    };
-    function renderRoles() {
-        roleList.innerHTML = '';
-        configData.roles.forEach(role => {
-            const item = document.createElement('div');
-            item.className = 'role-item';
-            const isEditing = editingRoleId === role.id;
-            const promptStyle = isEditing ? '' : 'style="font-size:11px;"';
-            item.innerHTML = `
-                <div class="role-item-header">
-                    <span class="role-item-name">${role.name}</span>
-                    <div class="model-item-actions">
-                        <i data-lucide="pencil" onclick="editRole(${role.id})"></i>
-                        <i data-lucide="trash" onclick="deleteRole(${role.id})"></i>
-                    </div>
-                </div>
-                <div class="role-item-prompt" ${promptStyle}>${role.prompt}</div>
-            `;
-            roleList.appendChild(item);
-        });
-        updateIcons();
-    }
-    window.editRole = (id) => {
-        const role = configData.roles.find(r => r.id === id);
-        if (role) {
-            editingRoleId = id;
-            document.getElementById('new-role-name').value = role.name;
-            document.getElementById('new-role-prompt').value = role.prompt;
-            document.getElementById('add-role-form').classList.add('active');
-            document.getElementById('edit-role-actions').classList.remove('hidden');
-            document.getElementById('new-role-prompt').style.minHeight = '200px';
-        }
-    };
-    window.deleteRole = (id) => {
-        const roleToDelete = configData.roles.find(r => r.id === id);
-        if (roleToDelete) {
-            configData.history.forEach(chat => {
-                if (chat.activeRole === roleToDelete.name) {
-                    chat.activeRole = null;
-                }
-            });
-        }
-        configData.roles = configData.roles.filter(r => r.id !== id);
-        renderRoles();
-        saveToStorage();
-        if (activeChatId) {
-            const chat = configData.history.find(c => c.id === activeChatId);
-            if (chat && !chat.activeRole) {
-                chatInput.value = '';
-                delete chatInput.dataset.selectedRole;
-            }
-        }
-    };
-    function renderModels() {
-        const provider = configData.providers[currentProviderKey];
-        modelList.innerHTML = '';
-        if (provider) provider.models.forEach(model => {
-            const item = document.createElement('div');
-            item.className = 'model-item';
-            item.innerHTML = `
-                <div class="model-item-info">
-                    <span class="model-item-name">${model.name}</span>
-                </div>
-                <div class="model-item-actions">
-                    <i data-lucide="star" class="${model.favorite ? 'active' : ''}" onclick="toggleFavorite(${model.id})"></i>
-                    <i data-lucide="trash" onclick="deleteModel(${model.id})"></i>
-                </div>
-            `;
-            modelList.appendChild(item);
-        });
-        const refreshIcon = fetchModelsBtn.querySelector('.spinning');
-        if (refreshIcon) refreshIcon.classList.remove('spinning');
-        updateIcons();
-    }
-    window.showModelModal = (fetchedModels) => {
-        const modal = document.getElementById('model-modal');
-        const selectionList = document.getElementById('model-selection-list');
-        const searchInput = document.getElementById('modal-model-search-input');
-        const existingModels = configData.providers[currentProviderKey].models || [];
-        if (!modal) {
-            return;
-        }
-        if (searchInput) searchInput.value = '';
-        selectionList.innerHTML = '';
-        window.allFetchedModels = fetchedModels;
-        renderModelList(fetchedModels, existingModels);
-        modal.classList.add('active');
-        updateIcons();
-    };
-    function renderModelList(models, existingModels) {
-        const selectionList = document.getElementById('model-selection-list');
-        const modal = document.getElementById('model-modal');
-        selectionList.innerHTML = '';
-        models.forEach(model => {
-            const existingModel = existingModels.find(m => m.name === model.name);
-            const isSelected = existingModel ? true : false;
-            const item = document.createElement('div');
-            item.className = 'model-selection-item';
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.id = `model-${model.id}`;
-            if (isSelected) checkbox.checked = true;
-            checkbox.dataset.modelName = model.name;
-            const label = document.createElement('label');
-            label.htmlFor = `model-${model.id}`;
-            label.textContent = model.name;
-            item.appendChild(checkbox);
-            item.appendChild(label);
-            checkbox.addEventListener('change', function () {
-                saveModelSelection();
-            });
-            selectionList.appendChild(item);
-        });
-        if (typeof lucide !== 'undefined') updateIcons();
-    };
-    window.closeModelModal = () => {
-        const modal = document.getElementById('model-modal');
-        modal.classList.remove('active');
-    };
-    const modalModelSearchInput = document.getElementById('modal-model-search-input');
-    if (modalModelSearchInput) {
-        modalModelSearchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            const allItems = document.querySelectorAll('#model-selection-list .model-selection-item');
-            allItems.forEach(item => {
-                const modelName = item.querySelector('label').textContent.toLowerCase();
-                if (modelName.includes(searchTerm)) {
-                    item.style.display = 'flex';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        });
-        modalModelSearchInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                modalModelSearchInput.value = '';
-                modalModelSearchInput.dispatchEvent(new Event('input'));
-                modalModelSearchInput.blur();
-            }
-        });
-    }
-    window.saveModelSelection = () => {
-        const allCheckboxes = document.querySelectorAll('#model-selection-list input[type="checkbox"]');
-        const checkedModelNames = Array.from(allCheckboxes)
-            .filter(checkbox => checkbox.checked)
-            .map(checkbox => checkbox.getAttribute('data-model-name'));
-        const allModelElements = document.querySelectorAll('#model-selection-list .model-selection-item');
-        const allAvailableModels = Array.from(allModelElements).map(item => {
-            const checkbox = item.querySelector('input[type="checkbox"]');
-            const modelName = checkbox.getAttribute('data-model-name');
-            return { name: modelName, favorite: false };
-        });
-        const selectedModels = allAvailableModels.filter(model => checkedModelNames.includes(model.name));
-        const existingModels = configData.providers[currentProviderKey].models || [];
-        const finalModels = selectedModels.map(selectedModel => {
-            const existingModel = existingModels.find(m => m.name === selectedModel.name);
-            if (existingModel) {
-                return { ...existingModel, name: selectedModel.name };
-            } else {
-                return {
-                    id: Date.now() + Math.random(),
-                    name: selectedModel.name,
-                    favorite: false
-                };
-            }
-        });
-        configData.providers[currentProviderKey].models = finalModels;
-        saveToStorage();
-        renderModels();
-    };
-    window.toggleFavorite = (id) => {
-        const provider = configData.providers[currentProviderKey];
-        const model = provider.models.find(m => m.id === id);
-        if (model) {
-            model.favorite = !model.favorite;
-            saveToStorage();
-            renderModels();
-        }
-    };
-    window.deleteModel = (id) => {
-        configData.providers[currentProviderKey].models = configData.providers[currentProviderKey].models.filter(m => m.id !== id);
-        renderModels();
-        saveToStorage();
-    };
-    window.deleteProvider = (providerKey) => {
-        if (currentProviderKey === providerKey) {
-            const remainingProviders = Object.keys(configData.providers).filter(p => p !== providerKey);
-            if (remainingProviders.length > 0) {
-                currentProviderKey = remainingProviders[0];
-                providerNameDisplay.textContent = currentProviderKey;
-                apiKeyInput.value = configData.providers[currentProviderKey].apiKey || '';
-                baseUrlInput.value = configData.providers[currentProviderKey].baseUrl || '';
-                renderModels();
-            } else {
-                currentProviderKey = null;
-                providerNameDisplay.textContent = t('model.notProvider');
-                apiKeyInput.value = '';
-                baseUrlInput.value = '';
-                modelList.innerHTML = '';
-            }
-        }
-        delete configData.providers[providerKey];
-        renderProviderList();
-        saveToStorage();
-        if (typeof lucide !== 'undefined') updateIcons();
-    };
-    if (configData.providers[currentProviderKey]) {
-        apiKeyInput.value = configData.providers[currentProviderKey].apiKey || '';
-        baseUrlInput.value = configData.providers[currentProviderKey].baseUrl || '';
-    }
-    renderProviderList();
-    renderModels();
-    renderGeneralSettings();
-    renderHistory();
-    updateChatLayout();
-    if (configData.history.length > 0) {
-        const lastActiveChatId = configData.general.activeChatId;
-        const targetChat = configData.history.find(c => c.id === lastActiveChatId);
-        if (targetChat) {
-            loadChat(lastActiveChatId);
-        } else {
-            loadChat(configData.history[0].id);
-        }
-    } else {
-        createNewChat();
-    }
-    updateIcons();
-    const clearChatBtn = document.getElementById('clear-chat-btn');
-    if (clearChatBtn) {
-        clearChatBtn.title = t('chat.clearChat');
-        clearChatBtn.addEventListener('dblclick', () => {
-            if (activeChatId) {
-                const chat = configData.history.find(c => c.id === activeChatId);
-                if (chat) {
-                    chat.messages = [];
-                    saveToStorage();
-                    loadChat(activeChatId);
-                }
-            }
-        });
-    }
-    const importFileBtn = document.getElementById('import-file-btn');
-    const importFileInput = document.getElementById('import-file-input');
-    if (importFileBtn && importFileInput) {
-        importFileBtn.addEventListener('click', () => {
-            importFileInput.click();
-        });
-        importFileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const importedData = JSON.parse(e.target.result);
-                    if (importedData && importedData.general && importedData.providers) {
-                        configData = importedData;
-                        localStorage.setItem('kissai_config', JSON.stringify(configData));
-                        if (currentProviderKey && configData.providers[currentProviderKey]) {
-                            apiKeyInput.value = configData.providers[currentProviderKey].apiKey || '';
-                            baseUrlInput.value = configData.providers[currentProviderKey].baseUrl || '';
-                        }
-                        location.reload();
-                    } else {
-                        console.error(t('alert.invalidConfig'));
-                    }
-                } catch (err) {
-                    console.error(t('alert.importFailed') + err.message);
-                }
-            };
-            reader.readAsText(file);
-            importFileInput.value = '';
-        });
-    }
-    const sidebarThemeBtn = document.getElementById('theme-toggle-btn');
+
+    // 侧边栏主题切换按钮
+    const sidebarThemeBtn = KissaiUtils.getElement('theme-toggle-btn');
     if (sidebarThemeBtn) {
         const updateThemeIcon = () => {
             const isDark = document.body.classList.contains('dark-mode');
             sidebarThemeBtn.innerHTML = `<i data-lucide="${isDark ? 'moon' : 'sun'}"></i>`;
-            if (typeof lucide !== 'undefined') updateIcons();
+            updateIcons();
         };
+
         updateThemeIcon();
+
         sidebarThemeBtn.addEventListener('click', () => {
             const isDark = document.body.classList.contains('dark-mode');
             if (isDark) {
@@ -2314,121 +1721,822 @@ document.addEventListener('DOMContentLoaded', () => {
             updateThemeIcon();
         });
     }
-    const resetPromptBtn = document.getElementById('reset-prompt-btn');
-    if (resetPromptBtn) {
-        resetPromptBtn.addEventListener('click', () => {
-            const defaultPrompt = t('systemPrompt.default');
-            document.getElementById('global-system-prompt').value = defaultPrompt;
-            configData.general.systemPrompt = defaultPrompt;
+
+    // ========== 语言切换 ==========
+
+    DOM.languageSelect?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        DOM.languageOptions?.classList.toggle('active');
+    });
+
+    DOM.languageOptions?.querySelectorAll('.select-option').forEach(opt => {
+        opt.addEventListener('click', (e) => {
+            const val = opt.getAttribute('data-value');
+            configData.general.language = val;
+            window.configData = configData;
+
+            DOM.currentLanguageSpan.textContent = opt.textContent;
+            DOM.languageOptions.querySelectorAll('.select-option').forEach(o => o.classList.remove('selected'));
+            opt.classList.add('selected');
+
+            // 更新默认系统提示词
+            const currentPrompt = configData.general.systemPrompt;
+            const zhDefault = translations.zh['systemPrompt.default'];
+            const enDefault = translations.en['systemPrompt.default'];
+            const isEmpty = !currentPrompt || !currentPrompt.trim();
+            const isDefaultPrompt = isEmpty || currentPrompt === zhDefault || currentPrompt === enDefault;
+
+            if (isDefaultPrompt) {
+                const newPrompt = t('systemPrompt.default');
+                configData.general.systemPrompt = newPrompt;
+                const promptTextarea = KissaiUtils.getElement('global-system-prompt');
+                if (promptTextarea) {
+                    promptTextarea.value = newPrompt;
+                }
+            }
+
             saveToStorage();
-        });
-    }
-    const clearHistoryBtn = document.getElementById('clear-history-btn');
-    if (clearHistoryBtn) {
-        clearHistoryBtn.title = t('footer.clearHistory');
-        clearHistoryBtn.addEventListener('dblclick', () => {
-            configData.history = [];
-            activeChatId = null;
-            saveToStorage();
-            createNewChat();
+            DOM.languageOptions.classList.remove('active');
+
+            // 更新所有文本
+            updateAllText();
             renderHistory();
-        });
-    }
-    if (contextCountDisplay) {
-        contextCountDisplay.textContent = configData.general.contextLimit || 10;
-    }
-    if (contextControlBtn) {
-        contextControlBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (modelDropdown) modelDropdown.classList.remove('active');
-            if (languageOptions) languageOptions.classList.remove('active');
-            contextLimitDropdown.classList.toggle('active');
-            if (contextLimitDropdown.classList.contains('active')) {
-                preventScrollPropagation(contextLimitDropdown);
+            renderModelDropdown();
+
+            if (DOM.settingsView?.classList.contains('active')) {
+                renderGeneralSettings();
             }
         });
+    });
+
+    // ========== 宽屏模式 ==========
+
+    DOM.wideModeCheckbox?.addEventListener('change', () => {
+        configData.general.wideMode = DOM.wideModeCheckbox.checked;
+        updateChatLayout();
+        saveToStorage();
+    });
+
+    // ========== 上下文限制 ==========
+
+    if (DOM.contextCountDisplay) {
+        DOM.contextCountDisplay.textContent = configData.general.contextLimit || KISSAI_CONFIG.STORAGE.DEFAULT_CONTEXT_LIMIT;
     }
-    if (contextLimitDropdown) {
-        const contextOptions = contextLimitDropdown.querySelectorAll('.context-limit-option');
-        contextOptions.forEach(option => {
-            option.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const limit = parseInt(option.getAttribute('data-value'));
-                if (!isNaN(limit)) {
-                    configData.general.contextLimit = limit;
-                    saveToStorage();
-                    if (contextCountDisplay) {
-                        contextCountDisplay.textContent = limit;
+
+    DOM.contextControlBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        DOM.modelDropdown?.classList.remove('active');
+        DOM.languageOptions?.classList.remove('active');
+        DOM.contextLimitDropdown?.classList.toggle('active');
+
+        if (DOM.contextLimitDropdown?.classList.contains('active')) {
+            KissaiUtils.preventScrollPropagation(DOM.contextLimitDropdown);
+        }
+    });
+
+    DOM.contextLimitDropdown?.querySelectorAll('.context-limit-option').forEach(option => {
+        option.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const limit = parseInt(option.getAttribute('data-value'));
+            if (!isNaN(limit)) {
+                configData.general.contextLimit = limit;
+                saveToStorage();
+                if (DOM.contextCountDisplay) {
+                    DOM.contextCountDisplay.textContent = limit;
+                }
+                DOM.contextLimitDropdown.classList.remove('active');
+            }
+        });
+    });
+
+    // ========== Provider 管理 ==========
+
+    // 设置侧边栏点击（事件委托）
+    const settingsSidebar = document.querySelector('.settings-sidebar');
+    settingsSidebar?.addEventListener('click', (e) => {
+        // 先检查操作按钮（优先级更高）
+        const copyBtn = e.target.closest('.provider-copy-btn');
+        if (copyBtn) {
+            e.stopPropagation();
+            copyProvider(copyBtn.dataset.provider);
+            return; // 阻止后续处理
+        }
+
+        const deleteBtn = e.target.closest('.provider-delete-btn');
+        if (deleteBtn) {
+            e.stopPropagation();
+            deleteProvider(deleteBtn.dataset.provider);
+            return; // 阻止后续处理
+        }
+
+        // 然后处理导航项点击
+        const item = e.target.closest('.settings-nav-item');
+        if (item) {
+            const tabId = item.getAttribute('data-tab');
+            switchTab(tabId, item);
+        }
+    });
+
+    /**
+     * 切换设置标签页
+     */
+    const switchTab = (tabId, element) => {
+        if (!tabId) return;
+
+        if (tabId === 'providers-toggle') {
+            DOM.providersHeader?.classList.toggle('collapsed');
+            DOM.providersListContainer?.classList.toggle('collapsed');
+            return;
+        }
+
+        document.querySelectorAll('.settings-nav-item').forEach(nav => nav.classList.remove('active'));
+        if (element) {
+            element.classList.add('active');
+        } else {
+            const targetNav = document.querySelector(`.settings-nav-item[data-tab="${tabId}"]`);
+            targetNav?.classList.add('active');
+        }
+
+        document.querySelectorAll('.settings-content').forEach(content => content.classList.remove('active'));
+
+        if (tabId.startsWith('provider-')) {
+            saveToStorage();
+            currentProviderKey = element.getAttribute('data-key');
+            DOM.providerNameDisplay.textContent = currentProviderKey;
+            DOM.apiKeyInput.value = configData.providers[currentProviderKey].apiKey || '';
+            DOM.baseUrlInput.value = configData.providers[currentProviderKey].baseUrl || '';
+            KissaiUtils.getElement('provider-settings')?.classList.add('active');
+            renderModels();
+        } else if (tabId === 'provider') {
+            KissaiUtils.getElement('provider-settings')?.classList.add('active');
+
+            let newCount = 1;
+            while (configData.providers[`New Provider ${newCount}`]) newCount++;
+            const newName = `New Provider ${newCount}`;
+
+            configData.providers[newName] = { apiKey: '', baseUrl: '', models: [] };
+            currentProviderKey = newName;
+            DOM.providerNameDisplay.textContent = currentProviderKey;
+            DOM.apiKeyInput.value = '';
+            DOM.baseUrlInput.value = '';
+            DOM.modelList.innerHTML = '';
+
+            renderProviderList();
+            setTimeout(() => DOM.editProviderBtn?.click(), 10);
+        } else {
+            const contentId = `${tabId}-settings`;
+            const content = KissaiUtils.getElement(contentId);
+            if (content) {
+                content.classList.add('active');
+                if (tabId === 'general') renderGeneralSettings();
+                if (tabId === 'role-presets') {
+                    if (!configData.roles || configData.roles.length === 0) {
+                        configData.roles = KissaiUtils.deepClone(DEFAULT_ROLES);
                     }
-                    contextLimitDropdown.classList.remove('active');
+                    renderRoles();
+                }
+            }
+        }
+
+        updateIcons();
+    };
+
+    /**
+     * 复制 Provider
+     */
+    const copyProvider = (providerKey) => {
+        const provider = configData.providers[providerKey];
+        if (!provider) return;
+
+        let newName = `${providerKey} copy`;
+        let counter = 1;
+        while (configData.providers[newName]) {
+            newName = `${providerKey} copy ${counter}`;
+            counter++;
+        }
+
+        configData.providers[newName] = KissaiUtils.deepClone(provider);
+        currentProviderKey = newName;
+        renderProviderList();
+        saveToStorage();
+
+        const item = document.querySelector(`.settings-nav-item[data-key="${newName}"]`);
+        if (item) switchTab(`provider-${newName.toLowerCase()}`, item);
+    };
+
+    window.copyProvider = copyProvider;
+
+    /**
+     * 删除 Provider
+     */
+    const deleteProvider = (providerKey) => {
+        if (currentProviderKey === providerKey) {
+            const remainingProviders = Object.keys(configData.providers).filter(p => p !== providerKey);
+            if (remainingProviders.length > 0) {
+                currentProviderKey = remainingProviders[0];
+                DOM.providerNameDisplay.textContent = currentProviderKey;
+                DOM.apiKeyInput.value = configData.providers[currentProviderKey].apiKey || '';
+                DOM.baseUrlInput.value = configData.providers[currentProviderKey].baseUrl || '';
+                renderModels();
+            } else {
+                currentProviderKey = null;
+                DOM.providerNameDisplay.textContent = t('model.notProvider');
+                DOM.apiKeyInput.value = '';
+                DOM.baseUrlInput.value = '';
+                DOM.modelList.innerHTML = '';
+            }
+        }
+
+        delete configData.providers[providerKey];
+        renderProviderList();
+        saveToStorage();
+        updateIcons();
+    };
+
+    window.deleteProvider = deleteProvider;
+
+    // Provider 名称编辑
+    DOM.editProviderBtn?.addEventListener('click', () => {
+        originalProviderName = DOM.providerNameDisplay.textContent;
+        DOM.providerNameDisplay.contentEditable = 'true';
+        DOM.providerNameDisplay.focus();
+
+        const range = document.createRange();
+        range.selectNodeContents(DOM.providerNameDisplay);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        DOM.editProviderBtn.classList.add('hidden');
+        DOM.saveProviderBtn?.classList.remove('hidden');
+        DOM.cancelProviderBtn?.classList.remove('hidden');
+    });
+
+    const exitTitleEdit = () => {
+        DOM.providerNameDisplay.contentEditable = 'false';
+        DOM.editProviderBtn?.classList.remove('hidden');
+        DOM.saveProviderBtn?.classList.add('hidden');
+        DOM.cancelProviderBtn?.classList.add('hidden');
+    };
+
+    DOM.saveProviderBtn?.addEventListener('click', () => {
+        const newName = DOM.providerNameDisplay.textContent.trim();
+        if (newName && newName !== currentProviderKey) {
+            configData.providers[newName] = configData.providers[currentProviderKey];
+            delete configData.providers[currentProviderKey];
+            currentProviderKey = newName;
+            renderProviderList();
+            renderModels();
+            saveToStorage();
+        }
+        exitTitleEdit();
+    });
+
+    DOM.cancelProviderBtn?.addEventListener('click', () => {
+        DOM.providerNameDisplay.textContent = originalProviderName;
+        exitTitleEdit();
+    });
+
+    // API Key 显示/隐藏
+    const toggleApiKeyBtn = document.querySelector('.action-icons .icon-btn:first-child');
+    toggleApiKeyBtn?.addEventListener('click', () => {
+        const isPassword = DOM.apiKeyInput.type === 'password';
+        DOM.apiKeyInput.type = isPassword ? 'text' : 'password';
+        toggleApiKeyBtn.innerHTML = `<i data-lucide="${isPassword ? 'eye-off' : 'eye'}"></i>`;
+        updateIcons();
+    });
+
+    // API Key 复制
+    const copyApiKeyBtn = document.querySelector('.action-icons .icon-btn:last-child');
+    copyApiKeyBtn?.addEventListener('click', async () => {
+        await KissaiUtils.copyToClipboard(DOM.apiKeyInput.value);
+        copyApiKeyBtn.innerHTML = '<i data-lucide="check"></i>';
+        updateIcons();
+        setTimeout(() => updateIcons(), KISSAI_CONFIG.UI.COPY_FEEDBACK_MS);
+    });
+
+
+    // ========== 模型管理 ==========
+
+    // 模型列表操作（事件委托）
+    DOM.modelList?.addEventListener('click', (e) => {
+        const target = e.target.closest('[data-action]');
+        if (!target) return;
+
+        const action = target.dataset.action;
+        const modelId = parseFloat(target.dataset.modelId);
+
+        if (action === 'favorite') {
+            toggleFavorite(modelId);
+        } else if (action === 'delete') {
+            deleteModel(modelId);
+        }
+    });
+
+    const toggleFavorite = (id) => {
+        const provider = configData.providers[currentProviderKey];
+        const model = provider?.models?.find(m => m.id === id);
+        if (model) {
+            model.favorite = !model.favorite;
+            saveToStorage();
+            renderModels();
+        }
+    };
+
+    window.toggleFavorite = toggleFavorite;
+
+    const deleteModel = (id) => {
+        if (configData.providers[currentProviderKey]) {
+            configData.providers[currentProviderKey].models =
+                configData.providers[currentProviderKey].models.filter(m => m.id !== id);
+            renderModels();
+            saveToStorage();
+        }
+    };
+
+    window.deleteModel = deleteModel;
+
+    // 手动添加模型
+    window.toggleAddModelForm = () => {
+        const form = KissaiUtils.getElement('add-model-form');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        if (form.style.display === 'block') {
+            KissaiUtils.getElement('new-model-name')?.focus();
+        }
+    };
+
+    window.addModel = () => {
+        const modelNameInput = KissaiUtils.getElement('new-model-name');
+        const modelName = modelNameInput?.value.trim();
+        if (!modelName) return;
+
+        const provider = configData.providers[currentProviderKey];
+        if (!provider) return;
+
+        if (provider.models?.find(m => m.name === modelName)) {
+            alert(t('alert.modelExists'));
+            return;
+        }
+
+        const newModel = {
+            id: KissaiUtils.generateId(),
+            name: modelName,
+            favorite: false,
+            enabled: true
+        };
+
+        if (!provider.models) provider.models = [];
+        provider.models.push(newModel);
+
+        saveToStorage();
+        renderModels();
+        modelNameInput.value = '';
+        KissaiUtils.getElement('add-model-form').style.display = 'none';
+    };
+
+    const newModelNameInput = KissaiUtils.getElement('new-model-name');
+    newModelNameInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addModel();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            toggleAddModelForm();
+        }
+    });
+
+    KissaiUtils.getElement('add-model-btn')?.addEventListener('click', toggleAddModelForm);
+
+    // 获取模型列表
+    DOM.fetchModelsBtn?.addEventListener('click', async () => {
+        const icon = DOM.fetchModelsBtn.querySelector('i') || DOM.fetchModelsBtn.querySelector('svg');
+        const apiKey = DOM.apiKeyInput?.value;
+        const baseUrl = DOM.baseUrlInput?.value;
+
+        if (!apiKey) return;
+
+        icon?.classList.add('spinning');
+        DOM.fetchModelsBtn.classList.add('loading');
+        DOM.fetchModelsBtn.disabled = true;
+
+        try {
+            const models = await KissaiAPI.fetchModels(apiKey, baseUrl);
+            showModelModal(models);
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.error(t('error.requestTimeout'));
+            } else {
+                console.error(t('error.fetchFailed') + error.message);
+                alert(t('alert.fetchFailed'));
+            }
+        } finally {
+            const iconAfter = DOM.fetchModelsBtn.querySelector('i') || DOM.fetchModelsBtn.querySelector('svg');
+            iconAfter?.classList.remove('spinning');
+            DOM.fetchModelsBtn.classList.remove('loading');
+            DOM.fetchModelsBtn.disabled = false;
+        }
+    });
+
+    // 模型选择弹窗
+    const showModelModal = (fetchedModels) => {
+        const modal = KissaiUtils.getElement('model-modal');
+        const selectionList = KissaiUtils.getElement('model-selection-list');
+        const searchInput = KissaiUtils.getElement('modal-model-search-input');
+
+        if (!modal) return;
+
+        if (searchInput) searchInput.value = '';
+        selectionList.innerHTML = '';
+
+        window.allFetchedModels = fetchedModels;
+        const existingModels = configData.providers[currentProviderKey]?.models || [];
+
+        fetchedModels.forEach(model => {
+            const isSelected = existingModels.some(m => m.name === model.name);
+
+            const item = document.createElement('div');
+            item.className = 'model-selection-item';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `model-${model.id}`;
+            checkbox.checked = isSelected;
+            checkbox.dataset.modelName = model.name;
+
+            checkbox.addEventListener('change', saveModelSelection);
+
+            const label = document.createElement('label');
+            label.htmlFor = `model-${model.id}`;
+            label.textContent = model.name;
+
+            item.appendChild(checkbox);
+            item.appendChild(label);
+            selectionList.appendChild(item);
+        });
+
+        modal.classList.add('active');
+        updateIcons();
+    };
+
+    window.showModelModal = showModelModal;
+
+    const closeModelModal = () => {
+        KissaiUtils.getElement('model-modal')?.classList.remove('active');
+    };
+
+    window.closeModelModal = closeModelModal;
+
+    // 模型搜索
+    const modalModelSearchInput = KissaiUtils.getElement('modal-model-search-input');
+    modalModelSearchInput?.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        document.querySelectorAll('#model-selection-list .model-selection-item').forEach(item => {
+            const modelName = item.querySelector('label').textContent.toLowerCase();
+            item.style.display = modelName.includes(searchTerm) ? 'flex' : 'none';
+        });
+    });
+
+    modalModelSearchInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            modalModelSearchInput.value = '';
+            modalModelSearchInput.dispatchEvent(new Event('input'));
+            modalModelSearchInput.blur();
+        }
+    });
+
+    const saveModelSelection = () => {
+        const allCheckboxes = document.querySelectorAll('#model-selection-list input[type="checkbox"]');
+        const checkedModelNames = Array.from(allCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.dataset.modelName);
+
+        const existingModels = configData.providers[currentProviderKey]?.models || [];
+
+        const finalModels = checkedModelNames.map(name => {
+            const existing = existingModels.find(m => m.name === name);
+            if (existing) {
+                return { ...existing };
+            }
+            return {
+                id: KissaiUtils.generateId(),
+                name,
+                favorite: false
+            };
+        });
+
+        configData.providers[currentProviderKey].models = finalModels;
+        saveToStorage();
+        renderModels();
+    };
+
+    window.saveModelSelection = saveModelSelection;
+
+    // ========== 角色管理 ==========
+
+    // 角色列表操作（事件委托）
+    DOM.roleList?.addEventListener('click', (e) => {
+        const target = e.target.closest('[data-action]');
+        if (!target) return;
+
+        const action = target.dataset.action;
+        const roleId = parseFloat(target.dataset.roleId);
+
+        if (action === 'edit') {
+            editRole(roleId);
+        } else if (action === 'delete') {
+            deleteRole(roleId);
+        }
+    });
+
+    window.toggleForm = (id) => {
+        const form = KissaiUtils.getElement(id);
+        form?.classList.toggle('active');
+
+        const actions = KissaiUtils.getElement('edit-role-actions');
+        const promptTextarea = KissaiUtils.getElement('new-role-prompt');
+
+        if (form?.classList.contains('active')) {
+            editingRoleId = null;
+            actions?.classList.remove('hidden');
+            if (promptTextarea) promptTextarea.style.minHeight = '200px';
+        } else {
+            editingRoleId = null;
+            actions?.classList.add('hidden');
+            KissaiUtils.getElement('new-role-name').value = '';
+            if (promptTextarea) {
+                promptTextarea.value = '';
+                promptTextarea.style.minHeight = '';
+            }
+        }
+    };
+
+    window.saveRole = () => {
+        const nameInput = KissaiUtils.getElement('new-role-name');
+        const promptInput = KissaiUtils.getElement('new-role-prompt');
+
+        if (!nameInput?.value.trim()) return;
+
+        if (editingRoleId) {
+            const role = configData.roles.find(r => r.id === editingRoleId);
+            if (role) {
+                role.name = nameInput.value.trim();
+                role.prompt = promptInput.value;
+            }
+            editingRoleId = null;
+        } else {
+            configData.roles.push({
+                id: KissaiUtils.generateId(),
+                name: nameInput.value.trim(),
+                prompt: promptInput.value
+            });
+        }
+
+        renderRoles();
+        nameInput.value = '';
+        promptInput.value = '';
+        KissaiUtils.getElement('add-role-form')?.classList.remove('active');
+        KissaiUtils.getElement('edit-role-actions')?.classList.add('hidden');
+        KissaiUtils.getElement('new-role-prompt').style.minHeight = '';
+        saveToStorage();
+    };
+
+    const editRole = (id) => {
+        const role = configData.roles.find(r => r.id === id);
+        if (role) {
+            editingRoleId = id;
+            KissaiUtils.getElement('new-role-name').value = role.name;
+            KissaiUtils.getElement('new-role-prompt').value = role.prompt;
+            KissaiUtils.getElement('add-role-form')?.classList.add('active');
+            KissaiUtils.getElement('edit-role-actions')?.classList.remove('hidden');
+            KissaiUtils.getElement('new-role-prompt').style.minHeight = '200px';
+        }
+    };
+
+    window.editRole = editRole;
+
+    const deleteRole = (id) => {
+        const roleToDelete = configData.roles.find(r => r.id === id);
+        if (roleToDelete) {
+            // 清除使用该角色的聊天
+            configData.history.forEach(chat => {
+                if (chat.activeRole === roleToDelete.name) {
+                    chat.activeRole = null;
                 }
             });
-        });
-    }
-    const chatMessages = document.getElementById('chat-messages');
-    const scrollbarMarkers = document.getElementById('scrollbar-markers');
-    const scrollbarTopZone = document.querySelector('.scrollbar-top-zone');
-    let aiMessageElements = [];
-    if (scrollbarTopZone) {
-        scrollbarTopZone.addEventListener('click', () => {
-            chatMessages.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        });
-    }
-    function updateScrollbarMarkers() {
-        if (!chatMessages || !scrollbarMarkers) return;
-        scrollbarMarkers.innerHTML = '';
-        aiMessageElements = Array.from(chatMessages.querySelectorAll('.message.assistant'));
-        if (aiMessageElements.length === 0) return;
-        const containerHeight = 100;
-        aiMessageElements.forEach((messageElement, index) => {
-            const marker = document.createElement('div');
-            marker.className = 'scrollbar-marker';
-            let topPosition = 0;
-            if (aiMessageElements.length > 1) {
-                topPosition = (index / (aiMessageElements.length - 1)) * (containerHeight - 4);
-            } else {
-                topPosition = 0;
+        }
+
+        configData.roles = configData.roles.filter(r => r.id !== id);
+        renderRoles();
+        saveToStorage();
+
+        if (activeChatId) {
+            const chat = configData.history.find(c => c.id === activeChatId);
+            if (chat && !chat.activeRole) {
+                DOM.chatInput.value = '';
+                delete DOM.chatInput.dataset.selectedRole;
             }
-            marker.style.top = `${topPosition}px`;
-            scrollbarMarkers.appendChild(marker);
-        });
-        scrollbarMarkers.onclick = (e) => {
-            e.stopPropagation();
-            const rect = scrollbarMarkers.getBoundingClientRect();
-            const clickY = e.clientY - rect.top;
-            let ratio = clickY / containerHeight;
-            ratio = Math.max(0, Math.min(1, ratio));
-            const targetIndex = Math.round(ratio * (aiMessageElements.length - 1));
-            const targetMessage = aiMessageElements[targetIndex];
-            if (targetMessage) {
-                targetMessage.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-                highlightActiveMarker(targetIndex);
+        }
+    };
+
+    window.deleteRole = deleteRole;
+
+    // ========== 数据导入导出 ==========
+
+    DOM.exportClipboardBtn?.addEventListener('click', async () => {
+        saveToStorage();
+        const exportData = KissaiStorage.exportConfig();
+        const success = await KissaiUtils.copyToClipboard(JSON.stringify(exportData, null, 2));
+
+        if (success) {
+            const span = DOM.exportClipboardBtn.querySelector('span');
+            const originalText = span?.textContent;
+            DOM.exportClipboardBtn.classList.add('copied');
+            if (span) span.textContent = t('code.copySuccess');
+
+            setTimeout(() => {
+                DOM.exportClipboardBtn.classList.remove('copied');
+                if (span) span.textContent = originalText;
+            }, 800);
+        }
+    });
+
+    DOM.importClipboardBtn?.addEventListener('click', async () => {
+        try {
+            const text = await KissaiUtils.readFromClipboard();
+            if (!text.trim()) return;
+
+            const importedData = JSON.parse(text);
+            if (importedData?.general && importedData?.providers) {
+                if (confirm(t('alert.importConfirm'))) {
+                    KissaiStorage.importConfig(importedData);
+                    location.reload();
+                }
+            }
+        } catch (err) {
+            console.error(t('alert.importFailed') + err.message);
+        }
+    });
+
+    DOM.exportFileBtn?.addEventListener('click', () => {
+        saveToStorage();
+        const exportData = KissaiStorage.exportConfig();
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `kissai-full-config-${KissaiUtils.formatTimestamp(Date.now())}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+
+    // 文件导入
+    const importFileBtn = KissaiUtils.getElement('import-file-btn');
+    const importFileInput = KissaiUtils.getElement('import-file-input');
+
+    importFileBtn?.addEventListener('click', () => importFileInput?.click());
+
+    importFileInput?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                if (importedData?.general && importedData?.providers) {
+                    KissaiStorage.importConfig(importedData);
+                    location.reload();
+                } else {
+                    console.error(t('alert.invalidConfig'));
+                }
+            } catch (err) {
+                console.error(t('alert.importFailed') + err.message);
             }
         };
-        updateActiveMarker();
-    }
-    function highlightActiveMarker(targetIndex) {
-        const markers = scrollbarMarkers.children;
-        Array.from(markers).forEach((marker, index) => {
-            if (index === targetIndex) {
-                marker.classList.add('active');
-            } else {
-                marker.classList.remove('active');
+        reader.readAsText(file);
+        importFileInput.value = '';
+    });
+
+    // 重置系统提示词
+    DOM.resetPromptBtn?.addEventListener('click', () => {
+        const defaultPrompt = t('systemPrompt.default');
+        KissaiUtils.getElement('global-system-prompt').value = defaultPrompt;
+        configData.general.systemPrompt = defaultPrompt;
+        saveToStorage();
+    });
+
+    // 清空当前对话
+    DOM.clearChatBtn?.addEventListener('dblclick', () => {
+        if (activeChatId) {
+            const chat = configData.history.find(c => c.id === activeChatId);
+            if (chat) {
+                chat.messages = [];
+                saveToStorage();
+                loadChat(activeChatId);
             }
+        }
+    });
+
+    // 清空所有历史
+    DOM.clearHistoryBtn?.addEventListener('dblclick', () => {
+        configData.history = [];
+        activeChatId = null;
+        saveToStorage();
+        createNewChat();
+        renderHistory();
+    });
+
+
+    // ========== 滚动条标记 ==========
+
+    let aiMessageElements = [];
+
+    DOM.scrollbarTopZone?.addEventListener('click', () => {
+        DOM.chatMessages?.scrollTo({ top: 0, behavior: 'auto' });
+    });
+
+    const updateScrollbarMarkers = () => {
+        if (!DOM.chatMessages || !DOM.scrollbarMarkers) return;
+
+        DOM.scrollbarMarkers.innerHTML = '';
+        aiMessageElements = Array.from(DOM.chatMessages.querySelectorAll('.message.assistant'));
+
+        if (aiMessageElements.length === 0) return;
+
+        const containerHeight = 320; // 与 CSS 中 .scrollbar-markers 高度一致
+        const padding = 16; // 上下 padding
+        const maxSpacing = 40; // 刻度之间最大间距
+        const availableHeight = containerHeight - padding * 2;
+
+        // 计算实际需要的高度
+        const idealHeight = (aiMessageElements.length - 1) * maxSpacing;
+        const actualHeight = Math.min(idealHeight, availableHeight);
+
+        // 计算起始位置（居中）
+        const startOffset = padding + (availableHeight - actualHeight) / 2;
+
+        aiMessageElements.forEach((_, index) => {
+            const marker = document.createElement('div');
+            marker.className = 'scrollbar-marker';
+            marker.dataset.index = index;
+
+            let topPosition = startOffset;
+            if (aiMessageElements.length > 1) {
+                topPosition = startOffset + (index / (aiMessageElements.length - 1)) * actualHeight;
+            }
+
+            marker.style.top = `${topPosition}px`;
+            DOM.scrollbarMarkers.appendChild(marker);
         });
-    }
-    function updateActiveMarker() {
-        if (!chatMessages || aiMessageElements.length === 0) return;
-        const containerTop = chatMessages.scrollTop;
-        const readFocus = containerTop + 100;
+
+        DOM.scrollbarMarkers.onclick = (e) => {
+            e.stopPropagation();
+            const marker = e.target.closest('.scrollbar-marker');
+            if (marker) {
+                const targetIndex = parseInt(marker.dataset.index);
+                const targetMessage = aiMessageElements[targetIndex];
+
+                if (targetMessage) {
+                    // 将消息滚动到屏幕中央
+                    const messageTop = targetMessage.offsetTop;
+                    const containerHeight = DOM.chatMessages.clientHeight;
+                    const scrollPosition = messageTop - (containerHeight / 2);
+
+                    DOM.chatMessages.scrollTo({
+                        top: Math.max(0, scrollPosition),
+                        behavior: 'auto' // 改为 auto 加快速度
+                    });
+
+                    highlightActiveMarker(targetIndex);
+                }
+            }
+        };
+
+        updateActiveMarker();
+    };
+
+    const highlightActiveMarker = (targetIndex) => {
+        const markers = DOM.scrollbarMarkers?.children;
+        if (!markers) return;
+
+        Array.from(markers).forEach((marker, index) => {
+            marker.classList.toggle('active', index === targetIndex);
+        });
+    };
+
+    const updateActiveMarker = () => {
+        if (!DOM.chatMessages || aiMessageElements.length === 0) return;
+
+        const containerTop = DOM.chatMessages.scrollTop;
+        const containerHeight = DOM.chatMessages.clientHeight;
+        const readFocus = containerTop + (containerHeight / 2);
+
         let activeIndex = -1;
         let minDistance = Infinity;
+
         aiMessageElements.forEach((el, index) => {
             const distance = Math.abs(el.offsetTop - readFocus);
             if (distance < minDistance) {
@@ -2436,11 +2544,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 activeIndex = index;
             }
         });
+
         highlightActiveMarker(activeIndex);
-    }
-    if (chatMessages) {
+    };
+
+    // 滚动事件（节流）
+    if (DOM.chatMessages) {
         let scrollTimeout;
-        chatMessages.addEventListener('scroll', () => {
+        DOM.chatMessages.addEventListener('scroll', () => {
             if (!scrollTimeout) {
                 scrollTimeout = requestAnimationFrame(() => {
                     updateActiveMarker();
@@ -2448,28 +2559,56 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         });
-        const observer = new MutationObserver((mutations) => {
-            let shouldUpdate = false;
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'childList' &&
-                    (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0)) {
-                    shouldUpdate = true;
-                }
-            });
-            if (shouldUpdate) {
-                setTimeout(updateScrollbarMarkers, 100);
-            }
-        });
-        observer.observe(chatMessages, {
-            childList: true,
-            subtree: true
-        });
+
+        // 监听消息变化（防抖，避免流式输出时频繁更新）
+        const observer = new MutationObserver(KissaiUtils.debounce(() => {
+            updateScrollbarMarkers();
+        }, 300));
+
+        observer.observe(DOM.chatMessages, { childList: true, subtree: true });
         setTimeout(updateScrollbarMarkers, 500);
     }
-    document.getElementById('chat-view')?.addEventListener('wheel', e =>
-        !e.target.closest('#chat-messages') && document.getElementById('chat-messages')?.scrollBy(0, e.deltaY)
-    );
+
+    // 聊天区域滚轮穿透
+    DOM.chatView?.addEventListener('wheel', e => {
+        if (!e.target.closest('#chat-messages')) {
+            DOM.chatMessages?.scrollBy(0, e.deltaY);
+        }
+    });
+
+    // ========== 初始化完成 ==========
+
+    // 初始化 Provider
+    if (configData.providers[currentProviderKey]) {
+        DOM.apiKeyInput.value = configData.providers[currentProviderKey].apiKey || '';
+        DOM.baseUrlInput.value = configData.providers[currentProviderKey].baseUrl || '';
+    }
+
+    // 渲染初始界面
+    setDefaultModel();
+    renderProviderList();
+    renderModels();
+    renderGeneralSettings();
+    renderHistory();
+    updateChatLayout();
+
+    // 加载上次的聊天或创建新聊天
+    if (configData.history.length > 0) {
+        const lastActiveChatId = configData.general.activeChatId;
+        const targetChat = configData.history.find(c => c.id === lastActiveChatId);
+        if (targetChat) {
+            loadChat(lastActiveChatId);
+        } else {
+            loadChat(configData.history[0].id);
+        }
+    } else {
+        createNewChat();
+    }
+
+    updateIcons();
     updateAllText();
+
+    // 完成加载
     document.body.classList.remove('loading');
     document.body.classList.add('loaded');
 });
