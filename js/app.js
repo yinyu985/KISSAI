@@ -381,6 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         activeChatId = newChat.id;
+        configData.general.activeChatId = newChat.id;
         configData.history.unshift(newChat);
         renderHistory();
         saveToStorage();
