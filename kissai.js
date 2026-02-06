@@ -45,7 +45,7 @@
                 5. Output **only** the translated text – no explanations, titles, or extra remarks.
                 Input: {text}
                 Expected Output: A clean {LANG} version of the input respecting the rules above.`,
-                model: 'groq-1:openai/gpt-oss-20b'
+                // model: 'groq-1:openai/gpt-oss-20b'
             },
             {// 跟评
                 name: '跟评',
@@ -88,7 +88,7 @@
                     Chinese translation of optimized comment 1 (if required)
                     Optimized comment 2
                     Chinese translation of optimized comment 2 (if required)`,
-                    model: 'groq-1:openai/gpt-oss-120b'
+                    // model: 'groq-1:openai/gpt-oss-120b'
             },
             {// 跟帖
                 name: '跟帖',
@@ -184,49 +184,49 @@
                 id: 'dashscope',
                 name: 'dashscope',
                 apiEndpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 selectedModels: ['qwen-flash', 'kimi-k2-thinking', 'kimi-k2.5','glm-4.7','moonshotai/kimi-k2-instruct-0905']
             },
             {
                 id: 'cerebras-1',
                 name: 'cerebras-1',
                 apiEndpoint: 'https://api.cerebras.ai/v1/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 selectedModels: ['gpt-oss-120b','qwen-3-32b','zai-glm-4.7','llama-3.3-70b']
             },
             {
                 id: 'cerebras-2',
                 name: 'cerebras-2',
                 apiEndpoint: 'https://api.cerebras.ai/v1/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 selectedModels: ['gpt-oss-120b','qwen-3-32b','zai-glm-4.7','llama-3.3-70b']
             },
             {
                 id: 'cerebras-3',
                 name: 'cerebras-3',
                 apiEndpoint: 'https://api.cerebras.ai/v1/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 selectedModels: ['gpt-oss-120b','qwen-3-32b','zai-glm-4.7','llama-3.3-70b']
             },
             {
                 id: 'gemini',
                 name: 'gemini',
                 apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 selectedModels: ['gemini-2.5-flash','gemini-2.0-flash-exp','gemini-2.5-flash-lite','gemini-2.5-flash-preview-09-2025','gemini-2.5-flash-lite-preview-09-2025','gemini-2.5-pro']
             },
             {
                 id: 'groq-1',
                 name: 'groq-1',
                 apiEndpoint: 'https://api.groq.com/openai/v1/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 selectedModels: ['openai/gpt-oss-20b', 'openai/gpt-oss-120b','groq/compound','groq/compound-mini', 'moonshotai/kimi-k2-instruct-0905']
             },
             {
                 id: 'groq-2',
                 name: 'groq-2',
                 apiEndpoint: 'https://api.groq.com/openai/v1/chat/completions',
-                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                apiKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 selectedModels: ['openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'groq/compound','groq/compound-mini','moonshotai/kimi-k2-instruct-0905']
             },
             ],
@@ -274,6 +274,42 @@
           letter-spacing: normal !important;
           word-spacing: normal !important;
           text-transform: none !important;
+          line-height: inherit !important;
+          vertical-align: baseline !important;
+          float: none !important;
+          clear: none !important;
+        }
+        .ai-float-toolbar button,
+        .ai-dialog button {
+          all: unset !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          box-sizing: border-box !important;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+          font-size: 12px !important;
+          font-weight: normal !important;
+          line-height: 1.2 !important;
+          color: #f0f0f0 !important;
+          cursor: pointer !important;
+          padding: 1px 4px !important;
+          margin: 0 !important;
+          border: none !important;
+          background: none !important;
+          height: auto !important;
+          min-height: 0 !important;
+          max-height: none !important;
+          width: auto !important;
+          min-width: 0 !important;
+          text-decoration: none !important;
+          text-indent: 0 !important;
+          text-align: center !important;
+          white-space: nowrap !important;
+          vertical-align: middle !important;
+          position: relative !important;
+          transform: none !important;
+          opacity: 1 !important;
+          visibility: visible !important;
         }
         [class^="ai-"]::selection,
         [class^="ai-"] *::selection,
@@ -312,56 +348,86 @@
           inset:            1px;
         }
         .ai-toolbar-inner-container {
-          display:          flex;
-          gap:              1px;
-          padding:          0;
+          display:          flex !important;
+          flex-direction:   row !important;
+          align-items:      center !important;
+          gap:              1px !important;
+          padding:          0 !important;
+          margin:           0 !important;
+          height:           auto !important;
+          min-height:       0 !important;
+          line-height:      normal !important;
         }
         .ai-float-toolbar {
           display:          none;
           pointer-events:   auto;
         }
         .ai-float-toolbar.show {
-          display:          block;
+          display:          block !important;
         }
         .ai-btn,
         .ai-text-btn,
         .ai-new-chat-btn,
         .ai-history-delete,
         .ai-send-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 1px 4px;
-          background: #2a2a2a;
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          padding: 1px 4px !important;
+          margin: 0 !important;
+          background: #2a2a2a !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
           color: #f0f0f0 !important;
-          border-radius: var(--ai-border-radius);
+          border-radius: var(--ai-border-radius) !important;
           font-size: 12px !important;
-          font-weight: normal;
-          white-space: nowrap;
-          cursor: pointer;
-          line-height: 1.2;
-          outline: none;
-          box-shadow: none;
+          font-weight: normal !important;
+          white-space: nowrap !important;
+          cursor: pointer !important;
+          line-height: 1.2 !important;
+          height: auto !important;
+          min-height: 0 !important;
+          max-height: none !important;
+          outline: none !important;
+          box-shadow: none !important;
+          text-decoration: none !important;
+          text-indent: 0 !important;
+          vertical-align: middle !important;
+          float: none !important;
+          position: relative !important;
+          transform: none !important;
         }
         .ai-btn:hover,
         .ai-text-btn:hover,
         .ai-new-chat-btn:hover,
         .ai-send-btn:hover {
-          background: #3a3a3a;
+          background: #3a3a3a !important;
         }
         .ai-toolbar-btn {
-          background: none;
-          border: none;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          background: none !important;
+          border: none !important;
           color: #f0f0f0 !important;
-          padding: 1px 4px;
+          padding: 1px 4px !important;
+          margin: 0 !important;
           font-size: 12px !important;
-          cursor: pointer;
-          white-space: nowrap;
-          line-height: 1.2;
+          font-weight: normal !important;
+          cursor: pointer !important;
+          white-space: nowrap !important;
+          line-height: 1.2 !important;
+          height: auto !important;
+          min-height: 0 !important;
+          max-height: none !important;
+          text-decoration: none !important;
+          text-indent: 0 !important;
+          vertical-align: middle !important;
+          float: none !important;
+          position: relative !important;
+          transform: none !important;
         }
         .ai-toolbar-btn:hover {
-          background: transparent;
+          background: transparent !important;
         }
         .ai-dialog {
           background:       transparent;
@@ -388,143 +454,185 @@
           z-index: 10;
         }
         .ai-dialog-header {
-          display:          flex;
-          align-items:      center;
-          justify-content:  space-between;
-          padding:          1px 4px;
-          box-sizing:       border-box;
-          background-color: var(--ai-hover);
-          border-bottom:    1px solid var(--ai-border);
-          border-radius:    calc(var(--ai-border-radius) - 2px) calc(var(--ai-border-radius) - 2px) 0 0;
-          cursor:           move;
-          user-select:      none;
-          -webkit-user-select: none;
-          -moz-user-select: none;
-          position:         relative;
+          display:          flex !important;
+          flex-direction:   row !important;
+          align-items:      center !important;
+          justify-content:  space-between !important;
+          padding:          1px 4px !important;
+          margin:           0 !important;
+          box-sizing:       border-box !important;
+          background-color: var(--ai-hover) !important;
+          border-bottom:    1px solid var(--ai-border) !important;
+          border-radius:    calc(var(--ai-border-radius) - 2px) calc(var(--ai-border-radius) - 2px) 0 0 !important;
+          cursor:           move !important;
+          user-select:      none !important;
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+          position:         relative !important;
+          height:           auto !important;
+          min-height:       0 !important;
+          line-height:      normal !important;
         }
         .ai-header-left {
-          display: flex;
-          align-items: center;
-          flex: 1;
-          min-width: 0;
+          display: flex !important;
+          align-items: center !important;
+          flex: 1 !important;
+          min-width: 0 !important;
+          height: auto !important;
+          margin: 0 !important;
+          padding: 0 !important;
         }
         .ai-header-right {
-          display: flex;
-          align-items: center;
-          gap: 2px;
+          display: flex !important;
+          align-items: center !important;
+          gap: 2px !important;
+          height: auto !important;
+          margin: 0 !important;
+          padding: 0 !important;
         }
         .ai-model-dropdown {
-          position: relative;
-          width: auto;
-          display: flex;
-          align-items: center;
-          min-width: 0;
-          max-width: 300px;
+          position: relative !important;
+          width: auto !important;
+          display: flex !important;
+          align-items: center !important;
+          min-width: 0 !important;
+          max-width: 300px !important;
+          height: auto !important;
+          margin: 0 !important;
+          padding: 0 !important;
         }
         .ai-model-select-trigger {
-          width: auto;
-          max-width: 100%;
-          height: 100%;
-          padding: 2px 0;
-          padding-left: 5px;
-          border: none;
-          background: transparent;
+          display: inline-block !important;
+          width: auto !important;
+          max-width: 100% !important;
+          height: auto !important;
+          min-height: 0 !important;
+          padding: 2px 0 !important;
+          padding-left: 5px !important;
+          margin: 0 !important;
+          border: none !important;
+          background: transparent !important;
           color: #f0f0f0 !important;
-          font-size: 12px; !important;
-          cursor: pointer;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          text-align: left;
-          line-height: 1.2;
+          font-size: 12px !important;
+          font-weight: normal !important;
+          cursor: pointer !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          text-align: left !important;
+          line-height: 1.2 !important;
+          text-decoration: none !important;
+          text-indent: 0 !important;
+          vertical-align: middle !important;
         }
         .ai-model-options {
-          position: fixed;
-          width: 0;
-          background: #2a2a2a;
-          border: 1px solid var(--ai-border);
-          border-radius: var(--ai-dropdown-radius);
-          z-index: 9999;
+          position: fixed !important;
+          width: 0 !important;
+          background: #2a2a2a !important;
+          border: 1px solid var(--ai-border) !important;
+          border-radius: var(--ai-dropdown-radius) !important;
+          z-index: 9999 !important;
           display: none;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-          padding: 1px;
-          pointer-events: auto;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+          padding: 1px !important;
+          pointer-events: auto !important;
         }
         .ai-model-options.show {
-          display: block;
+          display: block !important;
         }
         .ai-model-option {
-          padding: 2px 4px;
-          color: #888;
-          cursor: pointer;
-          font-size: 12px;
-          white-space: nowrap;
-          overflow: visible;
-          text-overflow: none;
-          line-height: 1.2;
-          display: flex;
-          align-items: center;
-          text-align: left;
-          border-radius: var(--ai-border-radius);
+          padding: 2px 4px !important;
+          margin: 0 !important;
+          color: #888 !important;
+          cursor: pointer !important;
+          font-size: 12px !important;
+          font-weight: normal !important;
+          white-space: nowrap !important;
+          overflow: visible !important;
+          text-overflow: none !important;
+          line-height: 1.2 !important;
+          height: auto !important;
+          min-height: 0 !important;
+          display: flex !important;
+          align-items: center !important;
+          text-align: left !important;
+          border-radius: var(--ai-border-radius) !important;
+          text-decoration: none !important;
+          text-indent: 0 !important;
         }
         .ai-model-option:hover {
-          background: var(--ai-hover);
-          color: #f0f0f0;
+          background: var(--ai-hover) !important;
+          color: #f0f0f0 !important;
         }
         .ai-model-option.selected {
-          background: transparent;
-          color: #f0f0f0;
+          background: transparent !important;
+          color: #f0f0f0 !important;
         }
         .ai-history-delete:hover {
-          background: rgba(255, 0, 0, 0.2);
+          background: rgba(255, 0, 0, 0.2) !important;
           color: #ff6666 !important;
         }
         .ai-history-dropdown {
-          position: fixed;
-          width: 0;
-          background: #2a2a2a;
-          border: 1px solid var(--ai-border);
-          border-radius: var(--ai-dropdown-radius);
-          z-index: 9999;
+          position: fixed !important;
+          width: 0 !important;
+          background: #2a2a2a !important;
+          border: 1px solid var(--ai-border) !important;
+          border-radius: var(--ai-dropdown-radius) !important;
+          z-index: 9999 !important;
           display: none;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-          padding: 1px;
-          pointer-events: auto;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+          padding: 1px !important;
+          pointer-events: auto !important;
         }
         .ai-history-dropdown.show {
-          display: block;
+          display: block !important;
         }
         .ai-history-item {
-          padding: 1px 4px;
-          border-radius: var(--ai-border-radius);
-          cursor: pointer;
-          font-size: 12px; !important;
+          padding: 1px 4px !important;
+          margin: 0 !important;
+          border-radius: var(--ai-border-radius) !important;
+          cursor: pointer !important;
+          font-size: 12px !important;
+          font-weight: normal !important;
           color: #888 !important;
-          border-bottom: 1px solid rgba(255,255,255,0.03);
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 4px;
-          line-height: 1.2;
+          border-bottom: 1px solid rgba(255,255,255,0.03) !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: space-between !important;
+          gap: 4px !important;
+          line-height: 1.2 !important;
+          height: auto !important;
+          min-height: 0 !important;
+          text-decoration: none !important;
+          text-indent: 0 !important;
         }
         .ai-history-item:last-child {
-          border-bottom: none;
+          border-bottom: none !important;
         }
         .ai-history-item:hover {
-          background: rgba(30, 30, 30, 0.9);
+          background: rgba(30, 30, 30, 0.9) !important;
           color: #f0f0f0 !important;
         }
         .ai-history-time {
-          font-size: 12px;
-          opacity: 0.6;
-          white-space: nowrap;
-          flex-shrink: 0;
+          font-size: 12px !important;
+          font-weight: normal !important;
+          opacity: 0.6 !important;
+          white-space: nowrap !important;
+          flex-shrink: 0 !important;
+          line-height: 1.2 !important;
+          height: auto !important;
+          margin: 0 !important;
+          padding: 0 !important;
         }
         .ai-history-summary {
-          flex: 1;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          flex: 1 !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          line-height: 1.2 !important;
+          height: auto !important;
+          margin: 0 !important;
+          padding: 0 !important;
         }
         .ai-dialog-content {
           flex:             1 1 auto !important;
@@ -616,33 +724,41 @@
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         }
         .ai-footer-area {
-          display:          flex;
-          align-items:      center;
-          gap:              1px;
-          padding:          1px 4px;
-          box-sizing:       border-box;
-          border-top:       1px solid var(--ai-border);
-          border-radius:    0 0 calc(var(--ai-border-radius) - 2px) calc(var(--ai-border-radius) - 2px);
-          background-color: rgba(0,0,0,0.2);
+          display:          flex !important;
+          flex-direction:   row !important;
+          align-items:      center !important;
+          gap:              1px !important;
+          padding:          1px 4px !important;
+          margin:           0 !important;
+          box-sizing:       border-box !important;
+          border-top:       1px solid var(--ai-border) !important;
+          border-radius:    0 0 calc(var(--ai-border-radius) - 2px) calc(var(--ai-border-radius) - 2px) !important;
+          background-color: rgba(0,0,0,0.2) !important;
+          height:           auto !important;
+          min-height:       0 !important;
+          line-height:      normal !important;
         }
         .ai-input-field {
-          flex: 1;
-          padding: 2px 4px;
+          flex: 1 !important;
+          padding: 2px 4px !important;
           font-size: 12px !important;
+          font-weight: normal !important;
           color: #f0f0f0 !important;
           border: 1px solid rgba(255, 255, 255, 0.1) !important;
-          border-radius: var(--ai-border-radius);
+          border-radius: var(--ai-border-radius) !important;
           background: transparent !important;
           resize: none !important;
           outline: none !important;
           line-height: 1.4 !important;
-          min-height: calc(11px * 1.4 + 4px);
-          max-height: calc(11px * 1.4 * 9 + 4px);
-          height: auto;
-          overflow-y: hidden;
+          min-height: calc(11px * 1.4 + 4px) !important;
+          max-height: calc(11px * 1.4 * 9 + 4px) !important;
+          height: auto !important;
+          overflow-y: hidden !important;
           box-shadow: none !important;
           text-shadow: none !important;
           margin: 0 !important;
+          text-indent: 0 !important;
+          text-decoration: none !important;
         }
         .ai-input-field:focus {
           outline: none !important;
@@ -650,13 +766,13 @@
           border-color: rgba(255, 255, 255, 0.1) !important;
         }
         .ai-send-btn {
-          transition: background 0.2s;
-          align-self: stretch;
-          height: auto;
+          transition: background 0.2s !important;
+          align-self: stretch !important;
+          height: auto !important;
         }
         .ai-send-btn:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
+          opacity: 0.6 !important;
+          cursor: not-allowed !important;
         }
         @keyframes ai-border-spin {
           to { --kissai-angle: 360deg; }

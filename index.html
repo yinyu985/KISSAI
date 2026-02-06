@@ -22,6 +22,24 @@
     <script src="js/api.js"></script>
 </head>
 <body class="loading">
+    <!-- Liquid Glass SVG Filter -->
+    <svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+        <defs>
+            <filter id="liquid-glass" color-interpolation-filters="sRGB" x="-5%" y="-5%" width="110%" height="110%">
+                <!-- Step 1: subtle organic distortion for refraction feel -->
+                <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="3" seed="2" result="noise"/>
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" result="refracted"/>
+                <!-- Step 2: very light blur — just enough to soften, NOT frosted glass -->
+                <feGaussianBlur in="refracted" stdDeviation="0.6" result="softened"/>
+                <!-- Step 3: boost saturation + brightness — the liquid glass signature -->
+                <feColorMatrix in="softened" type="matrix"
+                    values="1.05  0     0     0  0.02
+                            0     1.05  0     0  0.02
+                            0     0     1.05  0  0.02
+                            0     0     0     1  0" result="vivid"/>
+            </filter>
+        </defs>
+    </svg>
     <div id="app">
         <aside id="sidebar" class="sidebar">
             <div class="sidebar-header">

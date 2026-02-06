@@ -470,13 +470,12 @@ div.history-item.active svg.lucide.lucide-search {
     overscroll-behavior: contain;
 }
 .input-wrapper {
-    border-radius: 4px;
+    border-radius: 8px;
     padding: 10px 14px 10px 14px;
     display: flex;
     flex-direction: column;
     gap: 5px;
     position: relative;
-    box-shadow: none;
     z-index: 1;
     width: 100%;
     flex-shrink: 0;
@@ -484,11 +483,29 @@ div.history-item.active svg.lucide.lucide-search {
     transition: none;
     margin-top: 10px;
     margin-bottom: 10px;
+    /* liquid glass — SVG refraction filter, NOT blur */
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: url(#liquid-glass);
+    -webkit-backdrop-filter: url(#liquid-glass);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.15),
+        inset 0 -1px 0 rgba(0,0,0,0.05),
+        0 2px 20px rgba(0,0,0,0.15);
 }
+
+body.light-mode .input-wrapper {
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.40),
+        inset 0 -1px 0 rgba(0,0,0,0.02),
+        0 2px 20px rgba(0,0,0,0.04);
+}
+
+/* rainbow marquee border */
 .input-border {
     position: absolute;
-    inset: -1.5px;
-    border-radius: 5.5px;
+    inset: -0.5px;
+    border-radius: 8.5px;
     pointer-events: none;
     z-index: -1;
     overflow: hidden;
@@ -496,7 +513,7 @@ div.history-item.active svg.lucide.lucide-search {
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask-composite: exclude;
     -webkit-mask-composite: xor;
-    padding: 2px;
+    padding: 1px;
     transition: none;
 }
 .input-border::before {
@@ -509,10 +526,10 @@ div.history-item.active svg.lucide.lucide-search {
     transform: translate(-50%, -50%) rotate(0deg);
     background: conic-gradient(
         from 0deg,
-        #FF0000, #FF8000, #FFFF00, #00FF00,
-        #0000FF, #4B0082, #9400D3, #FF0000
+        rgba(255,80,80,0.7), rgba(255,160,50,0.7), rgba(255,230,80,0.7), rgba(80,220,100,0.7),
+        rgba(80,120,255,0.7), rgba(120,60,200,0.7), rgba(180,60,220,0.7), rgba(255,80,80,0.7)
     );
-    animation: rotateRainbow 3s linear infinite;
+    animation: rotateRainbow 4s linear infinite;
 }
 @keyframes rotateRainbow {
     from { transform: translate(-50%, -50%) rotate(0deg); }
@@ -1616,9 +1633,12 @@ input:checked + .slider:before {
     box-sizing: border-box;
     flex-shrink: 0;
     z-index: 10;
-    position: sticky;
+    position: absolute;
     bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
     transition: none;
+    background: transparent;
 }
 .chat-container.wide-mode .input-container {
     width: 90%;
@@ -1640,7 +1660,7 @@ input:checked + .slider:before {
 }
 .chat-container.has-messages .chat-messages {
     flex: 1;
-    padding: 10px 20px 0px 20px;
+    padding: 10px 20px 90px 20px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -2386,7 +2406,7 @@ input:checked + .slider:before {
     stroke-width: 2px !important;
 }
 
-/* ========== Scrollbar Navigation ========== */
+/* ========== Scrollbar Navigation — Liquid Glass ========== */
 .scrollbar-navigation {
     position: fixed;
     right: 12px;
@@ -2395,16 +2415,17 @@ input:checked + .slider:before {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     z-index: 100;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.4s ease;
 }
 
 .chat-container.has-messages .scrollbar-navigation {
     opacity: 1;
 }
 
+/* --- Top button (scroll-to-top) — liquid glass pill --- */
 .scrollbar-top-zone {
     width: 32px;
     height: 32px;
@@ -2412,55 +2433,90 @@ input:checked + .slider:before {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
-    background: rgba(26, 26, 26, 0.6);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: all 0.2s ease;
+    border-radius: 8px;
+    position: relative;
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(8px) saturate(1.7) brightness(1.1);
+    -webkit-backdrop-filter: blur(8px) saturate(1.7) brightness(1.1);
+    box-shadow:
+        inset 0 0.5px 0 rgba(255,255,255,0.18),
+        inset 0 -0.5px 0 rgba(0,0,0,0.08),
+        0 2px 8px rgba(0,0,0,0.20);
+    border: 0.5px solid rgba(255,255,255,0.10);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body.light-mode .scrollbar-top-zone {
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.10);
+    backdrop-filter: blur(8px) saturate(1.5) brightness(1.05);
+    -webkit-backdrop-filter: blur(8px) saturate(1.5) brightness(1.05);
+    box-shadow:
+        inset 0 0.5px 0 rgba(255,255,255,0.50),
+        inset 0 -0.5px 0 rgba(0,0,0,0.03),
+        0 2px 8px rgba(0,0,0,0.05);
+    border: 0.5px solid rgba(255,255,255,0.30);
 }
 
 .scrollbar-top-zone:hover {
-    /* 按钮不变色，保持原样 */
+    transform: scale(1.05);
 }
 
 .scrollbar-top-zone::before {
     content: '';
-    width: 8px;
-    height: 8px;
-    border-top: 2px solid var(--accent-color);
-    border-right: 2px solid var(--accent-color);
+    width: 7px;
+    height: 7px;
+    border-top: 1.5px solid var(--accent-color);
+    border-right: 1.5px solid var(--accent-color);
     transform: rotate(-45deg);
-    margin-top: 3px;
-    opacity: 0.6;
+    margin-top: 2px;
+    opacity: 0.8;
     transition: opacity 0.2s ease;
+    position: relative;
+    z-index: 1;
 }
 
 .scrollbar-top-zone:hover::before {
     opacity: 1;
 }
 
+/* --- Markers track (the glass rail) --- */
 .scrollbar-markers {
     position: relative;
     width: 32px;
     height: 320px;
-    background: rgba(26, 26, 26, 0.6);
-    backdrop-filter: blur(10px);
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
-    border: 1px solid rgba(255, 255, 255, 0.1);
     overflow: hidden;
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(8px) saturate(1.7) brightness(1.1);
+    -webkit-backdrop-filter: blur(8px) saturate(1.7) brightness(1.1);
+    border: 0.5px solid rgba(255,255,255,0.10);
+    box-shadow:
+        inset 0 0.5px 0 rgba(255,255,255,0.18),
+        inset 0 -0.5px 0 rgba(0,0,0,0.08),
+        0 2px 12px rgba(0,0,0,0.20);
+    transition: box-shadow 0.3s ease;
+}
+
+.scrollbar-markers:hover {
+    box-shadow:
+        inset 0 0.5px 0 rgba(255,255,255,0.22),
+        inset 0 -0.5px 0 rgba(0,0,0,0.08),
+        0 3px 16px rgba(0,0,0,0.26);
 }
 
 body.light-mode .scrollbar-markers {
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.10);
+    backdrop-filter: blur(8px) saturate(1.5) brightness(1.05);
+    -webkit-backdrop-filter: blur(8px) saturate(1.5) brightness(1.05);
+    border: 0.5px solid rgba(255,255,255,0.30);
+    box-shadow:
+        inset 0 0.5px 0 rgba(255,255,255,0.50),
+        inset 0 -0.5px 0 rgba(0,0,0,0.03),
+        0 2px 12px rgba(0,0,0,0.05);
 }
 
+/* --- Individual message markers --- */
 .scrollbar-marker {
     position: absolute;
     left: 0;
@@ -2471,25 +2527,29 @@ body.light-mode .scrollbar-markers {
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    z-index: 1;
 }
 
 .scrollbar-marker::before {
     content: '';
-    width: 12px;
-    height: 2px;
+    width: 14px;
+    height: 2.5px;
     background: var(--accent-color);
-    border-radius: 1px;
-    opacity: 0.35;
-    transition: all 0.15s ease;
+    border-radius: 2px;
+    opacity: 0.3;
+    transition: all 0.2s ease;
 }
 
 .scrollbar-marker.active::before {
-    width: 20px;
+    width: 22px;
     height: 3px;
     opacity: 1;
-    box-shadow: 0 0 6px var(--accent-color);
+    box-shadow:
+        0 0 8px var(--accent-color),
+        0 0 16px rgba(33, 150, 243, 0.3);
 }
 
 .scrollbar-marker:hover::before {
-    opacity: 0.7;
+    opacity: 0.6;
+    box-shadow: 0 0 6px rgba(33, 150, 243, 0.2);
 }
