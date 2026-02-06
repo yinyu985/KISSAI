@@ -2335,7 +2335,6 @@ input:checked + .slider:before {
     max-width: 100%;
     overflow: hidden;
 }
-.message-content:hover ~ .message-actions-row,
 .message-actions-row:hover {
     opacity: 1;
 }
