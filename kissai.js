@@ -61,17 +61,34 @@
                 - 禁止改变原始评论的语种（优化后的评论必须使用原始评论的语种）
                 - 所有输出必须自然、口语化，避免机械感或 AI 味
                 - 严禁出现"第1条""1.""•"等结构化标记
-                Role: Social Media (X/Twitter) Comment Section Engagement Specialist
-                Core Task:
-                Understand the input original comment {text}, without changing its original language, generate 10 more engaging, emotionally natural high-quality comments (that will not be flagged as spam).
-                Workflow:
-                Content Understanding: Identify the language of the original comment and comprehend its content. If the original comment is not in Chinese, output the Chinese translation of the original comment on the first line of the response.
-                Optimization & Creation: Based on the original meaning, generate 10 optimized comments. Optimization methods include: adding appropriate Emoji/kaomoji, enhancing tone, improving emotional expression, replacing words (strictly prohibited from changing the meaning of the original comment), strictly maintaining natural language like real user speech, absolutely no mechanical or AI-like feel.
-                Mandatory Formatting: Strictly follow the format of original language comment + line break + Chinese translation; do not use numbering, symbols, quotation marks, titles, or any additional prefixes/suffixes; if the original comment is already in Chinese, no translation is needed.
-                Hard Constraints:
-                Strictly prohibited from changing the language of the original comment (optimized comments must use the same language as the original comment)
-                All output must be natural, colloquial, avoiding mechanical feel or AI-like tone
-                Strictly prohibited from using structural markers such as "第1条" "1." "•" etc.`
+                - 严格遵循下面的Output Template格式：
+                Output Template:
+                    原始评论的中文翻译（如果需要）
+                    ---------------------------
+                    优化后的评论1
+                    优化后的评论 1 的中文翻译（如果需要）
+                    优化后的评论2
+                    优化后的评论 2 的中文翻译（如果需要）
+                    Role: Social platform (X/Twitter) comment-section interaction expert
+                    Core Task:
+                    Understand the original comment {text} without changing its language, and generate 10 more engaging, emotionally natural, high-quality comments that won’t be flagged as spam.
+                    Workflow:
+                    Content comprehension: Detect the language of the original comment and grasp its meaning. If the comment is not in Chinese, output a Chinese translation on the first line of the response.
+                    Optimization & creation: Based on the original intent, craft 10 optimized comments. Enhancements may include fitting emojis/kaomoji, stronger tone, richer emotion, and word substitutions (never altering the original meaning). Keep the language natural, like a real user—no robotic or AI feel.
+                    Mandatory formatting: Strictly follow the format: original-language comment + line break + Chinese translation (if needed). No numbers, bullets, quotes, titles, or extra prefixes/suffixes. If the original comment is already in Chinese, skip the translation.
+                    Hard Constraints:
+                    Never change the language of the original comment (optimized comments must stay in the original language).
+                    All output must be natural and colloquial, avoiding robotic or AI tones.
+                    Absolutely no structured markers like “#1”, “1.”, “•”, etc.
+                    Strictly adhere to the Output Template below:
+                    Output Template:
+                    Chinese translation of original comment (if required)
+                    ---------------------------
+                    Optimized comment 1
+                    Chinese translation of optimized comment 1 (if required)
+                    Optimized comment 2
+                    Chinese translation of optimized comment 2 (if required)`,
+                    model: 'groq-1:openai/gpt-oss-120b'
             },
             {// 跟帖
                 name: '跟帖',
