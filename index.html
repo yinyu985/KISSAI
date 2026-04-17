@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KISSAI Web</title>
+    <meta name="description" content="KISSAI 是一个现代、极简且高质感的 AI 聊天交互平台，支持多种模型提供商。" data-i18n="app.description">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/markdown.js"></script>
+    <script src="js/api.js"></script>
+</head>
+<body class="loading">
+    <!-- Liquid Glass SVG Filter -->
+    <svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+        <defs>
+            <filter id="liquid-glass" color-interpolation-filters="sRGB" x="-5%" y="-5%" width="110%" height="110%">
+                <!-- Step 1: subtle organic distortion for refraction feel -->
+                <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="3" seed="2" result="noise"/>
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" result="refracted"/>
+                <!-- Step 2: very light blur — just enough to soften, NOT frosted glass -->
+                <feGaussianBlur in="refracted" stdDeviation="0.6" result="softened"/>
+                <!-- Step 3: boost saturation + brightness — the liquid glass signature -->
+                <feColorMatrix in="softened" type="matrix"
+                    values="1.05  0     0     0  0.02
+                            0     1.05  0     0  0.02
+                            0     0     1.05  0  0.02
+                            0     0     0     1  0" result="vivid"/>
+            </filter>
+        </defs>
+    </svg>
+    <div id="app">
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-main">KISS AI</div>
+                    <div class="logo-sub">Keep it simple, stupid</div>
+                </div>
+            </div>
+            <div style="padding: 0 12px 12px 12px; flex-shrink: 0;">
+                <div class="sidebar-action">
+                    <i data-lucide="search"></i>
+                    <input type="text" id="search-input" placeholder="搜索对话" data-i18n-placeholder="sidebar.search.placeholder">
+                </div>
+            </div>
+            <div class="sidebar-content" style="padding-top: 0;">
+                <div class="history-list-container" style="margin-top: 0; border-top: none;">
+                    <div id="history-list" class="history-list">
+                        <div class="empty-state">
+                            <i data-lucide="message-square"></i>
+                            <p data-i18n="sidebar.empty.title">暂无会话</p>
+                            <span data-i18n="sidebar.empty.desc">开始新的对话以在此处查看您的会话历史记录。</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="padding: 12px; padding-top: 0; flex-shrink: 0;">
+                <button id="new-chat-btn" class="sidebar-action" style="cursor: pointer; justify-content: center;">
+                    <i data-lucide="plus"></i>
+                    <span data-i18n="sidebar.newChat">新建对话</span>
+                </button>
+            </div>
+            <div class="sidebar-footer">
+                <button id="github-btn" class="footer-btn" title="GitHub Repository" data-i18n-title="footer.github" onclick="window.open('https://github.com/yinyu985/KISSAI.git', '_blank')">
+                    <i data-lucide="github"></i>
+                </button>
+                <button id="theme-toggle-btn" class="footer-btn" title="切换主题" data-i18n-title="footer.theme">
+                    <i data-lucide="moon"></i>
+                </button>
+                <button id="clear-history-btn" class="footer-btn" title="双击以清理全部历史记录" data-i18n-title="footer.clearHistory">
+                    <i data-lucide="trash-2"></i>
+                </button>
+                <button id="settings-btn" class="footer-btn" title="设置" data-i18n-title="footer.settings">
+                    <i data-lucide="settings"></i>
+                </button>
+            </div>
+            <div id="sidebar-handle" class="sidebar-handle">
+                <svg viewBox="0 0 12 64" class="handle-svg">
+                    <path id="handle-path" d="M 6 2 L 6 32 L 6 62" />
+                </svg>
+            </div>
+        </aside>
+        <main id="main-content" class="main-content">
+            <div id="chat-view" class="view active">
+                <div class="chat-container narrow-mode">
+                    <div class="chat-container-inner">
+                        <div class="welcome-section">
+                            <h1 data-i18n="welcome.title">👋嗨，你好啊！</h1>
+                            <p data-i18n="welcome.subtitle">今天我能为您做些什么？</p>
+                        </div>
+                        <div id="chat-messages" class="chat-messages">
+                        </div>
+                        <div class="scrollbar-navigation">
+                            <div class="scrollbar-top-zone"></div>
+                            <div id="scrollbar-markers" class="scrollbar-markers"></div>
+                        </div>
+                        <div class="input-container">
+                        <div class="input-wrapper" style="position: relative;">
+                            <div class="input-border"></div>
+                            <textarea id="chat-input" class="chat-input" rows="1"></textarea>
+                            <div id="role-mention-dropdown" class="role-mention-dropdown" style="display: none;"></div>
+                            <div class="input-footer">
+                                <div class="left-controls" style="display: flex; gap: 8px; align-items: center;">
+                                    <div id="model-selector" class="model-selector">
+                                        <span id="current-model">openai/gpt-oss-120b</span>
+                                        <div id="model-dropdown" class="model-dropdown">
+                                        </div>
+                                    </div>
+                                    <button id="clear-chat-btn" class="icon-btn-inline" title="双击以清空对话" data-i18n-title="chat.clearChat">
+                                        <i data-lucide="brush-cleaning"></i>
+                                    </button>
+                                    <div class="context-control" style="position: relative;">
+                                        <button id="context-control-btn" class="icon-btn-inline context-btn" title="调节上下文消息数量" data-i18n-title="chat.contextControl">
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="15"
+  height="15"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round">
+  <line x1="4" y1="2" x2="22" y2="2" />
+  <line x1="4" y1="22" x2="22" y2="22" />
+  <line x1="7" y1="4" x2="7" y2="20" />
+  <polyline points="5 8 7 4 9 8" />
+  <polyline points="5 16 7 20 9 16" />
+</svg>
+                                            <span id="context-count-display" class="context-count-badge">20</span>
+                                        </button>
+                                        <div id="context-limit-dropdown" class="context-limit-dropdown">
+                                            <div class="context-limit-option" data-value="2"><span data-i18n-number="2">2</span> <span data-i18n="chat.context.messages">条消息</span></div>
+                                            <div class="context-limit-option" data-value="4"><span data-i18n-number="4">4</span> <span data-i18n="chat.context.messages">条消息</span></div>
+                                            <div class="context-limit-option" data-value="6"><span data-i18n-number="6">6</span> <span data-i18n="chat.context.messages">条消息</span></div>
+                                            <div class="context-limit-option" data-value="8"><span data-i18n-number="8">8</span> <span data-i18n="chat.context.messages">条消息</span></div>
+                                            <div class="context-limit-option" data-value="10"><span data-i18n-number="10">10</span> <span data-i18n="chat.context.messages">条消息</span></div>
+                                            <div class="context-limit-option" data-value="12"><span data-i18n-number="12">12</span> <span data-i18n="chat.context.messages">条消息</span></div>
+                                            <div class="context-limit-option" data-value="14"><span data-i18n-number="14">14</span> <span data-i18n="chat.context.messages">条消息</span></div>
+                                            <div class="context-limit-option" data-value="16"><span data-i18n-number="16">16</span> <span data-i18n="chat.context.messages">条消息</span></div>
+                                            <div class="context-limit-option" data-value="18"><span data-i18n-number="18">18</span> <span data-i18n="chat.context.messages">条消息</span></div>
+                                            <div class="context-limit-option" data-value="20"><span data-i18n-number="20">20</span> <span data-i18n="chat.context.messages">条消息</span></div>
+                                            <div class="context-limit-option" data-value="22"><span data-i18n-number="22">22</span> <span data-i18n="chat.context.messages">条消息</span></div>
+                                            <div class="context-limit-option" data-value="24"><span data-i18n-number="24">24</span> <span data-i18n="chat.context.messages">条消息</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button id="send-btn" class="send-btn" disabled>
+                                    <i data-lucide="send"></i>
+                                </button>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="settings-view" class="view">
+                <div class="settings-container">
+                    <aside class="settings-sidebar">
+                        <div class="settings-nav-item active" data-tab="general">
+                            <i data-lucide="settings-2" class="nav-icon"></i>
+                            <span data-i18n="settings.general">通用设置</span>
+                        </div>
+                        <div class="settings-nav-group">
+                            <div id="providers-header" class="settings-nav-item" data-tab="providers-toggle">
+                                <i data-lucide="box" class="nav-icon"></i>
+                                <span data-i18n="settings.providers">模型提供商</span>
+                            </div>
+                            <div id="providers-list" class="nav-group-content">
+                                <div id="add-provider-trigger" class="settings-nav-item add-btn" data-tab="provider">
+                                    <i data-lucide="plus" class="nav-icon"></i>
+                                    <span data-i18n="settings.addProvider">新增提供商</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="settings-nav-item" data-tab="role-presets">
+                            <i data-lucide="user-cog" class="nav-icon"></i>
+                            <span data-i18n="settings.roles">角色预设</span>
+                        </div>
+                    </aside>
+                    <section class="settings-main">
+                        <div id="general-settings" class="settings-content active">
+                            <div class="settings-group">
+                                <label data-i18n="settings.wideMode">宽屏模式</label>
+                                <div class="toggle-container">
+                                    <label class="switch">
+                                        <input type="checkbox" id="wide-mode-checkbox">
+                                        <span class="slider round"></span>
+                                    </label>
+                                    <span class="toggle-label" data-i18n="settings.wideMode.desc">开启宽屏对话视图</span>
+                                </div>
+                            </div>
+                            <div class="settings-group">
+                                <label data-i18n="settings.language">界面语言</label>
+                                <div id="language-select" class="custom-select short-select">
+                                    <div class="select-trigger">
+                                        <span id="current-language">简体中文</span>
+                                        <i data-lucide="chevron-down"></i>
+                                    </div>
+                                    <div class="select-options">
+                                        <div class="select-option selected" data-value="zh">简体中文</div>
+                                        <div class="select-option" data-value="en">English</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-group" style="position: relative;">
+                                <label data-i18n="settings.systemPrompt">全局系统提示词</label>
+                                <textarea id="global-system-prompt" class="settings-textarea no-resize" placeholder="提示词..." data-i18n-placeholder="settings.systemPrompt.placeholder"></textarea>
+                                <button id="reset-prompt-btn" class="text-btn-overlay" data-i18n="settings.resetPrompt">重置为默认值</button>
+                            </div>
+                            <div class="settings-group">
+                                <label data-i18n="settings.dataManagement">数据管理</label>
+                                <p class="help-text" data-i18n="settings.dataManagement.help">支持通过剪贴板或文件导入或导出您的配置数据（包括API配置、角色预设、对话历史等）。</p>
+                                <p class="warning-text" data-i18n-html="settings.dataManagement.warning">注意：导入配置会覆盖本地所有数据（包括API配置、角色预设、对话历史等）。<br>导出时会自动移除图片数据以减小体积。</p>
+                                <div class="data-management-buttons">
+                                    <button id="export-clipboard-btn" class="btn-secondary">
+                                        <i data-lucide="copy"></i>
+                                        <span data-i18n="settings.copyToClipboard">复制到剪贴板</span>
+                                    </button>
+                                    <button id="import-clipboard-btn" class="btn-secondary">
+                                        <i data-lucide="clipboard"></i>
+                                        <span data-i18n="settings.importFromClipboard">从剪贴板导入</span>
+                                    </button>
+                                    <button id="export-file-btn" class="btn-secondary">
+                                        <i data-lucide="download"></i>
+                                        <span data-i18n="settings.exportJson">导出 JSON 文件</span>
+                                    </button>
+                                    <button id="import-file-btn" class="btn-secondary">
+                                        <input type="file" id="import-file-input" accept=".json" style="display: none;">
+                                        <i data-lucide="upload"></i>
+                                        <span data-i18n="settings.importJson">导入 JSON 文件</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="provider-settings" class="settings-content">
+                            <div class="provider-title-container">
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <h2 id="provider-name" contenteditable="false">Groq</h2>
+                                    <div id="provider-title-actions" class="title-actions">
+                                        <button id="edit-provider-btn" class="icon-btn-inline" title="编辑名称" data-i18n-title="provider.editName">
+                                            <i data-lucide="pencil"></i>
+                                        </button>
+                                        <button id="save-provider-btn" class="icon-btn-inline hidden" title="保存" data-i18n-title="provider.save">
+                                            <i data-lucide="check"></i>
+                                        </button>
+                                        <button id="cancel-provider-btn" class="icon-btn-inline hidden" title="取消" data-i18n-title="provider.cancel">
+                                            <i data-lucide="x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="add-provider-form" class="compact-form">
+                                <input type="text" id="new-provider-name" placeholder="提供商名称" data-i18n-placeholder="provider.addName.placeholder">
+                                <div class="form-actions">
+                                    <button class="icon-btn-inline" onclick="saveProvider()" title="保存" data-i18n-title="provider.save">
+                                        <i data-lucide="check"></i>
+                                    </button>
+                                    <button class="icon-btn-inline" onclick="toggleForm('add-provider-form')" title="取消" data-i18n-title="provider.cancel">
+                                        <i data-lucide="x"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="settings-group">
+                                <label data-i18n="provider.apiKey">API Key</label>
+                                <div class="input-with-actions">
+                                    <input type="password" id="api-key" value="">
+                                    <div class="action-icons">
+                                        <button class="icon-btn"><i data-lucide="eye"></i></button>
+                                        <button class="icon-btn"><i data-lucide="copy"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-group">
+                                <label data-i18n="provider.baseUrl">Base URL</label>
+                                <input type="text" id="base-url" value="https://api.groq.com/openai/v1">
+                            </div>
+                            <div class="settings-group">
+                                <div class="group-header">
+                                    <label data-i18n="provider.models">模型</label>
+                                    <div class="header-actions">
+                                        <button id="add-model-btn" class="action-btn-xs-text" title="手动添加模型" data-i18n-title="provider.addModel">
+                                            <i data-lucide="plus"></i>
+                                        </button>
+                                        <button id="fetch-models-btn" class="action-btn-xs-text" title="获取模型" data-i18n-title="provider.fetchModels">
+                                            <i data-lucide="refresh-cw"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="add-model-form" class="compact-form" style="display: none;">
+                                    <input type="text" id="new-model-name" placeholder="模型名称" data-i18n-placeholder="provider.modelName.placeholder">
+                                    <div class="form-actions">
+                                        <button class="icon-btn-inline" onclick="addModel()" title="添加" data-i18n-title="provider.add">
+                                            <i data-lucide="check"></i>
+                                        </button>
+                                        <button class="icon-btn-inline" onclick="toggleAddModelForm()" title="取消" data-i18n-title="provider.cancel">
+                                            <i data-lucide="x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="model-list" class="model-list"></div>
+                            </div>
+                        </div>
+                         <div id="role-presets-settings" class="settings-content">
+                            <div id="add-role-form" class="compact-form">
+                                <input type="text" id="new-role-name" placeholder="角色名称" data-i18n-placeholder="role.name.placeholder">
+                                <textarea id="new-role-prompt" placeholder="系统提示词" rows="6" data-i18n-placeholder="role.prompt.placeholder"></textarea>
+                            </div>
+                            <div class="settings-group">
+                                <div class="group-header">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <label style="margin: 0;" data-i18n="role.commonPresets">常用预设</label>
+                                        <span class="help-text" style="margin: 0; display: flex; align-items: center;" data-i18n="role.help">在输入框中输入 @ 可快速调用预设角色</span>
+                                    </div>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <div id="edit-role-actions" class="form-actions hidden" style="margin: 0;">
+                                            <button class="icon-btn-inline" onclick="saveRole()" title="保存" data-i18n-title="provider.save">
+                                                <i data-lucide="check"></i>
+                                            </button>
+                                            <button class="icon-btn-inline" onclick="toggleForm('add-role-form')" title="取消" data-i18n-title="provider.cancel">
+                                                <i data-lucide="x"></i>
+                                            </button>
+                                        </div>
+                                        <button onclick="toggleForm('add-role-form')" class="icon-btn-xs"><i data-lucide="plus"></i></button>
+                                    </div>
+                                </div>
+                                <div id="role-list" class="role-list"></div>
+                            </div>
+                        </div>
+                    </section>
+                    <button id="close-settings" class="close-btn">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <div id="model-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 data-i18n="modal.availableModels">从API获取的可用模型</h3>
+                <button class="modal-close" onclick="closeModelModal()">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p style="margin: 0 0 8px 0; font-size: 12px; color: var(--text-secondary);" data-i18n="modal.modelSelectionHint">勾选要使用的模型，未勾选的将不会出现在模型列表中</p>
+                <div class="sidebar-action" style="margin-bottom: 12px; height: 24px; min-height: 24px;">
+                    <i data-lucide="search"></i>
+                    <input type="text" id="modal-model-search-input" placeholder="搜索模型..." data-i18n-placeholder="modal.searchModels">
+                </div>
+                <div id="model-selection-list" class="model-selection-list">
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/app.js"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>
