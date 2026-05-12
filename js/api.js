@@ -140,11 +140,12 @@ const KissaiAPI = {
                 this._abortController?.abort();
             }, KISSAI_CONFIG.API.REQUEST_TIMEOUT_MS);
 
-            const response = await fetch(`${baseUrl}/chat/completions`, {
+            const response = await fetch('/api/proxy/chat/completions', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${provider.apiKey}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'x-base-url': baseUrl
                 },
                 body: JSON.stringify({
                     model: modelName,
