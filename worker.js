@@ -1,8 +1,16 @@
-// functions/api/proxy/[[path]].js
+export default {
+    async fetch(request, env) {
+        const url = new URL(request.url);
 
-export async function onRequest(context) {
-    const { request, params } = context;
+        if (url.pathname.startsWith('/api/proxy/')) {
+            return handleProxyRequest(request, url);
+        }
 
+        return env.ASSETS.fetch(request);
+    }
+};
+
+async function handleProxyRequest(request, url) {
     if (request.method === 'OPTIONS') {
         return new Response(null, {
             status: 204,
@@ -19,10 +27,7 @@ export async function onRequest(context) {
     let upstreamUrl;
 
     try {
-        const path = Array.isArray(params.path)
-            ? params.path.join('/')
-            : params.path || '';
-
+        const path = url.pathname.slice('/api/proxy/'.length);
         upstreamUrl = buildUpstreamUrl(baseUrl, path);
     } catch {
         return json({ error: 'Invalid x-base-url' }, 400);

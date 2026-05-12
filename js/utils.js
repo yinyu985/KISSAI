@@ -192,21 +192,44 @@ const KissaiUtils = {
      * @returns {string}
      */
     normalizeBaseUrl(baseUrl) {
-        let cleanUrl = baseUrl.trim();
-        if (cleanUrl.endsWith('/')) {
-            cleanUrl = cleanUrl.slice(0, -1);
+        const cleanUrl = baseUrl.trim();
+
+        try {
+            const url = new URL(cleanUrl);
+            const lowerHostname = url.hostname.toLowerCase();
+            const lowerPathname = url.pathname.toLowerCase();
+
+            url.hash = '';
+            url.pathname = url.pathname.replace(/\/+$/, '') || '/';
+
+            // Google AI 的 OpenAI-compatible 根路径是 /v.../openai
+            if (lowerHostname.includes('generativelanguage.googleapis.com') && lowerPathname.includes('/openai')) {
+                const openaiIndex = lowerPathname.indexOf('/openai') + '/openai'.length;
+                url.pathname = url.pathname.substring(0, openaiIndex);
+                return `${url.origin}${url.pathname === '/' ? '' : url.pathname}${url.search}`;
+            }
+
+            const versionMatch = url.pathname.match(/\/v\d+(beta|alpha)?(?=\/|$)/i);
+            if (versionMatch) {
+                const versionIndex = versionMatch.index + versionMatch[0].length;
+                url.pathname = url.pathname.substring(0, versionIndex);
+            }
+
+            return `${url.origin}${url.pathname === '/' ? '' : url.pathname}${url.search}`;
+        } catch {
+            const queryIndex = cleanUrl.indexOf('?');
+            const urlWithoutQuery = queryIndex >= 0 ? cleanUrl.slice(0, queryIndex) : cleanUrl;
+            const query = queryIndex >= 0 ? cleanUrl.slice(queryIndex) : '';
+            const normalizedUrl = urlWithoutQuery.replace(/\/+$/, '');
+            const versionMatch = normalizedUrl.match(/\/v\d+(beta|alpha)?/i);
+
+            if (versionMatch) {
+                const versionIndex = versionMatch.index + versionMatch[0].length;
+                return `${normalizedUrl.substring(0, versionIndex)}${query}`;
+            }
+
+            return `${normalizedUrl}${query}`;
         }
-        // 处理 Google AI 的特殊路径
-        if (cleanUrl.includes('generativelanguage.googleapis.com') && cleanUrl.includes('/openai')) {
-            return cleanUrl;
-        }
-        // 处理版本号路径
-        const versionMatch = cleanUrl.match(/\/v\d+(beta|alpha)?/i);
-        if (versionMatch) {
-            const versionIndex = versionMatch.index + versionMatch[0].length;
-            return cleanUrl.substring(0, versionIndex);
-        }
-        return cleanUrl;
     },
 
     // ========== 滚动工具 ==========
