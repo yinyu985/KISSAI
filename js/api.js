@@ -37,6 +37,27 @@ const KissaiAPI = {
     },
 
     /**
+     * 通过同源代理请求 Provider API
+     * @private
+     * @param {string} path - Provider API path，例如 chat/completions 或 models
+     * @param {string} baseUrl - Provider Base URL
+     * @param {Object} options - fetch options
+     * @returns {Promise<Response>}
+     */
+    _fetchProviderApi(path, baseUrl, options = {}) {
+        const cleanBaseUrl = KissaiUtils.normalizeBaseUrl(baseUrl);
+        const headers = new Headers(options.headers || {});
+        const proxyPath = String(path || '').replace(/^\/+/, '');
+
+        headers.set('x-base-url', cleanBaseUrl);
+
+        return fetch(`/api/proxy/${proxyPath}`, {
+            ...options,
+            headers
+        });
+    },
+
+    /**
      * 发送消息到 API
      * @param {Object} options
      * @param {string} options.message - 用户消息
@@ -140,12 +161,11 @@ const KissaiAPI = {
                 this._abortController?.abort();
             }, KISSAI_CONFIG.API.REQUEST_TIMEOUT_MS);
 
-            const response = await fetch('/api/proxy/chat/completions', {
+            const response = await this._fetchProviderApi('chat/completions', baseUrl, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${provider.apiKey}`,
-                    'Content-Type': 'application/json',
-                    'x-base-url': baseUrl
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     model: modelName,
@@ -381,9 +401,7 @@ const KissaiAPI = {
      * @returns {Promise<Array>}
      */
     async fetchModels(apiKey, baseUrl) {
-        const cleanBaseUrl = KissaiUtils.normalizeBaseUrl(baseUrl);
-
-        const response = await fetch(`${cleanBaseUrl}/models`, {
+        const response = await this._fetchProviderApi('models', baseUrl, {
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json'

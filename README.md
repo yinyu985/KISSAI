@@ -160,10 +160,17 @@ https://api.groq.com/openai/v1
 /api/proxy/chat/completions
 ```
 
+获取模型列表时，前端会请求：
+
+```text
+/api/proxy/models
+```
+
 代理会转发到：
 
 ```text
 {BaseURL}/chat/completions
+{BaseURL}/models
 ```
 
 例如：
